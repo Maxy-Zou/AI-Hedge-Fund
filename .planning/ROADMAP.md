@@ -32,7 +32,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Each ticker in the universe has a GICS sector stored in PostgreSQL, fetched from yfinance and cached on first access
   3. Running `universe refresh` again appends new entrants and marks delisted tickers without deleting historical snapshots
   4. A CLI command displays the current universe size and sector breakdown
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Package scaffold: fund-backtest package, config, ORM models, Alembic migration, test structure
+- [ ] 01-02-PLAN.md — Universe domain logic: types, seeder (Wikipedia S&P 400), enricher (yfinance), UniverseBuilder with unit tests
+- [ ] 01-03-PLAN.md — CLI commands (`universe refresh`, `universe status`) and integration tests with PostgreSQL testcontainer
 
 ### Phase 2: Price Data Pipeline
 **Goal**: Daily OHLCV price data for all universe tickers is cached in PostgreSQL, validated, and incrementally updated without overwriting historical bars
@@ -120,7 +125,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Universe and Sector Data | 0/TBD | Not started | - |
+| 1. Universe and Sector Data | 0/3 | Planned | - |
 | 2. Price Data Pipeline | 0/TBD | Not started | - |
 | 3. Signal Adapter and Integration Contract | 0/TBD | Not started | - |
 | 4. Cost Model and Portfolio Simulator | 0/TBD | Not started | - |
