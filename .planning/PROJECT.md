@@ -12,12 +12,12 @@ Produce compelling, realistic backtest results the moment any strategy signal is
 
 ### Validated
 
-(None yet — ship to validate)
+- ✓ Universe management — maintain and refresh the list of target tickers matching market cap criteria — Phase 1
+- ✓ GICS sector classification per ticker stored in PostgreSQL — Phase 1
 
 ### Active
 
 - [ ] Historical daily OHLCV price data for mid-cap universe ($2B-$10B) going back 5 years via yfinance
-- [ ] Universe management — maintain and refresh the list of target tickers matching market cap criteria
 - [ ] Data caching and incremental updates — avoid redundant API calls, append new data daily
 - [ ] Vectorized backtesting engine — takes a signal DataFrame (date x ticker → score) and simulates a long/short portfolio
 - [ ] Realistic transaction cost modeling — slippage, commission, borrow costs for shorts
@@ -84,4 +84,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-28 after initialization*
+*Last updated: 2026-03-28 after Phase 1 completion*
