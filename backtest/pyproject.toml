@@ -48,6 +48,15 @@ markers = [
     "integration: integration tests requiring PostgreSQL (deselect with '-m not integration')",
 ]
 
+[tool.coverage.run]
+omit = [
+    "src/fund_backtest/__main__.py",
+    "src/fund_backtest/db/migrations/*",
+]
+
+[tool.coverage.report]
+fail_under = 80
+
 [tool.ruff]
 line-length = 100
 target-version = "py312"
