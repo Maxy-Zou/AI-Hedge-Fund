@@ -45,8 +45,6 @@ def refresh(
     and upserts results into PostgreSQL. Historical snapshots are preserved.
     Tickers that exit the $2B-$10B range are marked inactive (never deleted).
     """
-    settings = load_app_settings()
-    configure_logging(settings.log_level)
     universe_settings = load_universe_settings()
 
     if dry_run:
@@ -58,6 +56,9 @@ def refresh(
             f"${universe_settings.market_cap_max_cents / 100:,.0f}"
         )
         return
+
+    settings = load_app_settings()
+    configure_logging(settings.log_level)
 
     try:
         engine = create_engine_from_settings(settings)
