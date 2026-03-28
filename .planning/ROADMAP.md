@@ -36,7 +36,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [x] 01-01-PLAN.md — Package scaffold: fund-backtest package, config, ORM models, Alembic migration, test structure
-- [ ] 01-02-PLAN.md — Universe domain logic: types, seeder (Wikipedia S&P 400), enricher (yfinance), UniverseBuilder with unit tests
+- [x] 01-02-PLAN.md — Universe domain logic: types, seeder (Wikipedia S&P 400), enricher (yfinance), UniverseBuilder with unit tests
 - [ ] 01-03-PLAN.md — CLI commands (`universe refresh`, `universe status`) and integration tests with PostgreSQL testcontainer
 
 ### Phase 2: Price Data Pipeline
