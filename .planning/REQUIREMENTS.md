@@ -97,39 +97,39 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | - | Pending |
-| DATA-02 | - | Pending |
-| DATA-03 | - | Pending |
-| DATA-04 | - | Pending |
-| DATA-05 | - | Pending |
-| DATA-06 | - | Pending |
-| DATA-07 | - | Pending |
-| BT-01 | - | Pending |
-| BT-02 | - | Pending |
-| BT-03 | - | Pending |
-| BT-04 | - | Pending |
-| BT-05 | - | Pending |
-| BT-06 | - | Pending |
-| BT-07 | - | Pending |
-| RISK-01 | - | Pending |
-| RISK-02 | - | Pending |
-| RISK-03 | - | Pending |
-| RISK-04 | - | Pending |
-| RPT-01 | - | Pending |
-| RPT-02 | - | Pending |
-| RPT-03 | - | Pending |
-| RPT-04 | - | Pending |
-| RPT-05 | - | Pending |
-| RPT-06 | - | Pending |
-| INT-01 | - | Pending |
-| INT-02 | - | Pending |
-| INT-03 | - | Pending |
+| DATA-01 | Phase 2 | Pending |
+| DATA-02 | Phase 2 | Pending |
+| DATA-03 | Phase 2 | Pending |
+| DATA-04 | Phase 2 | Pending |
+| DATA-05 | Phase 1 | Pending |
+| DATA-06 | Phase 2 | Pending |
+| DATA-07 | Phase 1 | Pending |
+| BT-01 | Phase 3 | Pending |
+| BT-02 | Phase 4 | Pending |
+| BT-03 | Phase 4 | Pending |
+| BT-04 | Phase 4 | Pending |
+| BT-05 | Phase 3 | Pending |
+| BT-06 | Phase 4 | Pending |
+| BT-07 | Phase 4 | Pending |
+| RISK-01 | Phase 5 | Pending |
+| RISK-02 | Phase 5 | Pending |
+| RISK-03 | Phase 5 | Pending |
+| RISK-04 | Phase 5 | Pending |
+| RPT-01 | Phase 6 | Pending |
+| RPT-02 | Phase 6 | Pending |
+| RPT-03 | Phase 6 | Pending |
+| RPT-04 | Phase 7 | Pending |
+| RPT-05 | Phase 7 | Pending |
+| RPT-06 | Phase 7 | Pending |
+| INT-01 | Phase 3 | Pending |
+| INT-02 | Phase 8 | Pending |
+| INT-03 | Phase 8 | Pending |
 
 **Coverage:**
 - v1 requirements: 27 total
-- Mapped to phases: 0
-- Unmapped: 27
+- Mapped to phases: 27
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-28*
-*Last updated: 2026-03-28 after initial definition*
+*Last updated: 2026-03-28 after roadmap creation — all 27 requirements mapped*
