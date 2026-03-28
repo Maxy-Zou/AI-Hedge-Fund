@@ -12,7 +12,7 @@ Eight phases take this module from a clean Python package to a fully integrated,
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Universe and Sector Data** - Build and maintain the mid-cap ticker universe with GICS sector classification
+- [x] **Phase 1: Universe and Sector Data** - Build and maintain the mid-cap ticker universe with GICS sector classification (completed 2026-03-28)
 - [ ] **Phase 2: Price Data Pipeline** - Download, cache, validate, and incrementally update daily OHLCV data for the full universe
 - [ ] **Phase 3: Signal Adapter and Integration Contract** - Define the signal DataFrame contract and build the adapter that normalizes raw strategy scores into portfolio weights
 - [ ] **Phase 4: Cost Model and Portfolio Simulator** - Implement fully vectorized long/short simulation with realistic transaction and borrow costs
@@ -37,7 +37,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 Plans:
 - [x] 01-01-PLAN.md — Package scaffold: fund-backtest package, config, ORM models, Alembic migration, test structure
 - [x] 01-02-PLAN.md — Universe domain logic: types, seeder (Wikipedia S&P 400), enricher (yfinance), UniverseBuilder with unit tests
-- [ ] 01-03-PLAN.md — CLI commands (`universe refresh`, `universe status`) and integration tests with PostgreSQL testcontainer
+- [x] 01-03-PLAN.md — CLI commands (`universe refresh`, `universe status`) and integration tests with PostgreSQL testcontainer
 
 ### Phase 2: Price Data Pipeline
 **Goal**: Daily OHLCV price data for all universe tickers is cached in PostgreSQL, validated, and incrementally updated without overwriting historical bars
@@ -125,7 +125,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Universe and Sector Data | 1/3 | In Progress|  |
+| 1. Universe and Sector Data | 3/3 | Complete   | 2026-03-28 |
 | 2. Price Data Pipeline | 0/TBD | Not started | - |
 | 3. Signal Adapter and Integration Contract | 0/TBD | Not started | - |
 | 4. Cost Model and Portfolio Simulator | 0/TBD | Not started | - |
