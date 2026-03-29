@@ -143,7 +143,11 @@ Plans:
   1. Running `backtest run --signal ai-washing` loads DailyScore records from the shared PostgreSQL database and converts them to a valid SignalFrame with correct `available_date` offsets
   2. The end-to-end pipeline — from signal load through simulation, metrics computation, and dashboard render — completes without any manual intervention
   3. The pipeline exits with a non-zero status code and a descriptive error message if the Detector's scores table is empty or unavailable, rather than producing a silent empty backtest
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — AiWashingLoader: signal/loaders/ package, raw SQL query, SignalLoadError, TDD unit tests (INT-02)
+- [ ] 08-02-PLAN.md — CLI backtest run command + integration test against PostgreSQL testcontainer (INT-03)
 
 ## Progress
 
@@ -159,4 +163,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 5. Risk Metrics Engine | 2/2 | Complete   | 2026-03-29 |
 | 6. Streamlit Dashboard | 3/3 | Complete   | 2026-03-29 |
 | 7. Tearsheet and Data Exports | 2/2 | Complete   | 2026-03-29 |
-| 8. AI Washing Detector Integration | 0/TBD | Not started | - |
+| 8. AI Washing Detector Integration | 0/2 | Not started | - |
