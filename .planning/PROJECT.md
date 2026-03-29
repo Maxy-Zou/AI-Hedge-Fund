@@ -30,6 +30,8 @@ Produce compelling, realistic backtest results the moment any strategy signal is
 - ✓ Streamlit dashboard — equity curve, drawdown, monthly heatmap, sector exposure — Phase 6
 - ✓ PDF tearsheet — single-page factsheet with metrics and charts — Phase 7
 - ✓ CSV/JSON exports with cost assumption labels — Phase 7
+- ✓ AI Washing Detector integration — live score loading via shared PostgreSQL — Phase 8
+- ✓ End-to-end pipeline — signal → adapt → simulate → metrics → export — Phase 8
 
 ### Active
 - [ ] Vectorized backtesting engine — takes a signal DataFrame (date x ticker → score) and simulates a long/short portfolio
