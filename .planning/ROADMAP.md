@@ -66,7 +66,11 @@ Plans:
   2. Passing a signal DataFrame through the Signal Adapter produces a WeightFrame where all values are in [-1, +1] and rows with insufficient history are dropped
   3. A unit test verifies that a signal spike on date T produces zero weight on date T and nonzero weight on date T+1 (look-ahead bias guard)
   4. Invalid signal inputs (wrong columns, future-dated index, NaN-only rows) raise a descriptive validation error, not a silent failure
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Signal contracts (signal/types.py, signal/validator.py, SignalAdapterConfig in config.py) with TDD test scaffold (test_signal_types.py)
+- [ ] 03-02-PLAN.md — SignalAdapter implementation (signal/adapter.py) with TDD tests (test_signal_adapter.py) covering normalization, look-ahead bias guard, and mutation safety
 
 ### Phase 4: Cost Model and Portfolio Simulator
 **Goal**: A fully vectorized portfolio simulator produces daily returns and a trade log from a WeightFrame, with realistic short borrow and transaction costs built in
@@ -133,7 +137,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 |-------|----------------|--------|-----------|
 | 1. Universe and Sector Data | 3/3 | Complete   | 2026-03-28 |
 | 2. Price Data Pipeline | 4/4 | Complete   | 2026-03-29 |
-| 3. Signal Adapter and Integration Contract | 0/TBD | Not started | - |
+| 3. Signal Adapter and Integration Contract | 0/2 | Not started | - |
 | 4. Cost Model and Portfolio Simulator | 0/TBD | Not started | - |
 | 5. Risk Metrics Engine | 0/TBD | Not started | - |
 | 6. Streamlit Dashboard | 0/TBD | Not started | - |
