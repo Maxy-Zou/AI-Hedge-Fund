@@ -55,6 +55,7 @@ markers = [
 omit = [
     "src/fund_backtest/__main__.py",
     "src/fund_backtest/db/migrations/*",
+    "src/fund_backtest/dashboard/app.py",
 ]
 
 [tool.coverage.report]

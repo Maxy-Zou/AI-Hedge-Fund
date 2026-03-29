@@ -181,3 +181,167 @@ def test_refresh_error_handling_exits_code_1():
     assert "DB connection failed" in result.output, (
         f"expected error text in output: {result.output}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Tests for backtest export subgroup (Task 1 + 2 — Phase 07-02)
+# Note: matplotlib Agg backend is guarded in tearsheet.py itself, but we set
+# it here too as a belt-and-suspenders measure for the test process.
+# ---------------------------------------------------------------------------
+
+import matplotlib
+if matplotlib.get_backend() != "Agg":
+    matplotlib.use("Agg")
+
+
+def test_export_tearsheet_creates_pdf(tmp_path):
+    """backtest export --tearsheet writes tearsheet.pdf to output-dir."""
+    result = runner.invoke(app, ["backtest", "export", "--tearsheet", "--output-dir", str(tmp_path)])
+    assert result.exit_code == 0, f"exit code {result.exit_code}: {result.output}"
+    assert (tmp_path / "tearsheet.pdf").exists(), f"tearsheet.pdf missing; output: {result.output}"
+
+
+def test_export_csv_creates_three_files(tmp_path):
+    """backtest export --csv writes daily_returns.csv, positions.csv, trade_log.csv."""
+    result = runner.invoke(app, ["backtest", "export", "--csv", "--output-dir", str(tmp_path)])
+    assert result.exit_code == 0, f"exit code {result.exit_code}: {result.output}"
+    assert (tmp_path / "daily_returns.csv").exists(), "daily_returns.csv missing"
+    assert (tmp_path / "positions.csv").exists(), "positions.csv missing"
+    assert (tmp_path / "trade_log.csv").exists(), "trade_log.csv missing"
+
+
+def test_export_json_creates_metrics_file(tmp_path):
+    """backtest export --json writes metrics.json to output-dir."""
+    result = runner.invoke(app, ["backtest", "export", "--json", "--output-dir", str(tmp_path)])
+    assert result.exit_code == 0, f"exit code {result.exit_code}: {result.output}"
+    assert (tmp_path / "metrics.json").exists(), f"metrics.json missing; output: {result.output}"
+
+
+def test_export_all_creates_all_outputs(tmp_path):
+    """backtest export --all creates tearsheet.pdf + 3 CSVs + metrics.json."""
+    result = runner.invoke(app, ["backtest", "export", "--all", "--output-dir", str(tmp_path)])
+    assert result.exit_code == 0, f"exit code {result.exit_code}: {result.output}"
+    assert (tmp_path / "tearsheet.pdf").exists(), "tearsheet.pdf missing"
+    assert (tmp_path / "daily_returns.csv").exists(), "daily_returns.csv missing"
+    assert (tmp_path / "positions.csv").exists(), "positions.csv missing"
+    assert (tmp_path / "trade_log.csv").exists(), "trade_log.csv missing"
+    assert (tmp_path / "metrics.json").exists(), "metrics.json missing"
+
+
+def test_export_no_flags_exits_nonzero(tmp_path):
+    """backtest export without any flags exits with non-zero code."""
+    result = runner.invoke(app, ["backtest", "export", "--output-dir", str(tmp_path)])
+    assert result.exit_code != 0, f"expected non-zero exit, got {result.exit_code}: {result.output}"
+
+
+# ---------------------------------------------------------------------------
+# Tests for data commands — error paths and dry-run (Rule 2: missing coverage)
+# These mirror the pattern from universe command tests.
+# ---------------------------------------------------------------------------
+
+def test_data_download_dry_run_exits_zero():
+    """data download --dry-run exits 0 and mentions dry-run without touching DB."""
+    from fund_backtest.config import PriceSettings
+    with patch("fund_backtest.cli.load_app_settings"):
+        with patch("fund_backtest.cli.configure_logging"):
+            with patch("fund_backtest.cli.load_price_settings", return_value=PriceSettings()):
+                with patch("fund_backtest.cli.create_engine_from_settings"):
+                    with patch("fund_backtest.cli.get_session_factory") as mock_factory:
+                        mock_session = MagicMock()
+                        mock_session.__enter__ = MagicMock(return_value=mock_session)
+                        mock_session.__exit__ = MagicMock(return_value=False)
+                        mock_factory.return_value.return_value = mock_session
+                        with patch("fund_backtest.cli.PriceBuilder") as mock_cls:
+                            mock_instance = MagicMock()
+                            mock_instance.download.return_value = MagicMock(
+                                requested=0, successful=[], failed=[], bars_inserted=0
+                            )
+                            mock_cls.return_value = mock_instance
+                            result = runner.invoke(app, ["data", "download", "--dry-run"])
+    assert result.exit_code == 0, f"exit code {result.exit_code}: {result.output}"
+    assert "dry" in result.output.lower(), f"expected 'dry' in output: {result.output}"
+
+
+def test_data_download_error_exits_code_1():
+    """When PriceBuilder.download raises, data download exits code 1."""
+    with patch("fund_backtest.cli.load_app_settings"):
+        with patch("fund_backtest.cli.configure_logging"):
+            with patch("fund_backtest.cli.load_price_settings"):
+                with patch("fund_backtest.cli.create_engine_from_settings"):
+                    with patch("fund_backtest.cli.get_session_factory") as mock_factory:
+                        mock_session = MagicMock()
+                        mock_session.__enter__ = MagicMock(return_value=mock_session)
+                        mock_session.__exit__ = MagicMock(return_value=False)
+                        mock_factory.return_value.return_value = mock_session
+                        with patch("fund_backtest.cli.PriceBuilder") as mock_cls:
+                            mock_instance = MagicMock()
+                            mock_instance.download.side_effect = RuntimeError("fetch error")
+                            mock_cls.return_value = mock_instance
+                            result = runner.invoke(app, ["data", "download"])
+    assert result.exit_code == 1, f"expected exit 1, got {result.exit_code}: {result.output}"
+    assert "fetch error" in result.output
+
+
+def test_data_update_error_exits_code_1():
+    """When PriceBuilder.update raises, data update exits code 1."""
+    with patch("fund_backtest.cli.load_app_settings"):
+        with patch("fund_backtest.cli.configure_logging"):
+            with patch("fund_backtest.cli.load_price_settings"):
+                with patch("fund_backtest.cli.create_engine_from_settings"):
+                    with patch("fund_backtest.cli.get_session_factory") as mock_factory:
+                        mock_session = MagicMock()
+                        mock_session.__enter__ = MagicMock(return_value=mock_session)
+                        mock_session.__exit__ = MagicMock(return_value=False)
+                        mock_factory.return_value.return_value = mock_session
+                        with patch("fund_backtest.cli.PriceBuilder") as mock_cls:
+                            mock_instance = MagicMock()
+                            mock_instance.update.side_effect = RuntimeError("update error")
+                            mock_cls.return_value = mock_instance
+                            result = runner.invoke(app, ["data", "update"])
+    assert result.exit_code == 1, f"expected exit 1, got {result.exit_code}: {result.output}"
+    assert "update error" in result.output
+
+
+def test_data_coverage_error_exits_code_1():
+    """When DB query fails, data coverage exits code 1."""
+    with patch("fund_backtest.cli.load_app_settings"):
+        with patch("fund_backtest.cli.configure_logging"):
+            with patch("fund_backtest.cli.create_engine_from_settings"):
+                with patch("fund_backtest.cli.get_session_factory") as mock_factory:
+                    mock_factory.return_value.return_value.__enter__ = MagicMock(
+                        side_effect=RuntimeError("coverage error")
+                    )
+                    mock_factory.return_value.return_value.__exit__ = MagicMock(return_value=False)
+                    result = runner.invoke(app, ["data", "coverage"])
+    assert result.exit_code == 1, f"expected exit 1, got {result.exit_code}: {result.output}"
+    assert "coverage error" in result.output
+
+
+def test_status_with_latest_snapshot():
+    """universe status shows 'Last refreshed' row when snapshot exists."""
+    def make_ticker(t, sector):
+        m = MagicMock()
+        m.ticker = t
+        m.gics_sector = sector
+        return m
+
+    tickers = [make_ticker("ABC", "Information Technology")]
+    mock_snapshot = MagicMock()
+    mock_snapshot.snapshot_date = "2026-03-28"
+
+    with patch("fund_backtest.cli.load_app_settings"):
+        with patch("fund_backtest.cli.configure_logging"):
+            with patch("fund_backtest.cli.create_engine_from_settings"):
+                with patch("fund_backtest.cli.get_session_factory") as mock_factory:
+                    mock_session = MagicMock()
+                    mock_session.__enter__ = MagicMock(return_value=mock_session)
+                    mock_session.__exit__ = MagicMock(return_value=False)
+                    active_query = MagicMock()
+                    active_query.filter_by.return_value.all.return_value = tickers
+                    snapshot_query = MagicMock()
+                    snapshot_query.order_by.return_value.first.return_value = mock_snapshot
+                    mock_session.query.side_effect = [active_query, snapshot_query]
+                    mock_factory.return_value.return_value = mock_session
+                    result = runner.invoke(app, ["universe", "status"])
+    assert result.exit_code == 0, f"exit code {result.exit_code}: {result.output}"
+    assert "2026-03-28" in result.output

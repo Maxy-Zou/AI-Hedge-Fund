@@ -6,22 +6,26 @@ Commands:
     fund-backtest data download [--dry-run]
     fund-backtest data update
     fund-backtest data coverage
+    fund-backtest backtest export [--tearsheet] [--csv] [--json] [--all] [--output-dir DIR]
 """
 from __future__ import annotations
 
 from collections import Counter
+from pathlib import Path
 
 import structlog
 import typer
 from rich.console import Console
 from rich.table import Table
 
-from fund_backtest.config import load_app_settings, load_price_settings, load_universe_settings
+from fund_backtest.config import load_app_settings, load_cost_config, load_price_settings, load_universe_settings
+from fund_backtest.dashboard.demo_data import make_demo_bundle, make_demo_result
 from fund_backtest.db.models import PriceAnomalyORM, UniverseSnapshot, UniverseTicker
 from fund_backtest.db.session import create_engine_from_settings, get_session_factory
 from fund_backtest.logging import configure_logging
 from fund_backtest.price.builder import PriceBuilder
 from fund_backtest.price.repository import PriceBarRepository
+from fund_backtest.reports import ExportBuilder, TearsheetBuilder
 from fund_backtest.universe.builder import UniverseBuilder
 
 app = typer.Typer(
@@ -34,6 +38,9 @@ app.add_typer(universe_app, name="universe")
 
 data_app = typer.Typer(help="Manage OHLCV price data.")
 app.add_typer(data_app, name="data")
+
+backtest_app = typer.Typer(help="Backtest run and export commands.")
+app.add_typer(backtest_app, name="backtest")
 
 console = Console()
 log = structlog.get_logger(__name__)
@@ -250,6 +257,47 @@ def coverage() -> None:
         console.print(f"[red]Error fetching coverage: {exc}[/red]")
         log.exception("coverage_failed", error=str(exc))
         raise typer.Exit(code=1) from exc
+
+
+@backtest_app.command(name="export")
+def export(
+    tearsheet: bool = typer.Option(False, "--tearsheet", help="Generate PDF tearsheet"),
+    csv: bool = typer.Option(False, "--csv", help="Export CSV files (daily_returns, positions, trade_log)"),
+    json_export: bool = typer.Option(False, "--json", help="Export metrics JSON"),
+    all_exports: bool = typer.Option(False, "--all", help="Run all exports"),
+    output_dir: Path = typer.Option(Path("."), "--output-dir", help="Output directory"),
+) -> None:
+    """Export backtest results using demo data (Phase 7). Live data wired in Phase 8."""
+    _log = structlog.get_logger(__name__)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    result = make_demo_result()
+    bundle = make_demo_bundle(result)
+    cost_config = load_cost_config()
+
+    do_tearsheet = tearsheet or all_exports
+    do_csv = csv or all_exports
+    do_json = json_export or all_exports
+
+    if not any([do_tearsheet, do_csv, do_json]):
+        typer.echo("No export type specified. Use --tearsheet, --csv, --json, or --all.")
+        raise typer.Exit(code=1)
+
+    if do_tearsheet:
+        path = TearsheetBuilder().build(result, bundle, cost_config, output_dir / "tearsheet.pdf")
+        _log.info("tearsheet_exported", path=str(path))
+        typer.echo(f"Tearsheet: {path}")
+
+    if do_csv:
+        paths = ExportBuilder().export_csv(result, cost_config, output_dir)
+        for p in paths:
+            _log.info("csv_exported", path=str(p))
+            typer.echo(f"CSV: {p}")
+
+    if do_json:
+        path = ExportBuilder().export_json(bundle, cost_config, output_dir)
+        _log.info("json_exported", path=str(path))
+        typer.echo(f"JSON: {path}")
 
 
 if __name__ == "__main__":
