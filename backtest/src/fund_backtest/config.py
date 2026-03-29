@@ -1,4 +1,5 @@
 """Pydantic settings for fund-backtest package."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -23,7 +24,7 @@ class AppSettings(BaseSettings):
 class UniverseSettings(BaseModel):
     """Universe configuration — loaded from config/universe.yaml."""
 
-    market_cap_min_cents: int = 200_000_000_000   # $2B in cents
+    market_cap_min_cents: int = 200_000_000_000  # $2B in cents
     market_cap_max_cents: int = 1_000_000_000_000  # $10B in cents
     seed_url: str = "https://en.wikipedia.org/wiki/List_of_S%26P_400_companies"
     yfinance_delay_secs: float = 1.0
@@ -94,3 +95,44 @@ def load_price_settings(config_path: Path | None = None) -> PriceSettings:
         return PriceSettings(**data.get("price", {}))
     except Exception:
         return PriceSettings()
+
+
+class SignalAdapterConfig(BaseModel):
+    """Signal adapter configuration — controls normalization and coverage rules.
+
+    Fields:
+        min_coverage: Minimum number of tickers with non-NaN signals required
+                      for a date row to be included in the output WeightFrame.
+                      Rows with fewer non-NaN values are dropped before normalization.
+        gross_exposure_limit: Maximum absolute sum of portfolio weights allowed
+                              after normalization. Controls total leverage.
+                              1.0 = fully invested, 2.0 = 2x leverage.
+    """
+
+    min_coverage: int = 5
+    """Minimum non-NaN tickers per row. Rows below this threshold are dropped."""
+
+    gross_exposure_limit: float = 1.0
+    """Maximum absolute weight sum after normalization (e.g. 1.0 = no leverage)."""
+
+
+def load_signal_adapter_config(config_path: Path | None = None) -> SignalAdapterConfig:
+    """Load signal adapter config from YAML config or return defaults.
+
+    Args:
+        config_path: Optional path to a signal.yaml file.
+                     If None, returns defaults.
+
+    Returns:
+        SignalAdapterConfig with values from YAML or defaults.
+    """
+    if config_path is None:
+        return SignalAdapterConfig()
+    try:
+        import yaml
+
+        with config_path.open() as f:
+            data = yaml.safe_load(f)
+        return SignalAdapterConfig(**data.get("signal_adapter", {}))
+    except Exception:
+        return SignalAdapterConfig()
