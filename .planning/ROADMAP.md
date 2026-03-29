@@ -117,7 +117,7 @@ Plans:
 
 Plans:
 - [x] 06-01-PLAN.md — Scaffold: add streamlit+plotly deps, dashboard/ package, charts.py stubs, demo_data.py, RED test file
-- [ ] 06-02-PLAN.md — Implement charts.py: build_equity_drawdown_chart, build_monthly_heatmap, build_sector_exposure_chart (GREEN)
+- [x] 06-02-PLAN.md — Implement charts.py: build_equity_drawdown_chart, build_monthly_heatmap, build_sector_exposure_chart (GREEN)
 - [ ] 06-03-PLAN.md — app.py Streamlit entry point: KPI row, tabs layout, benchmark fetch, demo mode, checkpoint verification
 
 ### Phase 7: Tearsheet and Data Exports
@@ -153,6 +153,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 3. Signal Adapter and Integration Contract | 2/2 | Complete   | 2026-03-29 |
 | 4. Cost Model and Portfolio Simulator | 2/2 | Complete   | 2026-03-29 |
 | 5. Risk Metrics Engine | 2/2 | Complete   | 2026-03-29 |
-| 6. Streamlit Dashboard | 1/3 | In Progress|  |
+| 6. Streamlit Dashboard | 2/3 | In Progress|  |
 | 7. Tearsheet and Data Exports | 0/TBD | Not started | - |
 | 8. AI Washing Detector Integration | 0/TBD | Not started | - |
