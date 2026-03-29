@@ -9,10 +9,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Market Data
 
-- [ ] **DATA-01**: System downloads daily OHLCV price data via yfinance for all tickers in the mid-cap universe
-- [ ] **DATA-02**: System caches price data in PostgreSQL to avoid redundant API calls
+- [x] **DATA-01**: System downloads daily OHLCV price data via yfinance for all tickers in the mid-cap universe
+- [x] **DATA-02**: System caches price data in PostgreSQL to avoid redundant API calls
 - [ ] **DATA-03**: System performs incremental daily updates (append new bars, never overwrite historical)
-- [ ] **DATA-04**: System validates downloaded data (gap detection, daily return sanity check > +/-50%, missing ticker alerts)
+- [x] **DATA-04**: System validates downloaded data (gap detection, daily return sanity check > +/-50%, missing ticker alerts)
 - [x] **DATA-05**: System manages a universe of mid-cap tickers ($2B-$10B market cap) with refresh capability
 - [ ] **DATA-06**: System chunks yfinance downloads (~80 tickers/batch) with retry logic to handle rate limits
 - [x] **DATA-07**: System stores GICS sector classification for each ticker (required for sector exposure reporting)
@@ -97,10 +97,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | Phase 2 | Pending |
-| DATA-02 | Phase 2 | Pending |
+| DATA-01 | Phase 2 | Complete |
+| DATA-02 | Phase 2 | Complete |
 | DATA-03 | Phase 2 | Pending |
-| DATA-04 | Phase 2 | Pending |
+| DATA-04 | Phase 2 | Complete |
 | DATA-05 | Phase 1 | Complete |
 | DATA-06 | Phase 2 | Pending |
 | DATA-07 | Phase 1 | Complete |

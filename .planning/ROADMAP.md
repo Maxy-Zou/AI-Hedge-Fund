@@ -49,7 +49,13 @@ Plans:
   3. Any ticker with a single-day return exceeding ±50% is flagged in the log and excluded from downstream use until manually reviewed
   4. A coverage report shows how many of the requested tickers returned valid data; the pipeline alerts if coverage falls below 95%
   5. Downloads are chunked (~80 tickers per batch) with exponential backoff — no 429 errors cause a silent data gap
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [x] 02-01-PLAN.md — ORM models (PriceBarORM, PriceAnomalyORM), Alembic migration 002, price/types.py (PriceBar, PriceAnomalyRecord, DownloadSummary, CoverageReport), PriceSettings config, unit tests for cents conversion
+- [ ] 02-02-PLAN.md — price/downloader.py (chunked download, tenacity retry on YFRateLimitError) + price/validator.py (anomaly detection, gap detection, coverage) with unit tests
+- [ ] 02-03-PLAN.md — price/repository.py (PriceBarRepository: insert_bars ON CONFLICT DO NOTHING, get_last_dates, get_bars with per-bar anomaly exclusion) + price/builder.py (PriceBuilder: download and update orchestration)
+- [ ] 02-04-PLAN.md — CLI data subgroup (download, update, coverage commands) + integration tests against PostgreSQL testcontainer
 
 ### Phase 3: Signal Adapter and Integration Contract
 **Goal**: A typed, validated signal contract exists that any strategy module can conform to, and a Signal Adapter normalizes raw 0-100 scores into portfolio-ready weights
@@ -126,7 +132,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Universe and Sector Data | 3/3 | Complete   | 2026-03-28 |
-| 2. Price Data Pipeline | 0/TBD | Not started | - |
+| 2. Price Data Pipeline | 0/4 | Not started | - |
 | 3. Signal Adapter and Integration Contract | 0/TBD | Not started | - |
 | 4. Cost Model and Portfolio Simulator | 0/TBD | Not started | - |
 | 5. Risk Metrics Engine | 0/TBD | Not started | - |

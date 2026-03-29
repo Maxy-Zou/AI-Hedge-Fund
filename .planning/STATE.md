@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 01-universe-and-sector-data 01-03-PLAN.md
-last_updated: "2026-03-28T22:23:36.533Z"
-last_activity: 2026-03-28
+status: executing
+stopped_at: Completed 02-price-data-pipeline 02-01-PLAN.md
+last_updated: "2026-03-29T08:16:14.940Z"
+last_activity: 2026-03-29
 progress:
   total_phases: 8
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
+  total_plans: 7
+  completed_plans: 4
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-28)
 
 **Core value:** Produce compelling, realistic backtest results the moment any strategy signal is ready — so investor conversations can start immediately.
-**Current focus:** Phase 01 — universe-and-sector-data
+**Current focus:** Phase 02 — price-data-pipeline
 
 ## Current Position
 
-Phase: 2
-Plan: Not started
-Status: Phase complete — ready for verification
-Last activity: 2026-03-28
+Phase: 02 (price-data-pipeline) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
+Last activity: 2026-03-29
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -55,6 +55,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-universe-and-sector-data P01 | 5 | 2 tasks | 19 files |
 | Phase 01-universe-and-sector-data P02 | 5 | 2 tasks | 7 files |
 | Phase 01-universe-and-sector-data P03 | 7 | 2 tasks | 5 files |
+| Phase 02-price-data-pipeline P01 | 22 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,9 @@ Recent decisions affecting current work:
 - [Phase 01-universe-and-sector-data]: dry-run defers load_app_settings() until after early return — no DATABASE_URL required for preview
 - [Phase 01-universe-and-sector-data]: testcontainers URL uses psycopg2 by default; replaced with psycopg (v3) in db_engine fixture
 - [Phase 01-universe-and-sector-data]: Coverage omit: migrations/* and __main__.py excluded from pytest-cov; 92% actual coverage on testable code
+- [Phase 02-price-data-pipeline]: PriceBarORM is append-only: no TimestampMixin (no updated_at), created_at added directly
+- [Phase 02-price-data-pipeline]: price_to_cents uses round() not int() — prevents floating-point truncation (10.009*100=1000.9 -> 1001)
+- [Phase 02-price-data-pipeline]: PriceAnomalyRecord anomaly_type is Literal['return_spike_plus','return_spike_minus'] — closed set prevents drift
 
 ### Pending Todos
 
@@ -87,6 +91,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-28T22:19:19.099Z
-Stopped at: Completed 01-universe-and-sector-data 01-03-PLAN.md
+Last session: 2026-03-29T08:16:14.937Z
+Stopped at: Completed 02-price-data-pipeline 02-01-PLAN.md
 Resume file: None
