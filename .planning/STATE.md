@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 03-signal-adapter-and-integration-contract 03-01-PLAN.md
-last_updated: "2026-03-29T08:49:46.734Z"
+status: verifying
+stopped_at: Completed 03-signal-adapter-and-integration-contract 03-02-PLAN.md
+last_updated: "2026-03-29T08:54:01.176Z"
 last_activity: 2026-03-29
 progress:
   total_phases: 8
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 8
+  completed_plans: 9
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 Phase: 03 (signal-adapter-and-integration-contract) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-03-29
 
 Progress: [░░░░░░░░░░] 0%
@@ -60,6 +60,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02-price-data-pipeline P03 | 3 | 2 tasks | 2 files |
 | Phase 02-price-data-pipeline P04 | 4 | 2 tasks | 3 files |
 | Phase 03 P01 | 2 | 2 tasks | 5 files |
+| Phase 03 P02 | 5 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -92,6 +93,8 @@ Recent decisions affecting current work:
 - [Phase 03]: SignalFrame/WeightFrame are pd.DataFrame type aliases with docstring contracts; validate_signal_frame() enforces the contract at adapter boundary
 - [Phase 03]: All-NaN columns warn (do not raise) in validate_signal_frame(); adapter drops them downstream
 - [Phase 03]: SignalAdapterConfig min_coverage=5, gross_exposure_limit=1.0 — mirrors PriceSettings BaseModel pattern
+- [Phase 03]: shift(1) is the final step in SignalAdapter.adapt() — Phase 4 Portfolio Simulator must NOT apply an additional shift
+- [Phase 03]: Test fixture min_coverage override: 4-ticker fixture requires min_coverage=1 override in tests that isolate shift/weight behavior from coverage logic
 
 ### Pending Todos
 
@@ -105,6 +108,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29T08:49:46.732Z
-Stopped at: Completed 03-signal-adapter-and-integration-contract 03-01-PLAN.md
+Last session: 2026-03-29T08:54:01.173Z
+Stopped at: Completed 03-signal-adapter-and-integration-contract 03-02-PLAN.md
 Resume file: None

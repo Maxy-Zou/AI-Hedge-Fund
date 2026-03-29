@@ -19,11 +19,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Backtesting Engine
 
-- [ ] **BT-01**: Engine accepts a signal DataFrame (date x ticker -> score) and simulates a long/short portfolio
+- [x] **BT-01**: Engine accepts a signal DataFrame (date x ticker -> score) and simulates a long/short portfolio
 - [ ] **BT-02**: Engine supports short positions as a first-class operation
 - [ ] **BT-03**: Engine models transaction costs (slippage + commission, configurable bps)
 - [ ] **BT-04**: Engine models short borrow costs (configurable flat rate, default 50bps/yr)
-- [ ] **BT-05**: Engine enforces look-ahead bias prevention (signal shifted by 1 day before execution)
+- [x] **BT-05**: Engine enforces look-ahead bias prevention (signal shifted by 1 day before execution)
 - [ ] **BT-06**: Engine uses equal-weight position sizing across all signal-selected tickers
 - [ ] **BT-07**: Engine produces a daily returns series and a trade log as output
 
@@ -104,11 +104,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-05 | Phase 1 | Complete |
 | DATA-06 | Phase 2 | Complete |
 | DATA-07 | Phase 1 | Complete |
-| BT-01 | Phase 3 | Pending |
+| BT-01 | Phase 3 | Complete |
 | BT-02 | Phase 4 | Pending |
 | BT-03 | Phase 4 | Pending |
 | BT-04 | Phase 4 | Pending |
-| BT-05 | Phase 3 | Pending |
+| BT-05 | Phase 3 | Complete |
 | BT-06 | Phase 4 | Pending |
 | BT-07 | Phase 4 | Pending |
 | RISK-01 | Phase 5 | Pending |

@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Universe and Sector Data** - Build and maintain the mid-cap ticker universe with GICS sector classification (completed 2026-03-28)
 - [x] **Phase 2: Price Data Pipeline** - Download, cache, validate, and incrementally update daily OHLCV data for the full universe (completed 2026-03-29)
-- [ ] **Phase 3: Signal Adapter and Integration Contract** - Define the signal DataFrame contract and build the adapter that normalizes raw strategy scores into portfolio weights
+- [x] **Phase 3: Signal Adapter and Integration Contract** - Define the signal DataFrame contract and build the adapter that normalizes raw strategy scores into portfolio weights (completed 2026-03-29)
 - [ ] **Phase 4: Cost Model and Portfolio Simulator** - Implement fully vectorized long/short simulation with realistic transaction and borrow costs
 - [ ] **Phase 5: Risk Metrics Engine** - Compute the full institutional metric suite (Sharpe, Sortino, drawdown, benchmarks, rolling windows)
 - [ ] **Phase 6: Streamlit Dashboard** - Interactive investor-facing dashboard showing equity curves, drawdown, sector exposure, and monthly returns
@@ -70,7 +70,7 @@ Plans:
 
 Plans:
 - [x] 03-01-PLAN.md — Signal contracts (signal/types.py, signal/validator.py, SignalAdapterConfig in config.py) with TDD test scaffold (test_signal_types.py)
-- [ ] 03-02-PLAN.md — SignalAdapter implementation (signal/adapter.py) with TDD tests (test_signal_adapter.py) covering normalization, look-ahead bias guard, and mutation safety
+- [x] 03-02-PLAN.md — SignalAdapter implementation (signal/adapter.py) with TDD tests (test_signal_adapter.py) covering normalization, look-ahead bias guard, and mutation safety
 
 ### Phase 4: Cost Model and Portfolio Simulator
 **Goal**: A fully vectorized portfolio simulator produces daily returns and a trade log from a WeightFrame, with realistic short borrow and transaction costs built in
@@ -137,7 +137,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 |-------|----------------|--------|-----------|
 | 1. Universe and Sector Data | 3/3 | Complete   | 2026-03-28 |
 | 2. Price Data Pipeline | 4/4 | Complete   | 2026-03-29 |
-| 3. Signal Adapter and Integration Contract | 0/2 | Not started | - |
+| 3. Signal Adapter and Integration Contract | 2/2 | Complete   | 2026-03-29 |
 | 4. Cost Model and Portfolio Simulator | 0/TBD | Not started | - |
 | 5. Risk Metrics Engine | 0/TBD | Not started | - |
 | 6. Streamlit Dashboard | 0/TBD | Not started | - |
