@@ -29,10 +29,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Risk Metrics
 
-- [ ] **RISK-01**: System computes Sharpe ratio, Sortino ratio, max drawdown, and Calmar ratio
-- [ ] **RISK-02**: System computes hit rate, win/loss ratio, and portfolio turnover
-- [ ] **RISK-03**: System compares strategy returns against S&P 500 and Russell 2000 benchmarks
-- [ ] **RISK-04**: System computes rolling Sharpe and rolling drawdown over configurable windows
+- [x] **RISK-01**: System computes Sharpe ratio, Sortino ratio, max drawdown, and Calmar ratio
+- [x] **RISK-02**: System computes hit rate, win/loss ratio, and portfolio turnover
+- [x] **RISK-03**: System compares strategy returns against S&P 500 and Russell 2000 benchmarks
+- [x] **RISK-04**: System computes rolling Sharpe and rolling drawdown over configurable windows
 
 ### Reporting
 
@@ -111,10 +111,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BT-05 | Phase 3 | Complete |
 | BT-06 | Phase 4 | Complete |
 | BT-07 | Phase 4 | Complete |
-| RISK-01 | Phase 5 | Pending |
-| RISK-02 | Phase 5 | Pending |
-| RISK-03 | Phase 5 | Pending |
-| RISK-04 | Phase 5 | Pending |
+| RISK-01 | Phase 5 | Complete |
+| RISK-02 | Phase 5 | Complete |
+| RISK-03 | Phase 5 | Complete |
+| RISK-04 | Phase 5 | Complete |
 | RPT-01 | Phase 6 | Pending |
 | RPT-02 | Phase 6 | Pending |
 | RPT-03 | Phase 6 | Pending |

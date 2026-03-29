@@ -100,7 +100,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Type contracts (MetricsConfig, MetricsBundle) and TDD scaffolds (RED state)
+- [x] 05-01-PLAN.md — Type contracts (MetricsConfig, MetricsBundle) and TDD scaffolds (RED state)
 - [ ] 05-02-PLAN.md — MetricsEngine implementation (GREEN phase)
 
 ### Phase 6: Streamlit Dashboard

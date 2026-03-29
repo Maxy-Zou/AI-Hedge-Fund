@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 04-cost-model-and-portfolio-simulator 04-02-PLAN.md
-last_updated: "2026-03-29T09:21:35.432Z"
+status: executing
+stopped_at: Completed 05-risk-metrics-engine 05-01-PLAN.md
+last_updated: "2026-03-29T09:38:54.608Z"
 last_activity: 2026-03-29
 progress:
   total_phases: 8
   completed_phases: 4
-  total_plans: 11
-  completed_plans: 11
+  total_plans: 13
+  completed_plans: 12
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-28)
 
 **Core value:** Produce compelling, realistic backtest results the moment any strategy signal is ready — so investor conversations can start immediately.
-**Current focus:** Phase 04 — cost-model-and-portfolio-simulator
+**Current focus:** Phase 05 — risk-metrics-engine
 
 ## Current Position
 
-Phase: 5
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 05 (risk-metrics-engine) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-03-29
 
 Progress: [░░░░░░░░░░] 0%
@@ -63,6 +63,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03 P02 | 5 | 2 tasks | 2 files |
 | Phase 04-cost-model-and-portfolio-simulator P01 | 316 | 2 tasks | 5 files |
 | Phase 04-cost-model-and-portfolio-simulator P02 | 8 | 2 tasks | 2 files |
+| Phase 05-risk-metrics-engine P01 | 5min | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -101,6 +102,9 @@ Recent decisions affecting current work:
 - [Phase 04-cost-model-and-portfolio-simulator]: load_cost_config() reads from 'cost' YAML key, consistent with load_signal_adapter_config() pattern
 - [Phase 04-cost-model-and-portfolio-simulator]: future_stack=True does not drop NaN in pandas 2.x — must call .dropna() explicitly after stack()
 - [Phase 04-cost-model-and-portfolio-simulator]: Entry trades captured by fillna(0.0) before diff() — weight_before=0 for first non-NaN position
+- [Phase 05-risk-metrics-engine]: arbitrary_types_allowed=True in MetricsBundle model_config for pd.Series fields (mirrors PortfolioResult pattern)
+- [Phase 05-risk-metrics-engine]: max_drawdown stored as negative float; periods=252 constant enforced via _TRADING_DAYS_PER_YEAR to avoid 20% Sharpe inflation from qs default 365
+- [Phase 05-risk-metrics-engine]: alpha=0.0 and beta=0.0 default when benchmark=None
 
 ### Pending Todos
 
@@ -114,6 +118,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29T09:18:43.381Z
-Stopped at: Completed 04-cost-model-and-portfolio-simulator 04-02-PLAN.md
+Last session: 2026-03-29T09:38:54.605Z
+Stopped at: Completed 05-risk-metrics-engine 05-01-PLAN.md
 Resume file: None
