@@ -17,8 +17,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import pytest
-from fund_backtest.metrics.engine import MetricsEngine  # noqa: F401 — RED: does not exist yet
 
+from fund_backtest.metrics.engine import MetricsEngine  # noqa: F401 — RED: does not exist yet
 from fund_backtest.simulator.types import PortfolioResult
 
 # ---------------------------------------------------------------------------
