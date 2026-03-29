@@ -82,7 +82,11 @@ Plans:
   3. Each trade in the log shows slippage and commission charges at the configured basis points — gross and net returns are reported separately
   4. Running the simulator on synthetic data where all positions are fully known produces returns that match a hand-calculated reference to within floating-point tolerance
   5. All cost parameters (slippage, commission, borrow rate) live in a frozen `CostConfig` object — no hardcoded values exist in the simulator
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Type contracts (CostConfig, PortfolioResult) and TDD scaffolds (RED state)
+- [ ] 04-02-PLAN.md — PortfolioSimulator engine implementation (GREEN phase)
 
 ### Phase 5: Risk Metrics Engine
 **Goal**: A MetricsBundle containing the full institutional metric suite can be computed from any PortfolioResult, including benchmark comparison and rolling statistics
@@ -138,7 +142,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 1. Universe and Sector Data | 3/3 | Complete   | 2026-03-28 |
 | 2. Price Data Pipeline | 4/4 | Complete   | 2026-03-29 |
 | 3. Signal Adapter and Integration Contract | 2/2 | Complete   | 2026-03-29 |
-| 4. Cost Model and Portfolio Simulator | 0/TBD | Not started | - |
+| 4. Cost Model and Portfolio Simulator | 0/2 | Not started | - |
 | 5. Risk Metrics Engine | 0/TBD | Not started | - |
 | 6. Streamlit Dashboard | 0/TBD | Not started | - |
 | 7. Tearsheet and Data Exports | 0/TBD | Not started | - |
