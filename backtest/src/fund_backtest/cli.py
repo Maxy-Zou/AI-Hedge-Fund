@@ -6,6 +6,7 @@ Commands:
     fund-backtest data download [--dry-run]
     fund-backtest data update
     fund-backtest data coverage
+    fund-backtest backtest run --signal ai-washing
     fund-backtest backtest export [--tearsheet] [--csv] [--json] [--all] [--output-dir DIR]
 """
 from __future__ import annotations
@@ -13,6 +14,7 @@ from __future__ import annotations
 from collections import Counter
 from pathlib import Path
 
+import pandas as pd
 import structlog
 import typer
 from rich.console import Console
@@ -23,9 +25,13 @@ from fund_backtest.dashboard.demo_data import make_demo_bundle, make_demo_result
 from fund_backtest.db.models import PriceAnomalyORM, UniverseSnapshot, UniverseTicker
 from fund_backtest.db.session import create_engine_from_settings, get_session_factory
 from fund_backtest.logging import configure_logging
+from fund_backtest.metrics.engine import MetricsEngine
 from fund_backtest.price.builder import PriceBuilder
 from fund_backtest.price.repository import PriceBarRepository
 from fund_backtest.reports import ExportBuilder, TearsheetBuilder
+from fund_backtest.signal.adapter import SignalAdapter
+from fund_backtest.signal.loaders import AiWashingLoader, SignalLoadError
+from fund_backtest.simulator.engine import PortfolioSimulator
 from fund_backtest.universe.builder import UniverseBuilder
 
 app = typer.Typer(
@@ -256,6 +262,83 @@ def coverage() -> None:
     except Exception as exc:
         console.print(f"[red]Error fetching coverage: {exc}[/red]")
         log.exception("coverage_failed", error=str(exc))
+        raise typer.Exit(code=1) from exc
+
+
+@backtest_app.command(name="run")
+def run(
+    signal: str = typer.Option(..., "--signal", help="Signal source (e.g. 'ai-washing')"),
+    output_dir: Path = typer.Option(Path("."), "--output-dir", help="Output directory for exports"),
+    export_all: bool = typer.Option(False, "--export-all", help="Generate all exports after run"),
+) -> None:
+    """Run full end-to-end backtest from signal load through metrics computation.
+
+    Loads signal data from the configured source, adapts scores to portfolio weights,
+    runs the portfolio simulator, and computes risk metrics. Exits 1 on any pipeline failure.
+    """
+    # Validate signal name early — before loading settings (avoids DB config requirement)
+    if signal != "ai-washing":
+        console.print(f"[red]Unknown signal source: '{signal}'. Supported: 'ai-washing'[/red]")
+        raise typer.Exit(code=1)
+
+    settings = load_app_settings()
+    configure_logging(settings.log_level)
+    _log = structlog.get_logger(__name__)
+
+    try:
+        engine = create_engine_from_settings(settings)
+        session_factory = get_session_factory(engine)
+        with session_factory() as session:
+            # Stage 1: Load signal
+            loader = AiWashingLoader(session)
+            signal_frame = loader.load()
+            _log.info("signal_loaded", n_dates=len(signal_frame), n_tickers=len(signal_frame.columns))
+
+            # Stage 2: Load price data for signal tickers and date range
+            repo = PriceBarRepository(session)
+            tickers = list(signal_frame.columns)
+            start = signal_frame.index.min().date()
+            end = signal_frame.index.max().date()
+            bars = repo.get_bars(tickers=tickers, start_date=start, end_date=end)
+            records = [
+                {"date": b.bar_date, "ticker": b.ticker, "close": b.close_cents / 100}
+                for b in bars
+            ]
+            price_df = pd.DataFrame(records)
+            price_frame = price_df.pivot_table(index="date", columns="ticker", values="close")
+            price_frame.index = pd.DatetimeIndex(pd.to_datetime(price_frame.index))
+            price_frame.columns.name = None
+
+            # Stage 3: Adapt signal to weights
+            weight_frame = SignalAdapter().adapt(signal_frame)
+
+            # Stage 4: Simulate portfolio
+            portfolio_result = PortfolioSimulator().simulate(weight_frame, price_frame)
+            _log.info("simulation_complete", n_trading_days=len(portfolio_result.net_returns))
+
+            # Stage 5: Compute risk metrics
+            bundle = MetricsEngine().compute(portfolio_result)
+            _log.info("metrics_complete", sharpe=bundle.sharpe, cagr=bundle.cagr)
+
+        # Stage 6 (optional): Export
+        if export_all:
+            output_dir.mkdir(parents=True, exist_ok=True)
+            cost_cfg = load_cost_config()
+            ExportBuilder().export_csv(portfolio_result, cost_cfg, output_dir)
+            ExportBuilder().export_json(bundle, cost_cfg, output_dir)
+            console.print(f"[green]Exports written to {output_dir}[/green]")
+
+        console.print(
+            f"[green]Pipeline complete — Sharpe: {bundle.sharpe:.2f}, CAGR: {bundle.cagr:.2%}[/green]"
+        )
+
+    except SignalLoadError as exc:
+        console.print(f"[red]Signal unavailable: {exc}[/red]")
+        _log.error("signal_load_failed", error=str(exc))
+        raise typer.Exit(code=1) from exc
+    except Exception as exc:
+        console.print(f"[red]Pipeline error: {exc}[/red]")
+        _log.exception("pipeline_failed", error=str(exc))
         raise typer.Exit(code=1) from exc
 
 

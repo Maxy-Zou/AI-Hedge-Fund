@@ -352,6 +352,7 @@ def test_status_with_latest_snapshot():
 # ---------------------------------------------------------------------------
 
 import numpy as np
+import pandas as pd
 from datetime import date as _date
 
 
