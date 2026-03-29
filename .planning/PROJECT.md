@@ -28,6 +28,8 @@ Produce compelling, realistic backtest results the moment any strategy signal is
 - ✓ Benchmark comparison with alpha/beta — Phase 5
 - ✓ Rolling Sharpe + rolling drawdown at configurable windows — Phase 5
 - ✓ Streamlit dashboard — equity curve, drawdown, monthly heatmap, sector exposure — Phase 6
+- ✓ PDF tearsheet — single-page factsheet with metrics and charts — Phase 7
+- ✓ CSV/JSON exports with cost assumption labels — Phase 7
 
 ### Active
 - [ ] Vectorized backtesting engine — takes a signal DataFrame (date x ticker → score) and simulates a long/short portfolio
