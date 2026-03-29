@@ -54,7 +54,7 @@ Plans:
 Plans:
 - [x] 02-01-PLAN.md — ORM models (PriceBarORM, PriceAnomalyORM), Alembic migration 002, price/types.py (PriceBar, PriceAnomalyRecord, DownloadSummary, CoverageReport), PriceSettings config, unit tests for cents conversion
 - [x] 02-02-PLAN.md — price/downloader.py (chunked download, tenacity retry on YFRateLimitError) + price/validator.py (anomaly detection, gap detection, coverage) with unit tests
-- [ ] 02-03-PLAN.md — price/repository.py (PriceBarRepository: insert_bars ON CONFLICT DO NOTHING, get_last_dates, get_bars with per-bar anomaly exclusion) + price/builder.py (PriceBuilder: download and update orchestration)
+- [x] 02-03-PLAN.md — price/repository.py (PriceBarRepository: insert_bars ON CONFLICT DO NOTHING, get_last_dates, get_bars with per-bar anomaly exclusion) + price/builder.py (PriceBuilder: download and update orchestration)
 - [ ] 02-04-PLAN.md — CLI data subgroup (download, update, coverage commands) + integration tests against PostgreSQL testcontainer
 
 ### Phase 3: Signal Adapter and Integration Contract
