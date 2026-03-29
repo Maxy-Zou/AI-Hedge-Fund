@@ -18,6 +18,8 @@ Produce compelling, realistic backtest results the moment any strategy signal is
 - ✓ Data caching and incremental updates — append-only PostgreSQL cache — Phase 2
 - ✓ Data validation — ±50% return anomalies, gap detection, coverage alerting — Phase 2
 - ✓ Chunked downloads with retry — 80-ticker batches, tenacity exponential backoff — Phase 2
+- ✓ Signal contract — typed SignalFrame/WeightFrame with validation — Phase 3
+- ✓ Look-ahead bias prevention — shift(1) in Signal Adapter, not simulator — Phase 3
 
 ### Active
 - [ ] Vectorized backtesting engine — takes a signal DataFrame (date x ticker → score) and simulates a long/short portfolio
@@ -85,4 +87,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-29 after Phase 2 completion*
+*Last updated: 2026-03-29 after Phase 3 completion*
