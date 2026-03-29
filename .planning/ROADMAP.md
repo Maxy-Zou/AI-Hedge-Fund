@@ -97,7 +97,11 @@ Plans:
   2. Benchmark comparison runs against SPY and Russell 2000; alpha and beta are included in the MetricsBundle
   3. Rolling Sharpe and rolling drawdown are available at configurable window sizes (default 252 trading days)
   4. All metrics can be computed from synthetic test data without any database or network access
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Type contracts (MetricsConfig, MetricsBundle) and TDD scaffolds (RED state)
+- [ ] 05-02-PLAN.md — MetricsEngine implementation (GREEN phase)
 
 ### Phase 6: Streamlit Dashboard
 **Goal**: An interactive investor-facing dashboard renders the full backtest story — equity curve, drawdown, monthly returns, and sector exposure — from a completed MetricsBundle and PortfolioResult
@@ -143,7 +147,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 2. Price Data Pipeline | 4/4 | Complete   | 2026-03-29 |
 | 3. Signal Adapter and Integration Contract | 2/2 | Complete   | 2026-03-29 |
 | 4. Cost Model and Portfolio Simulator | 2/2 | Complete   | 2026-03-29 |
-| 5. Risk Metrics Engine | 0/TBD | Not started | - |
+| 5. Risk Metrics Engine | 0/2 | Not started | - |
 | 6. Streamlit Dashboard | 0/TBD | Not started | - |
 | 7. Tearsheet and Data Exports | 0/TBD | Not started | - |
 | 8. AI Washing Detector Integration | 0/TBD | Not started | - |
