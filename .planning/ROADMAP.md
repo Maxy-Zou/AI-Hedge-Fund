@@ -69,7 +69,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Signal contracts (signal/types.py, signal/validator.py, SignalAdapterConfig in config.py) with TDD test scaffold (test_signal_types.py)
+- [x] 03-01-PLAN.md — Signal contracts (signal/types.py, signal/validator.py, SignalAdapterConfig in config.py) with TDD test scaffold (test_signal_types.py)
 - [ ] 03-02-PLAN.md — SignalAdapter implementation (signal/adapter.py) with TDD tests (test_signal_adapter.py) covering normalization, look-ahead bias guard, and mutation safety
 
 ### Phase 4: Cost Model and Portfolio Simulator

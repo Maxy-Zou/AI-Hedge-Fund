@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 02-price-data-pipeline 02-04-PLAN.md
-last_updated: "2026-03-29T08:36:47.724Z"
+status: executing
+stopped_at: Completed 03-signal-adapter-and-integration-contract 03-01-PLAN.md
+last_updated: "2026-03-29T08:49:46.734Z"
 last_activity: 2026-03-29
 progress:
   total_phases: 8
   completed_phases: 2
-  total_plans: 7
-  completed_plans: 7
+  total_plans: 9
+  completed_plans: 8
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-28)
 
 **Core value:** Produce compelling, realistic backtest results the moment any strategy signal is ready — so investor conversations can start immediately.
-**Current focus:** Phase 02 — price-data-pipeline
+**Current focus:** Phase 03 — signal-adapter-and-integration-contract
 
 ## Current Position
 
-Phase: 3
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 03 (signal-adapter-and-integration-contract) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-03-29
 
 Progress: [░░░░░░░░░░] 0%
@@ -59,6 +59,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02-price-data-pipeline P02 | 3 | 2 tasks | 4 files |
 | Phase 02-price-data-pipeline P03 | 3 | 2 tasks | 2 files |
 | Phase 02-price-data-pipeline P04 | 4 | 2 tasks | 3 files |
+| Phase 03 P01 | 2 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -88,6 +89,9 @@ Recent decisions affecting current work:
 - [Phase 02-price-data-pipeline]: PriceBuilder.update() groups tickers by start_date before download_in_chunks() to minimise API calls on daily cadence
 - [Phase 02-price-data-pipeline]: RETURNING clause for pg_insert rowcount: use .returning(id) + len(result.all()); psycopg3 returns -1 for ON CONFLICT DO NOTHING without RETURNING
 - [Phase 02-price-data-pipeline]: autouse DELETE fixture for integration test isolation: compensates for explicit session.commit() inside repository methods preventing conftest rollback cleanup
+- [Phase 03]: SignalFrame/WeightFrame are pd.DataFrame type aliases with docstring contracts; validate_signal_frame() enforces the contract at adapter boundary
+- [Phase 03]: All-NaN columns warn (do not raise) in validate_signal_frame(); adapter drops them downstream
+- [Phase 03]: SignalAdapterConfig min_coverage=5, gross_exposure_limit=1.0 — mirrors PriceSettings BaseModel pattern
 
 ### Pending Todos
 
@@ -101,6 +105,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29T08:32:36.798Z
-Stopped at: Completed 02-price-data-pipeline 02-04-PLAN.md
+Last session: 2026-03-29T08:49:46.732Z
+Stopped at: Completed 03-signal-adapter-and-integration-contract 03-01-PLAN.md
 Resume file: None
