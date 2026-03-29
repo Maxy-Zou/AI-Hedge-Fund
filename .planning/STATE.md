@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 07-tearsheet-and-data-exports 07-02-PLAN.md
-last_updated: "2026-03-29T18:56:41.076Z"
+status: executing
+stopped_at: Completed 08-ai-washing-detector-integration 08-01-PLAN.md
+last_updated: "2026-03-29T19:26:14.976Z"
 last_activity: 2026-03-29
 progress:
   total_phases: 8
   completed_phases: 7
-  total_plans: 18
-  completed_plans: 18
+  total_plans: 20
+  completed_plans: 19
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-28)
 
 **Core value:** Produce compelling, realistic backtest results the moment any strategy signal is ready — so investor conversations can start immediately.
-**Current focus:** Phase 07 — tearsheet-and-data-exports
+**Current focus:** Phase 08 — ai-washing-detector-integration
 
 ## Current Position
 
-Phase: 8
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 08 (ai-washing-detector-integration) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-03-29
 
 Progress: [░░░░░░░░░░] 0%
@@ -70,6 +70,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 06-streamlit-dashboard P03 | 1min | 2 tasks | 1 files |
 | Phase 07-tearsheet-and-data-exports P01 | 3min | 2 tasks | 5 files |
 | Phase 07 P02 | 13min | 2 tasks | 3 files |
+| Phase 08-ai-washing-detector-integration P01 | 1min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -123,6 +124,8 @@ Recent decisions affecting current work:
 - [Phase 07-tearsheet-and-data-exports]: Rolling Series fields excluded from JSON by explicit key enumeration (not model_dump) for type safety
 - [Phase 07-tearsheet-and-data-exports]: export command placed directly on backtest_app (not nested sub-typer) — Typer sub-typer requires extra command level incompatible with test invocation pattern
 - [Phase 07-tearsheet-and-data-exports]: dashboard/app.py added to coverage omit — Streamlit UI cannot be unit-tested; 5 data-command error-path tests added to reach 80% coverage
+- [Phase 08-ai-washing-detector-integration]: DB-as-integration-boundary: AiWashingLoader uses sqlalchemy.text() raw SQL — no cross-package imports from ai_washer; database is the only coupling point
+- [Phase 08-ai-washing-detector-integration]: pivot_table(aggfunc='last') deduplication in AiWashingLoader — most recently inserted row wins when multiple scores share (ticker, date)
 
 ### Pending Todos
 
@@ -136,6 +139,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29T18:52:29.857Z
-Stopped at: Completed 07-tearsheet-and-data-exports 07-02-PLAN.md
+Last session: 2026-03-29T19:26:14.973Z
+Stopped at: Completed 08-ai-washing-detector-integration 08-01-PLAN.md
 Resume file: None

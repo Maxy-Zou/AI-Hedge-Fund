@@ -146,7 +146,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 08-01-PLAN.md — AiWashingLoader: signal/loaders/ package, raw SQL query, SignalLoadError, TDD unit tests (INT-02)
+- [x] 08-01-PLAN.md — AiWashingLoader: signal/loaders/ package, raw SQL query, SignalLoadError, TDD unit tests (INT-02)
 - [ ] 08-02-PLAN.md — CLI backtest run command + integration test against PostgreSQL testcontainer (INT-03)
 
 ## Progress
@@ -163,4 +163,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 5. Risk Metrics Engine | 2/2 | Complete   | 2026-03-29 |
 | 6. Streamlit Dashboard | 3/3 | Complete   | 2026-03-29 |
 | 7. Tearsheet and Data Exports | 2/2 | Complete   | 2026-03-29 |
-| 8. AI Washing Detector Integration | 0/2 | Not started | - |
+| 8. AI Washing Detector Integration | 1/2 | In Progress|  |
