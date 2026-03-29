@@ -7,6 +7,8 @@ from pathlib import Path
 from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from fund_backtest.simulator.types import CostConfig
+
 
 class AppSettings(BaseSettings):
     """Application settings loaded from environment variables."""
@@ -136,3 +138,25 @@ def load_signal_adapter_config(config_path: Path | None = None) -> SignalAdapter
         return SignalAdapterConfig(**data.get("signal_adapter", {}))
     except Exception:
         return SignalAdapterConfig()
+
+
+def load_cost_config(config_path: Path | None = None) -> CostConfig:
+    """Load cost config from YAML config or return defaults.
+
+    Args:
+        config_path: Optional path to a cost.yaml file.
+                     If None, returns defaults.
+
+    Returns:
+        CostConfig with values from YAML or defaults.
+    """
+    if config_path is None:
+        return CostConfig()
+    try:
+        import yaml
+
+        with config_path.open() as f:
+            data = yaml.safe_load(f)
+        return CostConfig(**data.get("cost", {}))
+    except Exception:
+        return CostConfig()
