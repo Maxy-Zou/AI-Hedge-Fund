@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 07-tearsheet-and-data-exports 07-01-PLAN.md
-last_updated: "2026-03-29T18:37:10.807Z"
+status: verifying
+stopped_at: Completed 07-tearsheet-and-data-exports 07-02-PLAN.md
+last_updated: "2026-03-29T18:52:29.870Z"
 last_activity: 2026-03-29
 progress:
   total_phases: 8
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 18
-  completed_plans: 17
+  completed_plans: 18
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 Phase: 07 (tearsheet-and-data-exports) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-03-29
 
 Progress: [░░░░░░░░░░] 0%
@@ -69,6 +69,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 06-streamlit-dashboard P02 | 15min | 2 tasks | 1 files |
 | Phase 06-streamlit-dashboard P03 | 1min | 2 tasks | 1 files |
 | Phase 07-tearsheet-and-data-exports P01 | 3min | 2 tasks | 5 files |
+| Phase 07 P02 | 13min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -120,6 +121,8 @@ Recent decisions affecting current work:
 - [Phase 06-streamlit-dashboard]: Benchmark fetch (SPY/IWM) gracefully degrades to empty dict — equity chart renders strategy-only on yfinance failure
 - [Phase 07-tearsheet-and-data-exports]: Matplotlib Agg backend guarded with get_backend() \!= 'Agg' check before use() call to avoid double-switching when already set
 - [Phase 07-tearsheet-and-data-exports]: Rolling Series fields excluded from JSON by explicit key enumeration (not model_dump) for type safety
+- [Phase 07-tearsheet-and-data-exports]: export command placed directly on backtest_app (not nested sub-typer) — Typer sub-typer requires extra command level incompatible with test invocation pattern
+- [Phase 07-tearsheet-and-data-exports]: dashboard/app.py added to coverage omit — Streamlit UI cannot be unit-tested; 5 data-command error-path tests added to reach 80% coverage
 
 ### Pending Todos
 
@@ -133,6 +136,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29T18:37:10.804Z
-Stopped at: Completed 07-tearsheet-and-data-exports 07-01-PLAN.md
+Last session: 2026-03-29T18:52:29.857Z
+Stopped at: Completed 07-tearsheet-and-data-exports 07-02-PLAN.md
 Resume file: None

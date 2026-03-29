@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: Cost Model and Portfolio Simulator** - Implement fully vectorized long/short simulation with realistic transaction and borrow costs (completed 2026-03-29)
 - [x] **Phase 5: Risk Metrics Engine** - Compute the full institutional metric suite (Sharpe, Sortino, drawdown, benchmarks, rolling windows) (completed 2026-03-29)
 - [x] **Phase 6: Streamlit Dashboard** - Interactive investor-facing dashboard showing equity curves, drawdown, sector exposure, and monthly returns (completed 2026-03-29)
-- [ ] **Phase 7: Tearsheet and Data Exports** - PDF tearsheet, CSV/JSON exports, and explicit cost labeling on all outputs
+- [x] **Phase 7: Tearsheet and Data Exports** - PDF tearsheet, CSV/JSON exports, and explicit cost labeling on all outputs (completed 2026-03-29)
 - [ ] **Phase 8: AI Washing Detector Integration** - Wire live AI Washing Risk Scores into the backtester and validate the end-to-end pipeline
 
 ## Phase Details
@@ -133,7 +133,7 @@ Plans:
 
 Plans:
 - [x] 07-01-PLAN.md — reports/ module: TearsheetBuilder (matplotlib PDF) and ExportBuilder (CSV/JSON) with TDD tests
-- [ ] 07-02-PLAN.md — CLI wiring: backtest export subgroup (--tearsheet, --csv, --json, --all) + CLI tests
+- [x] 07-02-PLAN.md — CLI wiring: backtest export subgroup (--tearsheet, --csv, --json, --all) + CLI tests
 
 ### Phase 8: AI Washing Detector Integration
 **Goal**: Live AI Washing Risk Scores from the Detector's PostgreSQL output can be loaded, adapted to the SignalFrame contract, and run through the full backtesting pipeline without manual steps
@@ -158,5 +158,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 4. Cost Model and Portfolio Simulator | 2/2 | Complete   | 2026-03-29 |
 | 5. Risk Metrics Engine | 2/2 | Complete   | 2026-03-29 |
 | 6. Streamlit Dashboard | 3/3 | Complete   | 2026-03-29 |
-| 7. Tearsheet and Data Exports | 1/2 | In Progress|  |
+| 7. Tearsheet and Data Exports | 2/2 | Complete   | 2026-03-29 |
 | 8. AI Washing Detector Integration | 0/TBD | Not started | - |
