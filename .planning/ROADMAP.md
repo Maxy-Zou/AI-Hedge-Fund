@@ -86,7 +86,7 @@ Plans:
 
 Plans:
 - [x] 04-01-PLAN.md — Type contracts (CostConfig, PortfolioResult) and TDD scaffolds (RED state)
-- [ ] 04-02-PLAN.md — PortfolioSimulator engine implementation (GREEN phase)
+- [x] 04-02-PLAN.md — PortfolioSimulator engine implementation (GREEN phase)
 
 ### Phase 5: Risk Metrics Engine
 **Goal**: A MetricsBundle containing the full institutional metric suite can be computed from any PortfolioResult, including benchmark comparison and rolling statistics
@@ -142,7 +142,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 1. Universe and Sector Data | 3/3 | Complete   | 2026-03-28 |
 | 2. Price Data Pipeline | 4/4 | Complete   | 2026-03-29 |
 | 3. Signal Adapter and Integration Contract | 2/2 | Complete   | 2026-03-29 |
-| 4. Cost Model and Portfolio Simulator | 1/2 | In Progress|  |
+| 4. Cost Model and Portfolio Simulator | 2/2 | Complete   | 2026-03-29 |
 | 5. Risk Metrics Engine | 0/TBD | Not started | - |
 | 6. Streamlit Dashboard | 0/TBD | Not started | - |
 | 7. Tearsheet and Data Exports | 0/TBD | Not started | - |
