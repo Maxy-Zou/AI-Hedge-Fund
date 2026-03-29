@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Signal Adapter and Integration Contract** - Define the signal DataFrame contract and build the adapter that normalizes raw strategy scores into portfolio weights (completed 2026-03-29)
 - [x] **Phase 4: Cost Model and Portfolio Simulator** - Implement fully vectorized long/short simulation with realistic transaction and borrow costs (completed 2026-03-29)
 - [x] **Phase 5: Risk Metrics Engine** - Compute the full institutional metric suite (Sharpe, Sortino, drawdown, benchmarks, rolling windows) (completed 2026-03-29)
-- [ ] **Phase 6: Streamlit Dashboard** - Interactive investor-facing dashboard showing equity curves, drawdown, sector exposure, and monthly returns
+- [x] **Phase 6: Streamlit Dashboard** - Interactive investor-facing dashboard showing equity curves, drawdown, sector exposure, and monthly returns (completed 2026-03-29)
 - [ ] **Phase 7: Tearsheet and Data Exports** - PDF tearsheet, CSV/JSON exports, and explicit cost labeling on all outputs
 - [ ] **Phase 8: AI Washing Detector Integration** - Wire live AI Washing Risk Scores into the backtester and validate the end-to-end pipeline
 
@@ -118,7 +118,7 @@ Plans:
 Plans:
 - [x] 06-01-PLAN.md — Scaffold: add streamlit+plotly deps, dashboard/ package, charts.py stubs, demo_data.py, RED test file
 - [x] 06-02-PLAN.md — Implement charts.py: build_equity_drawdown_chart, build_monthly_heatmap, build_sector_exposure_chart (GREEN)
-- [ ] 06-03-PLAN.md — app.py Streamlit entry point: KPI row, tabs layout, benchmark fetch, demo mode, checkpoint verification
+- [x] 06-03-PLAN.md — app.py Streamlit entry point: KPI row, tabs layout, benchmark fetch, demo mode, checkpoint verification
 
 ### Phase 7: Tearsheet and Data Exports
 **Goal**: A single-page PDF tearsheet and machine-readable CSV/JSON exports are generated from any backtest run, with all cost assumptions explicitly labelled
@@ -153,6 +153,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 3. Signal Adapter and Integration Contract | 2/2 | Complete   | 2026-03-29 |
 | 4. Cost Model and Portfolio Simulator | 2/2 | Complete   | 2026-03-29 |
 | 5. Risk Metrics Engine | 2/2 | Complete   | 2026-03-29 |
-| 6. Streamlit Dashboard | 2/3 | In Progress|  |
+| 6. Streamlit Dashboard | 3/3 | Complete   | 2026-03-29 |
 | 7. Tearsheet and Data Exports | 0/TBD | Not started | - |
 | 8. AI Washing Detector Integration | 0/TBD | Not started | - |
