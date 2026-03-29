@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 05-risk-metrics-engine 05-01-PLAN.md
-last_updated: "2026-03-29T09:38:54.608Z"
+status: verifying
+stopped_at: Completed 05-risk-metrics-engine 05-02-PLAN.md
+last_updated: "2026-03-29T09:45:37.237Z"
 last_activity: 2026-03-29
 progress:
   total_phases: 8
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 13
-  completed_plans: 12
+  completed_plans: 13
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 Phase: 05 (risk-metrics-engine) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-03-29
 
 Progress: [░░░░░░░░░░] 0%
@@ -64,6 +64,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04-cost-model-and-portfolio-simulator P01 | 316 | 2 tasks | 5 files |
 | Phase 04-cost-model-and-portfolio-simulator P02 | 8 | 2 tasks | 2 files |
 | Phase 05-risk-metrics-engine P01 | 5min | 2 tasks | 7 files |
+| Phase 05-risk-metrics-engine P02 | 4min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -105,6 +106,8 @@ Recent decisions affecting current work:
 - [Phase 05-risk-metrics-engine]: arbitrary_types_allowed=True in MetricsBundle model_config for pd.Series fields (mirrors PortfolioResult pattern)
 - [Phase 05-risk-metrics-engine]: max_drawdown stored as negative float; periods=252 constant enforced via _TRADING_DAYS_PER_YEAR to avoid 20% Sharpe inflation from qs default 365
 - [Phase 05-risk-metrics-engine]: alpha=0.0 and beta=0.0 default when benchmark=None
+- [Phase 05-risk-metrics-engine]: qs.stats.greeks() guarded against near-zero benchmark variance (< 1e-12): returns alpha=0.0, beta=0.0 to avoid numerical instability from division-by-near-zero
+- [Phase 05-risk-metrics-engine]: win_loss_ratio guarded with math.isfinite(): returns 0.0 when no losing days exist (avoids non-finite float in frozen MetricsBundle)
 
 ### Pending Todos
 
@@ -118,6 +121,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29T09:38:54.605Z
-Stopped at: Completed 05-risk-metrics-engine 05-01-PLAN.md
+Last session: 2026-03-29T09:45:37.234Z
+Stopped at: Completed 05-risk-metrics-engine 05-02-PLAN.md
 Resume file: None

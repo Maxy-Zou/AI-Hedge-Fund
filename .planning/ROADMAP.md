@@ -147,7 +147,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 2. Price Data Pipeline | 4/4 | Complete   | 2026-03-29 |
 | 3. Signal Adapter and Integration Contract | 2/2 | Complete   | 2026-03-29 |
 | 4. Cost Model and Portfolio Simulator | 2/2 | Complete   | 2026-03-29 |
-| 5. Risk Metrics Engine | 2/2 | Complete | 2026-03-29 |
+| 5. Risk Metrics Engine | 2/2 | Complete   | 2026-03-29 |
 | 6. Streamlit Dashboard | 0/TBD | Not started | - |
 | 7. Tearsheet and Data Exports | 0/TBD | Not started | - |
 | 8. AI Washing Detector Integration | 0/TBD | Not started | - |
