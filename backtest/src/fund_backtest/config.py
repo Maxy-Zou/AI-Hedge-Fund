@@ -160,3 +160,48 @@ def load_cost_config(config_path: Path | None = None) -> CostConfig:
         return CostConfig(**data.get("cost", {}))
     except Exception:
         return CostConfig()
+
+
+class MetricsConfig(BaseModel):
+    """Metrics engine configuration — controls rolling windows and annualization.
+
+    Fields:
+        rolling_window: Rolling window in trading days for rolling_sharpe
+                        and rolling_drawdown. Default 252 (one trading year).
+        periods_per_year: Trading days per year for annualization.
+                          CRITICAL: must be 252 (not 365). Using 365 inflates
+                          Sharpe/Sortino by ~20% on daily equity data.
+        risk_free_rate: Daily risk-free rate for Sharpe/Sortino computation.
+                        Default 0.0 (no RF subtraction).
+    """
+
+    rolling_window: int = 252
+    """Rolling window in trading days. Default: 252 (one trading year)."""
+
+    periods_per_year: int = 252
+    """Annualization period. Use 252 for daily equity data (NOT 365)."""
+
+    risk_free_rate: float = 0.0
+    """Daily risk-free rate for Sharpe/Sortino. Default: 0.0."""
+
+
+def load_metrics_config(config_path: Path | None = None) -> MetricsConfig:
+    """Load metrics config from YAML 'metrics' key or return defaults.
+
+    Args:
+        config_path: Optional path to a metrics.yaml file.
+                     If None, returns defaults.
+
+    Returns:
+        MetricsConfig with values from YAML or defaults.
+    """
+    if config_path is None:
+        return MetricsConfig()
+    try:
+        import yaml
+
+        with config_path.open() as f:
+            data = yaml.safe_load(f)
+        return MetricsConfig(**data.get("metrics", {}))
+    except Exception:
+        return MetricsConfig()
