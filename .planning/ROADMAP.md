@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Universe and Sector Data** - Build and maintain the mid-cap ticker universe with GICS sector classification (completed 2026-03-28)
 - [x] **Phase 2: Price Data Pipeline** - Download, cache, validate, and incrementally update daily OHLCV data for the full universe (completed 2026-03-29)
 - [x] **Phase 3: Signal Adapter and Integration Contract** - Define the signal DataFrame contract and build the adapter that normalizes raw strategy scores into portfolio weights (completed 2026-03-29)
-- [ ] **Phase 4: Cost Model and Portfolio Simulator** - Implement fully vectorized long/short simulation with realistic transaction and borrow costs
+- [x] **Phase 4: Cost Model and Portfolio Simulator** - Implement fully vectorized long/short simulation with realistic transaction and borrow costs (completed 2026-03-29)
 - [ ] **Phase 5: Risk Metrics Engine** - Compute the full institutional metric suite (Sharpe, Sortino, drawdown, benchmarks, rolling windows)
 - [ ] **Phase 6: Streamlit Dashboard** - Interactive investor-facing dashboard showing equity curves, drawdown, sector exposure, and monthly returns
 - [ ] **Phase 7: Tearsheet and Data Exports** - PDF tearsheet, CSV/JSON exports, and explicit cost labeling on all outputs
