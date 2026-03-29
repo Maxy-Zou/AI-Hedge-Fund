@@ -53,7 +53,9 @@ class TestSignalAdapterReturnType:
     def test_adapt_returns_dataframe(self) -> None:
         """SignalAdapter.adapt() returns a pd.DataFrame."""
         df = _make_signal_frame()
-        result = SignalAdapter().adapt(df)
+        # Use min_coverage=1 so no rows are zeroed — isolates return-type check
+        config = SignalAdapterConfig(min_coverage=1)
+        result = SignalAdapter(config).adapt(df)
         assert isinstance(result, pd.DataFrame)
 
 
@@ -63,7 +65,9 @@ class TestSignalAdapterWeightRange:
     def test_weight_values_in_minus_one_to_one(self) -> None:
         """All non-NaN weight values must satisfy |w| <= 1.0."""
         df = _make_signal_frame()
-        result = SignalAdapter().adapt(df)
+        # Use min_coverage=1 so rows are not zeroed — isolates weight range check
+        config = SignalAdapterConfig(min_coverage=1)
+        result = SignalAdapter(config).adapt(df)
         max_abs = result.stack().dropna().abs().max()
         assert max_abs <= 1.0 + 1e-9
 
@@ -78,9 +82,14 @@ class TestSignalAdapterLookAheadBiasGuard:
         shift(1) means weights on day 2 are derived from day 1 signals:
           AAPL=20, NVDA=80 => NVDA outranks AAPL on day 2.
         On day 3 (T+1): the spike is reflected => AAPL outranks NVDA.
+
+        Uses min_coverage=1 to prevent all rows from being zeroed
+        (fixture has 4 tickers; default min_coverage=5 would zero all rows).
         """
         df = _make_signal_frame()
-        result = SignalAdapter().adapt(df)
+        # min_coverage=1 isolates the shift behavior from coverage logic
+        config = SignalAdapterConfig(min_coverage=1)
+        result = SignalAdapter(config).adapt(df)
 
         spike_day = 2  # index 2 has AAPL=99, NVDA=1
 
@@ -93,7 +102,9 @@ class TestSignalAdapterLookAheadBiasGuard:
     def test_first_row_is_nan_after_shift(self) -> None:
         """First row of WeightFrame must be all-NaN (shift(1) artifact)."""
         df = _make_signal_frame()
-        result = SignalAdapter().adapt(df)
+        # min_coverage=1 prevents all-zero rows from masking the NaN behavior
+        config = SignalAdapterConfig(min_coverage=1)
+        result = SignalAdapter(config).adapt(df)
         assert result.iloc[0].isna().all()
 
 
