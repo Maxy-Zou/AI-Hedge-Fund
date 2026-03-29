@@ -27,6 +27,7 @@ Produce compelling, realistic backtest results the moment any strategy signal is
 - ✓ Risk metrics — Sharpe, Sortino, Calmar, drawdown, CAGR, hit rate, turnover — Phase 5
 - ✓ Benchmark comparison with alpha/beta — Phase 5
 - ✓ Rolling Sharpe + rolling drawdown at configurable windows — Phase 5
+- ✓ Streamlit dashboard — equity curve, drawdown, monthly heatmap, sector exposure — Phase 6
 
 ### Active
 - [ ] Vectorized backtesting engine — takes a signal DataFrame (date x ticker → score) and simulates a long/short portfolio
