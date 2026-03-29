@@ -112,8 +112,13 @@ Plans:
   2. A drawdown chart beneath the equity curve shows underwater periods visually; each major drawdown episode is labelled with its depth and duration
   3. A monthly returns heatmap renders the full calendar with each month cell colour-coded red/green by return magnitude
   4. A sector exposure chart shows the portfolio's allocation breakdown by GICS sector, updated by the currently displayed backtest run
-**Plans**: TBD
+**Plans**: 3 plans
 **UI hint**: yes
+
+Plans:
+- [x] 06-01-PLAN.md — Scaffold: add streamlit+plotly deps, dashboard/ package, charts.py stubs, demo_data.py, RED test file
+- [ ] 06-02-PLAN.md — Implement charts.py: build_equity_drawdown_chart, build_monthly_heatmap, build_sector_exposure_chart (GREEN)
+- [ ] 06-03-PLAN.md — app.py Streamlit entry point: KPI row, tabs layout, benchmark fetch, demo mode, checkpoint verification
 
 ### Phase 7: Tearsheet and Data Exports
 **Goal**: A single-page PDF tearsheet and machine-readable CSV/JSON exports are generated from any backtest run, with all cost assumptions explicitly labelled
@@ -148,6 +153,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 3. Signal Adapter and Integration Contract | 2/2 | Complete   | 2026-03-29 |
 | 4. Cost Model and Portfolio Simulator | 2/2 | Complete   | 2026-03-29 |
 | 5. Risk Metrics Engine | 2/2 | Complete   | 2026-03-29 |
-| 6. Streamlit Dashboard | 0/TBD | Not started | - |
+| 6. Streamlit Dashboard | 1/3 | In Progress|  |
 | 7. Tearsheet and Data Exports | 0/TBD | Not started | - |
 | 8. AI Washing Detector Integration | 0/TBD | Not started | - |
