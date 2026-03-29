@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 08-ai-washing-detector-integration 08-01-PLAN.md
-last_updated: "2026-03-29T19:26:14.976Z"
+status: verifying
+stopped_at: Completed 08-ai-washing-detector-integration 08-02-PLAN.md
+last_updated: "2026-03-29T19:33:34.836Z"
 last_activity: 2026-03-29
 progress:
   total_phases: 8
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 20
-  completed_plans: 19
+  completed_plans: 20
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 
 Phase: 08 (ai-washing-detector-integration) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-03-29
 
 Progress: [░░░░░░░░░░] 0%
@@ -71,6 +71,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 07-tearsheet-and-data-exports P01 | 3min | 2 tasks | 5 files |
 | Phase 07 P02 | 13min | 2 tasks | 3 files |
 | Phase 08-ai-washing-detector-integration P01 | 1min | 2 tasks | 3 files |
+| Phase 08-ai-washing-detector-integration P02 | 5min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -126,6 +127,8 @@ Recent decisions affecting current work:
 - [Phase 07-tearsheet-and-data-exports]: dashboard/app.py added to coverage omit — Streamlit UI cannot be unit-tested; 5 data-command error-path tests added to reach 80% coverage
 - [Phase 08-ai-washing-detector-integration]: DB-as-integration-boundary: AiWashingLoader uses sqlalchemy.text() raw SQL — no cross-package imports from ai_washer; database is the only coupling point
 - [Phase 08-ai-washing-detector-integration]: pivot_table(aggfunc='last') deduplication in AiWashingLoader — most recently inserted row wins when multiple scores share (ticker, date)
+- [Phase 08-ai-washing-detector-integration]: Signal guard before load_app_settings(): unknown signal exits 1 without requiring DATABASE_URL env var
+- [Phase 08-ai-washing-detector-integration]: Module-level imports for AiWashingLoader/PortfolioSimulator/MetricsEngine in cli.py: required for unittest.mock.patch to target fund_backtest.cli.* namespace
 
 ### Pending Todos
 
@@ -139,6 +142,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29T19:26:14.973Z
-Stopped at: Completed 08-ai-washing-detector-integration 08-01-PLAN.md
+Last session: 2026-03-29T19:33:34.834Z
+Stopped at: Completed 08-ai-washing-detector-integration 08-02-PLAN.md
 Resume file: None

@@ -47,7 +47,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **INT-01**: Well-defined signal contract (DataFrame schema) that any strategy module can conform to
 - [x] **INT-02**: AI Washing Detector scores can be loaded and converted to the signal contract format
-- [ ] **INT-03**: End-to-end pipeline runs from signal input to dashboard output without manual steps
+- [x] **INT-03**: End-to-end pipeline runs from signal input to dashboard output without manual steps
 
 ## v2 Requirements
 
@@ -123,7 +123,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RPT-06 | Phase 7 | Complete |
 | INT-01 | Phase 3 | Complete |
 | INT-02 | Phase 8 | Complete |
-| INT-03 | Phase 8 | Pending |
+| INT-03 | Phase 8 | Complete |
 
 **Coverage:**
 - v1 requirements: 27 total
