@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-price-data-pipeline 02-01-PLAN.md
-last_updated: "2026-03-29T08:16:14.940Z"
+stopped_at: Completed 02-price-data-pipeline 02-02-PLAN.md
+last_updated: "2026-03-29T08:21:34.986Z"
 last_activity: 2026-03-29
 progress:
   total_phases: 8
   completed_phases: 1
   total_plans: 7
-  completed_plans: 4
+  completed_plans: 5
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-28)
 ## Current Position
 
 Phase: 02 (price-data-pipeline) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-03-29
 
@@ -56,6 +56,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-universe-and-sector-data P02 | 5 | 2 tasks | 7 files |
 | Phase 01-universe-and-sector-data P03 | 7 | 2 tasks | 5 files |
 | Phase 02-price-data-pipeline P01 | 22 | 2 tasks | 6 files |
+| Phase 02-price-data-pipeline P02 | 3 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,9 @@ Recent decisions affecting current work:
 - [Phase 02-price-data-pipeline]: PriceBarORM is append-only: no TimestampMixin (no updated_at), created_at added directly
 - [Phase 02-price-data-pipeline]: price_to_cents uses round() not int() — prevents floating-point truncation (10.009*100=1000.9 -> 1001)
 - [Phase 02-price-data-pipeline]: PriceAnomalyRecord anomaly_type is Literal['return_spike_plus','return_spike_minus'] — closed set prevents drift
+- [Phase 02-price-data-pipeline]: Tenacity wait patched via retry.wait=lambda:0 in tests to avoid sleeping while testing real retry behavior through the live decorator
+- [Phase 02-price-data-pipeline]: YFRateLimitError() takes no constructor args — instantiate without message string
+- [Phase 02-price-data-pipeline]: detect_gaps uses bdate_range(inclusive='neither') to count only missing business days between two dates
 
 ### Pending Todos
 
@@ -91,6 +95,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29T08:16:14.937Z
-Stopped at: Completed 02-price-data-pipeline 02-01-PLAN.md
+Last session: 2026-03-29T08:21:34.984Z
+Stopped at: Completed 02-price-data-pipeline 02-02-PLAN.md
 Resume file: None

@@ -14,7 +14,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **DATA-03**: System performs incremental daily updates (append new bars, never overwrite historical)
 - [x] **DATA-04**: System validates downloaded data (gap detection, daily return sanity check > +/-50%, missing ticker alerts)
 - [x] **DATA-05**: System manages a universe of mid-cap tickers ($2B-$10B market cap) with refresh capability
-- [ ] **DATA-06**: System chunks yfinance downloads (~80 tickers/batch) with retry logic to handle rate limits
+- [x] **DATA-06**: System chunks yfinance downloads (~80 tickers/batch) with retry logic to handle rate limits
 - [x] **DATA-07**: System stores GICS sector classification for each ticker (required for sector exposure reporting)
 
 ### Backtesting Engine
@@ -102,7 +102,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-03 | Phase 2 | Pending |
 | DATA-04 | Phase 2 | Complete |
 | DATA-05 | Phase 1 | Complete |
-| DATA-06 | Phase 2 | Pending |
+| DATA-06 | Phase 2 | Complete |
 | DATA-07 | Phase 1 | Complete |
 | BT-01 | Phase 3 | Pending |
 | BT-02 | Phase 4 | Pending |
