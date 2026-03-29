@@ -30,6 +30,17 @@ class UniverseSettings(BaseModel):
     yfinance_max_retries: int = 3
 
 
+class PriceSettings(BaseModel):
+    """Price data configuration — loaded from config/price.yaml."""
+
+    lookback_years: int = 5
+    batch_size: int = 80
+    batch_sleep_secs: float = 1.0
+    coverage_alert_threshold: float = 0.95
+    return_anomaly_threshold: float = 0.50
+    max_gap_days: int = 3
+
+
 _settings: AppSettings | None = None
 
 
@@ -61,3 +72,25 @@ def load_universe_settings(config_path: Path | None = None) -> UniverseSettings:
         return UniverseSettings(**data.get("universe", {}))
     except Exception:
         return UniverseSettings()
+
+
+def load_price_settings(config_path: Path | None = None) -> PriceSettings:
+    """Load price settings from YAML config or return defaults.
+
+    Args:
+        config_path: Optional path to a price.yaml file.
+                     If None, returns defaults.
+
+    Returns:
+        PriceSettings with values from YAML or defaults.
+    """
+    if config_path is None:
+        return PriceSettings()
+    try:
+        import yaml
+
+        with config_path.open() as f:
+            data = yaml.safe_load(f)
+        return PriceSettings(**data.get("price", {}))
+    except Exception:
+        return PriceSettings()
