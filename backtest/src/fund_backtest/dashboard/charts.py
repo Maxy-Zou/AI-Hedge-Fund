@@ -12,6 +12,7 @@ Constants:
     _DRAWDOWN_FILL_COLOUR: RGBA fill colour for drawdown area.
     _MONTH_LABELS: 12-element list of abbreviated month names (Jan..Dec).
 """
+
 from __future__ import annotations
 
 import pandas as pd
@@ -25,8 +26,18 @@ _STRATEGY_COLOUR: str = "#1f77b4"
 _DRAWDOWN_FILL_COLOUR: str = "rgba(220,50,50,0.3)"
 _DRAWDOWN_LINE_COLOUR: str = "rgba(220,50,50,0.8)"
 _MONTH_LABELS: list[str] = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
 ]
 
 
@@ -114,8 +125,12 @@ def build_equity_drawdown_chart(
     if net_returns is None or len(net_returns) < 2:
         fig = go.Figure()
         fig.add_annotation(
-            x=0.5, y=0.5, xref="paper", yref="paper",
-            text="Insufficient data", showarrow=False,
+            x=0.5,
+            y=0.5,
+            xref="paper",
+            yref="paper",
+            text="Insufficient data",
+            showarrow=False,
         )
         return fig
 
@@ -202,8 +217,12 @@ def build_monthly_heatmap(net_returns: pd.Series) -> go.Figure:
     if net_returns is None or len(net_returns) < 2:
         fig = go.Figure()
         fig.add_annotation(
-            x=0.5, y=0.5, xref="paper", yref="paper",
-            text="Insufficient data", showarrow=False,
+            x=0.5,
+            y=0.5,
+            xref="paper",
+            yref="paper",
+            text="Insufficient data",
+            showarrow=False,
         )
         return fig
 
@@ -247,9 +266,7 @@ def build_sector_exposure_chart(
     sector_map = pd.Series(ticker_sectors)
     valid = positions.columns.intersection(sector_map.index)
     sector_weights = (
-        positions[valid].abs().mean()
-        .groupby(sector_map[valid]).sum()
-        .sort_values(ascending=True)
+        positions[valid].abs().mean().groupby(sector_map[valid]).sum().sort_values(ascending=True)
     )
 
     fig = go.Figure(
