@@ -129,7 +129,11 @@ Plans:
   2. Running `backtest export --csv` produces three files: `daily_returns.csv`, `positions.csv`, and `trade_log.csv`, with dates in ISO 8601 format
   3. Running `backtest export --json` produces a metrics JSON file consumable by downstream portfolio management modules
   4. Every generated output (PDF, CSV, JSON) includes a header or annotation stating the slippage, commission, and borrow rate assumptions used in that run
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — reports/ module: TearsheetBuilder (matplotlib PDF) and ExportBuilder (CSV/JSON) with TDD tests
+- [ ] 07-02-PLAN.md — CLI wiring: backtest export subgroup (--tearsheet, --csv, --json, --all) + CLI tests
 
 ### Phase 8: AI Washing Detector Integration
 **Goal**: Live AI Washing Risk Scores from the Detector's PostgreSQL output can be loaded, adapted to the SignalFrame contract, and run through the full backtesting pipeline without manual steps
@@ -154,5 +158,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 4. Cost Model and Portfolio Simulator | 2/2 | Complete   | 2026-03-29 |
 | 5. Risk Metrics Engine | 2/2 | Complete   | 2026-03-29 |
 | 6. Streamlit Dashboard | 3/3 | Complete   | 2026-03-29 |
-| 7. Tearsheet and Data Exports | 0/TBD | Not started | - |
+| 7. Tearsheet and Data Exports | 0/2 | Not started | - |
 | 8. AI Washing Detector Integration | 0/TBD | Not started | - |
