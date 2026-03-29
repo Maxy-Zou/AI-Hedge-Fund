@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 03-signal-adapter-and-integration-contract 03-02-PLAN.md
-last_updated: "2026-03-29T08:57:10.292Z"
+status: executing
+stopped_at: Completed 04-cost-model-and-portfolio-simulator 04-01-PLAN.md
+last_updated: "2026-03-29T09:13:49.274Z"
 last_activity: 2026-03-29
 progress:
   total_phases: 8
   completed_phases: 3
-  total_plans: 9
-  completed_plans: 9
+  total_plans: 11
+  completed_plans: 10
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-28)
 
 **Core value:** Produce compelling, realistic backtest results the moment any strategy signal is ready — so investor conversations can start immediately.
-**Current focus:** Phase 03 — signal-adapter-and-integration-contract
+**Current focus:** Phase 04 — cost-model-and-portfolio-simulator
 
 ## Current Position
 
-Phase: 4
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 04 (cost-model-and-portfolio-simulator) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-03-29
 
 Progress: [░░░░░░░░░░] 0%
@@ -61,6 +61,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02-price-data-pipeline P04 | 4 | 2 tasks | 3 files |
 | Phase 03 P01 | 2 | 2 tasks | 5 files |
 | Phase 03 P02 | 5 | 2 tasks | 2 files |
+| Phase 04-cost-model-and-portfolio-simulator P01 | 316 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,8 @@ Recent decisions affecting current work:
 - [Phase 03]: SignalAdapterConfig min_coverage=5, gross_exposure_limit=1.0 — mirrors PriceSettings BaseModel pattern
 - [Phase 03]: shift(1) is the final step in SignalAdapter.adapt() — Phase 4 Portfolio Simulator must NOT apply an additional shift
 - [Phase 03]: Test fixture min_coverage override: 4-ticker fixture requires min_coverage=1 override in tests that isolate shift/weight behavior from coverage logic
+- [Phase 04-cost-model-and-portfolio-simulator]: CostConfig defaults: slippage=10bps, commission=5bps, borrow=50bps/yr — flat-rate borrow, tiered is future
+- [Phase 04-cost-model-and-portfolio-simulator]: load_cost_config() reads from 'cost' YAML key, consistent with load_signal_adapter_config() pattern
 
 ### Pending Todos
 
@@ -108,6 +111,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29T08:54:01.173Z
-Stopped at: Completed 03-signal-adapter-and-integration-contract 03-02-PLAN.md
+Last session: 2026-03-29T09:13:49.271Z
+Stopped at: Completed 04-cost-model-and-portfolio-simulator 04-01-PLAN.md
 Resume file: None

@@ -20,12 +20,12 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Backtesting Engine
 
 - [x] **BT-01**: Engine accepts a signal DataFrame (date x ticker -> score) and simulates a long/short portfolio
-- [ ] **BT-02**: Engine supports short positions as a first-class operation
-- [ ] **BT-03**: Engine models transaction costs (slippage + commission, configurable bps)
-- [ ] **BT-04**: Engine models short borrow costs (configurable flat rate, default 50bps/yr)
+- [x] **BT-02**: Engine supports short positions as a first-class operation
+- [x] **BT-03**: Engine models transaction costs (slippage + commission, configurable bps)
+- [x] **BT-04**: Engine models short borrow costs (configurable flat rate, default 50bps/yr)
 - [x] **BT-05**: Engine enforces look-ahead bias prevention (signal shifted by 1 day before execution)
-- [ ] **BT-06**: Engine uses equal-weight position sizing across all signal-selected tickers
-- [ ] **BT-07**: Engine produces a daily returns series and a trade log as output
+- [x] **BT-06**: Engine uses equal-weight position sizing across all signal-selected tickers
+- [x] **BT-07**: Engine produces a daily returns series and a trade log as output
 
 ### Risk Metrics
 
@@ -105,12 +105,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-06 | Phase 2 | Complete |
 | DATA-07 | Phase 1 | Complete |
 | BT-01 | Phase 3 | Complete |
-| BT-02 | Phase 4 | Pending |
-| BT-03 | Phase 4 | Pending |
-| BT-04 | Phase 4 | Pending |
+| BT-02 | Phase 4 | Complete |
+| BT-03 | Phase 4 | Complete |
+| BT-04 | Phase 4 | Complete |
 | BT-05 | Phase 3 | Complete |
-| BT-06 | Phase 4 | Pending |
-| BT-07 | Phase 4 | Pending |
+| BT-06 | Phase 4 | Complete |
+| BT-07 | Phase 4 | Complete |
 | RISK-01 | Phase 5 | Pending |
 | RISK-02 | Phase 5 | Pending |
 | RISK-03 | Phase 5 | Pending |
