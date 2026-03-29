@@ -3,6 +3,9 @@
 Commands:
     fund-backtest universe refresh [--dry-run]
     fund-backtest universe status
+    fund-backtest data download [--dry-run]
+    fund-backtest data update
+    fund-backtest data coverage
 """
 from __future__ import annotations
 
@@ -13,10 +16,12 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from fund_backtest.config import load_app_settings, load_universe_settings
-from fund_backtest.db.models import UniverseSnapshot, UniverseTicker
+from fund_backtest.config import load_app_settings, load_price_settings, load_universe_settings
+from fund_backtest.db.models import PriceAnomalyORM, UniverseSnapshot, UniverseTicker
 from fund_backtest.db.session import create_engine_from_settings, get_session_factory
 from fund_backtest.logging import configure_logging
+from fund_backtest.price.builder import PriceBuilder
+from fund_backtest.price.repository import PriceBarRepository
 from fund_backtest.universe.builder import UniverseBuilder
 
 app = typer.Typer(
@@ -26,6 +31,9 @@ app = typer.Typer(
 )
 universe_app = typer.Typer(help="Manage the mid-cap ticker universe.")
 app.add_typer(universe_app, name="universe")
+
+data_app = typer.Typer(help="Manage OHLCV price data.")
+app.add_typer(data_app, name="data")
 
 console = Console()
 log = structlog.get_logger(__name__)
@@ -128,6 +136,119 @@ def status() -> None:
     except Exception as exc:
         console.print(f"[red]Error fetching status: {exc}[/red]")
         log.exception("status_failed", error=str(exc))
+        raise typer.Exit(code=1) from exc
+
+
+@data_app.command()
+def download(
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Preview download plan without writing to DB.",
+    ),
+) -> None:
+    """Download 5 years of daily OHLCV bars for all active universe tickers."""
+    price_settings = load_price_settings()
+    if dry_run:
+        console.print("[yellow]dry-run mode — no database writes will occur[/yellow]")
+        console.print(
+            f"batch_size={price_settings.batch_size},"
+            f" lookback_years={price_settings.lookback_years}"
+        )
+
+    settings = load_app_settings()
+    configure_logging(settings.log_level)
+
+    try:
+        engine = create_engine_from_settings(settings)
+        session_factory = get_session_factory(engine)
+        with session_factory() as session:
+            builder = PriceBuilder(session=session, settings=price_settings)
+            summary = builder.download(dry_run=dry_run)
+
+        if not dry_run:
+            table = Table(title="Download Complete", show_header=True)
+            table.add_column("Metric", style="cyan")
+            table.add_column("Value", style="green")
+            table.add_row("Tickers requested", str(summary.requested))
+            table.add_row("Tickers successful", str(len(summary.successful)))
+            table.add_row("Tickers failed", str(len(summary.failed)))
+            table.add_row("Bars inserted", str(summary.bars_inserted))
+            console.print(table)
+
+    except Exception as exc:
+        console.print(f"[red]Error during download: {exc}[/red]")
+        log.exception("download_failed", error=str(exc))
+        raise typer.Exit(code=1) from exc
+
+
+@data_app.command()
+def update() -> None:
+    """Append new bars since last download. Historical data is never modified."""
+    settings = load_app_settings()
+    configure_logging(settings.log_level)
+
+    try:
+        engine = create_engine_from_settings(settings)
+        session_factory = get_session_factory(engine)
+        with session_factory() as session:
+            builder = PriceBuilder(session=session, settings=load_price_settings())
+            summary = builder.update()
+
+        table = Table(title="Incremental Update Complete", show_header=True)
+        table.add_column("Metric", style="cyan")
+        table.add_column("Value", style="green")
+        table.add_row("Tickers requested", str(summary.requested))
+        table.add_row("Tickers successful", str(len(summary.successful)))
+        table.add_row("Tickers failed", str(len(summary.failed)))
+        table.add_row("Bars inserted", str(summary.bars_inserted))
+        console.print(table)
+
+    except Exception as exc:
+        console.print(f"[red]Error during update: {exc}[/red]")
+        log.exception("update_failed", error=str(exc))
+        raise typer.Exit(code=1) from exc
+
+
+@data_app.command()
+def coverage() -> None:
+    """Show data coverage: tickers with bars, date range, unreviewed anomaly count."""
+    settings = load_app_settings()
+    configure_logging(settings.log_level)
+
+    try:
+        engine = create_engine_from_settings(settings)
+        session_factory = get_session_factory(engine)
+        with session_factory() as session:
+            from sqlalchemy import text as sa_text
+
+            repo = PriceBarRepository(session)
+            tickers_with_bars = repo.get_coverage_tickers()
+            result = session.execute(
+                sa_text(
+                    "SELECT MIN(bar_date) AS min_date, MAX(bar_date) AS max_date"
+                    " FROM price_bars"
+                )
+            ).first()
+            anomaly_count = (
+                session.query(PriceAnomalyORM).filter_by(is_reviewed=False).count()
+            )
+
+        table = Table(title="Price Data Coverage", show_header=True)
+        table.add_column("Metric", style="cyan")
+        table.add_column("Value", style="green")
+        table.add_row("Tickers with bars", str(len(tickers_with_bars)))
+        if result and result.min_date:
+            table.add_row("Earliest bar date", str(result.min_date))
+            table.add_row("Latest bar date", str(result.max_date))
+        else:
+            table.add_row("Date range", "No data")
+        table.add_row("Unreviewed anomalies", str(anomaly_count))
+        console.print(table)
+
+    except Exception as exc:
+        console.print(f"[red]Error fetching coverage: {exc}[/red]")
+        log.exception("coverage_failed", error=str(exc))
         raise typer.Exit(code=1) from exc
 
 
