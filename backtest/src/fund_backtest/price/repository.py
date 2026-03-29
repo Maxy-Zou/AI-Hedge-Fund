@@ -61,12 +61,18 @@ class PriceBarRepository:
             }
             for b in bars
         ]
-        stmt = pg_insert(PriceBarORM).values(rows).on_conflict_do_nothing(
-            index_elements=["ticker", "bar_date"]
+        stmt = (
+            pg_insert(PriceBarORM)
+            .values(rows)
+            .on_conflict_do_nothing(index_elements=["ticker", "bar_date"])
+            .returning(PriceBarORM.id)
         )
         result = self._session.execute(stmt)
         self._session.commit()
-        inserted = result.rowcount
+        # Use len(result.all()) instead of rowcount: psycopg3 returns -1 for
+        # multi-row ON CONFLICT DO NOTHING inserts.  RETURNING gives the exact
+        # set of IDs actually inserted.
+        inserted = len(result.all())
         log.info("insert_bars_complete", requested=len(bars), inserted=inserted)
         return inserted
 
@@ -92,12 +98,15 @@ class PriceBarRepository:
             }
             for a in anomalies
         ]
-        stmt = pg_insert(PriceAnomalyORM).values(rows).on_conflict_do_nothing(
-            index_elements=["ticker", "bar_date", "anomaly_type"]
+        stmt = (
+            pg_insert(PriceAnomalyORM)
+            .values(rows)
+            .on_conflict_do_nothing(index_elements=["ticker", "bar_date", "anomaly_type"])
+            .returning(PriceAnomalyORM.id)
         )
         result = self._session.execute(stmt)
         self._session.commit()
-        return result.rowcount
+        return len(result.all())
 
     def get_last_dates(self, tickers: list[str]) -> dict[str, date]:
         """Return {ticker: max(bar_date)} for all requested tickers that have bars.
