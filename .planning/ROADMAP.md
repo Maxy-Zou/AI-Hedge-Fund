@@ -13,7 +13,7 @@ Eight phases take this module from a clean Python package to a fully integrated,
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Universe and Sector Data** - Build and maintain the mid-cap ticker universe with GICS sector classification (completed 2026-03-28)
-- [ ] **Phase 2: Price Data Pipeline** - Download, cache, validate, and incrementally update daily OHLCV data for the full universe
+- [x] **Phase 2: Price Data Pipeline** - Download, cache, validate, and incrementally update daily OHLCV data for the full universe (completed 2026-03-29)
 - [ ] **Phase 3: Signal Adapter and Integration Contract** - Define the signal DataFrame contract and build the adapter that normalizes raw strategy scores into portfolio weights
 - [ ] **Phase 4: Cost Model and Portfolio Simulator** - Implement fully vectorized long/short simulation with realistic transaction and borrow costs
 - [ ] **Phase 5: Risk Metrics Engine** - Compute the full institutional metric suite (Sharpe, Sortino, drawdown, benchmarks, rolling windows)
@@ -55,7 +55,7 @@ Plans:
 - [x] 02-01-PLAN.md — ORM models (PriceBarORM, PriceAnomalyORM), Alembic migration 002, price/types.py (PriceBar, PriceAnomalyRecord, DownloadSummary, CoverageReport), PriceSettings config, unit tests for cents conversion
 - [x] 02-02-PLAN.md — price/downloader.py (chunked download, tenacity retry on YFRateLimitError) + price/validator.py (anomaly detection, gap detection, coverage) with unit tests
 - [x] 02-03-PLAN.md — price/repository.py (PriceBarRepository: insert_bars ON CONFLICT DO NOTHING, get_last_dates, get_bars with per-bar anomaly exclusion) + price/builder.py (PriceBuilder: download and update orchestration)
-- [ ] 02-04-PLAN.md — CLI data subgroup (download, update, coverage commands) + integration tests against PostgreSQL testcontainer
+- [x] 02-04-PLAN.md — CLI data subgroup (download, update, coverage commands) + integration tests against PostgreSQL testcontainer
 
 ### Phase 3: Signal Adapter and Integration Contract
 **Goal**: A typed, validated signal contract exists that any strategy module can conform to, and a Signal Adapter normalizes raw 0-100 scores into portfolio-ready weights
@@ -132,7 +132,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Universe and Sector Data | 3/3 | Complete   | 2026-03-28 |
-| 2. Price Data Pipeline | 2/4 | In Progress|  |
+| 2. Price Data Pipeline | 4/4 | Complete   | 2026-03-29 |
 | 3. Signal Adapter and Integration Contract | 0/TBD | Not started | - |
 | 4. Cost Model and Portfolio Simulator | 0/TBD | Not started | - |
 | 5. Risk Metrics Engine | 0/TBD | Not started | - |
