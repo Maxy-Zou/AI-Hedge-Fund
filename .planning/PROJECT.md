@@ -20,6 +20,10 @@ Produce compelling, realistic backtest results the moment any strategy signal is
 - ✓ Chunked downloads with retry — 80-ticker batches, tenacity exponential backoff — Phase 2
 - ✓ Signal contract — typed SignalFrame/WeightFrame with validation — Phase 3
 - ✓ Look-ahead bias prevention — shift(1) in Signal Adapter, not simulator — Phase 3
+- ✓ Vectorized portfolio simulator with short support — Phase 4
+- ✓ Transaction cost modeling — slippage, commission, borrow costs in frozen CostConfig — Phase 4
+- ✓ Equal-weight position sizing (via upstream SignalAdapter) — Phase 4
+- ✓ Daily returns Series + trade log DataFrame output — Phase 4
 
 ### Active
 - [ ] Vectorized backtesting engine — takes a signal DataFrame (date x ticker → score) and simulates a long/short portfolio
@@ -87,4 +91,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-29 after Phase 3 completion*
+*Last updated: 2026-03-29 after Phase 4 completion*
