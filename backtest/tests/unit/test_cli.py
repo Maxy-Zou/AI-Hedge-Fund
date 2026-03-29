@@ -345,3 +345,116 @@ def test_status_with_latest_snapshot():
                     result = runner.invoke(app, ["universe", "status"])
     assert result.exit_code == 0, f"exit code {result.exit_code}: {result.output}"
     assert "2026-03-28" in result.output
+
+
+# ---------------------------------------------------------------------------
+# Tests for backtest run command (Phase 08-02)
+# ---------------------------------------------------------------------------
+
+import numpy as np
+from datetime import date as _date
+
+
+def _make_minimal_signal_frame():
+    """Build a minimal 10-row x 3-ticker SignalFrame for CLI run tests."""
+    dates = pd.date_range("2024-01-02", periods=10, freq="B")
+    tickers = ["AAPL", "MSFT", "GOOG"]
+    data = np.random.uniform(40, 80, (10, 3))
+    return pd.DataFrame(data, index=dates, columns=tickers)
+
+
+def _make_mock_session():
+    """Build a mock SQLAlchemy session context manager."""
+    mock_session = MagicMock()
+    mock_session.__enter__ = MagicMock(return_value=mock_session)
+    mock_session.__exit__ = MagicMock(return_value=False)
+    return mock_session
+
+
+def test_backtest_run_ai_washing_exits_zero():
+    """backtest run --signal ai-washing exits 0 when all pipeline stages complete."""
+    signal_frame = _make_minimal_signal_frame()
+
+    # Build mock PriceBarORM objects for the 3 tickers
+    mock_bars = []
+    for ticker in ["AAPL", "MSFT", "GOOG"]:
+        for i in range(10):
+            bar = MagicMock()
+            bar.ticker = ticker
+            bar.bar_date = _date(2024, 1, 2 + i)
+            bar.close_cents = 15000
+            mock_bars.append(bar)
+
+    mock_session = _make_mock_session()
+
+    with patch("fund_backtest.cli.load_app_settings"):
+        with patch("fund_backtest.cli.configure_logging"):
+            with patch("fund_backtest.cli.create_engine_from_settings"):
+                with patch("fund_backtest.cli.get_session_factory") as mock_factory:
+                    mock_factory.return_value.return_value = mock_session
+
+                    with patch("fund_backtest.cli.AiWashingLoader") as mock_loader_cls:
+                        mock_loader = MagicMock()
+                        mock_loader.load.return_value = signal_frame
+                        mock_loader_cls.return_value = mock_loader
+
+                        with patch("fund_backtest.cli.PriceBarRepository") as mock_repo_cls:
+                            mock_repo = MagicMock()
+                            mock_repo.get_bars.return_value = mock_bars
+                            mock_repo_cls.return_value = mock_repo
+
+                            with patch("fund_backtest.cli.PortfolioSimulator") as mock_sim_cls:
+                                mock_sim = MagicMock()
+                                mock_portfolio_result = MagicMock()
+                                mock_sim.simulate.return_value = mock_portfolio_result
+                                mock_sim_cls.return_value = mock_sim
+
+                                with patch("fund_backtest.cli.MetricsEngine") as mock_metrics_cls:
+                                    mock_metrics = MagicMock()
+                                    mock_bundle = MagicMock()
+                                    mock_bundle.sharpe = 1.23
+                                    mock_bundle.cagr = 0.15
+                                    mock_metrics.compute.return_value = mock_bundle
+                                    mock_metrics_cls.return_value = mock_metrics
+
+                                    result = runner.invoke(
+                                        app, ["backtest", "run", "--signal", "ai-washing"]
+                                    )
+
+    assert result.exit_code == 0, f"exit code {result.exit_code}: {result.output}"
+    assert "complete" in result.output.lower(), f"expected 'complete' in output: {result.output}"
+
+
+def test_backtest_run_exits_1_on_signal_load_error():
+    """backtest run exits 1 with error message when AiWashingLoader raises SignalLoadError."""
+    from fund_backtest.signal.loaders import SignalLoadError
+
+    mock_session = _make_mock_session()
+
+    with patch("fund_backtest.cli.load_app_settings"):
+        with patch("fund_backtest.cli.configure_logging"):
+            with patch("fund_backtest.cli.create_engine_from_settings"):
+                with patch("fund_backtest.cli.get_session_factory") as mock_factory:
+                    mock_factory.return_value.return_value = mock_session
+
+                    with patch("fund_backtest.cli.AiWashingLoader") as mock_loader_cls:
+                        mock_loader = MagicMock()
+                        mock_loader.load.side_effect = SignalLoadError(
+                            "scores table is empty"
+                        )
+                        mock_loader_cls.return_value = mock_loader
+
+                        result = runner.invoke(
+                            app, ["backtest", "run", "--signal", "ai-washing"]
+                        )
+
+    assert result.exit_code == 1, f"expected exit 1, got {result.exit_code}: {result.output}"
+    assert "empty" in result.output.lower(), f"expected 'empty' in output: {result.output}"
+
+
+def test_backtest_run_unknown_signal_exits_1():
+    """backtest run --signal unknown-strategy exits 1 with 'unknown' in output."""
+    result = runner.invoke(app, ["backtest", "run", "--signal", "unknown-strategy"])
+
+    assert result.exit_code == 1, f"expected exit 1, got {result.exit_code}: {result.output}"
+    assert "unknown" in result.output.lower(), f"expected 'unknown' in output: {result.output}"
