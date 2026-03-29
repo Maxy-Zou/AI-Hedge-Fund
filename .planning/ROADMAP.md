@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Price Data Pipeline** - Download, cache, validate, and incrementally update daily OHLCV data for the full universe (completed 2026-03-29)
 - [x] **Phase 3: Signal Adapter and Integration Contract** - Define the signal DataFrame contract and build the adapter that normalizes raw strategy scores into portfolio weights (completed 2026-03-29)
 - [x] **Phase 4: Cost Model and Portfolio Simulator** - Implement fully vectorized long/short simulation with realistic transaction and borrow costs (completed 2026-03-29)
-- [ ] **Phase 5: Risk Metrics Engine** - Compute the full institutional metric suite (Sharpe, Sortino, drawdown, benchmarks, rolling windows)
+- [x] **Phase 5: Risk Metrics Engine** - Compute the full institutional metric suite (Sharpe, Sortino, drawdown, benchmarks, rolling windows) (completed 2026-03-29)
 - [ ] **Phase 6: Streamlit Dashboard** - Interactive investor-facing dashboard showing equity curves, drawdown, sector exposure, and monthly returns
 - [ ] **Phase 7: Tearsheet and Data Exports** - PDF tearsheet, CSV/JSON exports, and explicit cost labeling on all outputs
 - [ ] **Phase 8: AI Washing Detector Integration** - Wire live AI Washing Risk Scores into the backtester and validate the end-to-end pipeline
@@ -101,7 +101,7 @@ Plans:
 
 Plans:
 - [x] 05-01-PLAN.md — Type contracts (MetricsConfig, MetricsBundle) and TDD scaffolds (RED state)
-- [ ] 05-02-PLAN.md — MetricsEngine implementation (GREEN phase)
+- [x] 05-02-PLAN.md — MetricsEngine implementation (GREEN phase)
 
 ### Phase 6: Streamlit Dashboard
 **Goal**: An interactive investor-facing dashboard renders the full backtest story — equity curve, drawdown, monthly returns, and sector exposure — from a completed MetricsBundle and PortfolioResult
@@ -147,7 +147,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 2. Price Data Pipeline | 4/4 | Complete   | 2026-03-29 |
 | 3. Signal Adapter and Integration Contract | 2/2 | Complete   | 2026-03-29 |
 | 4. Cost Model and Portfolio Simulator | 2/2 | Complete   | 2026-03-29 |
-| 5. Risk Metrics Engine | 0/2 | Not started | - |
+| 5. Risk Metrics Engine | 2/2 | Complete | 2026-03-29 |
 | 6. Streamlit Dashboard | 0/TBD | Not started | - |
 | 7. Tearsheet and Data Exports | 0/TBD | Not started | - |
 | 8. AI Washing Detector Integration | 0/TBD | Not started | - |
