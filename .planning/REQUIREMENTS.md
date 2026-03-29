@@ -36,12 +36,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Reporting
 
-- [ ] **RPT-01**: Interactive Streamlit dashboard displays equity curve and drawdown chart
-- [ ] **RPT-02**: Dashboard displays monthly returns heatmap (calendar table)
-- [ ] **RPT-03**: Dashboard displays sector exposure breakdown
-- [ ] **RPT-04**: PDF tearsheet generates a single-page fund factsheet with key metrics and charts
-- [ ] **RPT-05**: System exports daily returns, positions, and trade log as CSV and JSON
-- [ ] **RPT-06**: All outputs label cost assumptions (slippage, borrow rate, commission) explicitly
+- [x] **RPT-01**: Interactive Streamlit dashboard displays equity curve and drawdown chart
+- [x] **RPT-02**: Dashboard displays monthly returns heatmap (calendar table)
+- [x] **RPT-03**: Dashboard displays sector exposure breakdown
+- [x] **RPT-04**: PDF tearsheet generates a single-page fund factsheet with key metrics and charts
+- [x] **RPT-05**: System exports daily returns, positions, and trade log as CSV and JSON
+- [x] **RPT-06**: All outputs label cost assumptions (slippage, borrow rate, commission) explicitly
 
 ### Integration
 
@@ -115,12 +115,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RISK-02 | Phase 5 | Complete |
 | RISK-03 | Phase 5 | Complete |
 | RISK-04 | Phase 5 | Complete |
-| RPT-01 | Phase 6 | Pending |
-| RPT-02 | Phase 6 | Pending |
-| RPT-03 | Phase 6 | Pending |
-| RPT-04 | Phase 7 | Pending |
-| RPT-05 | Phase 7 | Pending |
-| RPT-06 | Phase 7 | Pending |
+| RPT-01 | Phase 6 | Complete |
+| RPT-02 | Phase 6 | Complete |
+| RPT-03 | Phase 6 | Complete |
+| RPT-04 | Phase 7 | Complete |
+| RPT-05 | Phase 7 | Complete |
+| RPT-06 | Phase 7 | Complete |
 | INT-01 | Phase 3 | Complete |
 | INT-02 | Phase 8 | Pending |
 | INT-03 | Phase 8 | Pending |

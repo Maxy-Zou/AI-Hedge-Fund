@@ -132,7 +132,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — reports/ module: TearsheetBuilder (matplotlib PDF) and ExportBuilder (CSV/JSON) with TDD tests
+- [x] 07-01-PLAN.md — reports/ module: TearsheetBuilder (matplotlib PDF) and ExportBuilder (CSV/JSON) with TDD tests
 - [ ] 07-02-PLAN.md — CLI wiring: backtest export subgroup (--tearsheet, --csv, --json, --all) + CLI tests
 
 ### Phase 8: AI Washing Detector Integration
@@ -158,5 +158,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 4. Cost Model and Portfolio Simulator | 2/2 | Complete   | 2026-03-29 |
 | 5. Risk Metrics Engine | 2/2 | Complete   | 2026-03-29 |
 | 6. Streamlit Dashboard | 3/3 | Complete   | 2026-03-29 |
-| 7. Tearsheet and Data Exports | 0/2 | Not started | - |
+| 7. Tearsheet and Data Exports | 1/2 | In Progress|  |
 | 8. AI Washing Detector Integration | 0/TBD | Not started | - |

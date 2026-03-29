@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 06-streamlit-dashboard 06-03-PLAN.md
-last_updated: "2026-03-29T18:15:31.980Z"
+status: executing
+stopped_at: Completed 07-tearsheet-and-data-exports 07-01-PLAN.md
+last_updated: "2026-03-29T18:37:10.807Z"
 last_activity: 2026-03-29
 progress:
   total_phases: 8
   completed_phases: 6
-  total_plans: 16
-  completed_plans: 16
+  total_plans: 18
+  completed_plans: 17
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-28)
 
 **Core value:** Produce compelling, realistic backtest results the moment any strategy signal is ready — so investor conversations can start immediately.
-**Current focus:** Phase 06 — streamlit-dashboard
+**Current focus:** Phase 07 — tearsheet-and-data-exports
 
 ## Current Position
 
-Phase: 7
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 07 (tearsheet-and-data-exports) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-03-29
 
 Progress: [░░░░░░░░░░] 0%
@@ -68,6 +68,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 06-streamlit-dashboard P01 | 210min | 2 tasks | 6 files |
 | Phase 06-streamlit-dashboard P02 | 15min | 2 tasks | 1 files |
 | Phase 06-streamlit-dashboard P03 | 1min | 2 tasks | 1 files |
+| Phase 07-tearsheet-and-data-exports P01 | 3min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -117,6 +118,8 @@ Recent decisions affecting current work:
 - [Phase 06-streamlit-dashboard]: _annotate_drawdown_episodes handles open-ended trailing episodes (no closing transition at end of series)
 - [Phase 06-streamlit-dashboard]: width="stretch" used for all st.plotly_chart calls (Streamlit 1.45+ API; use_container_width deprecated and absent)
 - [Phase 06-streamlit-dashboard]: Benchmark fetch (SPY/IWM) gracefully degrades to empty dict — equity chart renders strategy-only on yfinance failure
+- [Phase 07-tearsheet-and-data-exports]: Matplotlib Agg backend guarded with get_backend() \!= 'Agg' check before use() call to avoid double-switching when already set
+- [Phase 07-tearsheet-and-data-exports]: Rolling Series fields excluded from JSON by explicit key enumeration (not model_dump) for type safety
 
 ### Pending Todos
 
@@ -130,6 +133,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29T18:11:43.305Z
-Stopped at: Completed 06-streamlit-dashboard 06-03-PLAN.md
+Last session: 2026-03-29T18:37:10.804Z
+Stopped at: Completed 07-tearsheet-and-data-exports 07-01-PLAN.md
 Resume file: None
