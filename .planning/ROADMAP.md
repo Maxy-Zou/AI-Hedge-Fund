@@ -197,7 +197,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 11-01-PLAN.md — Pre-flight: install PyTorch, verify EDGAR identity, confirm companies table, smoke test
+- [x] 11-01-PLAN.md — Pre-flight: install PyTorch, verify EDGAR identity, confirm companies table, smoke test
 - [ ] 11-02-PLAN.md — Pipeline execution: run full pipeline in background, verify daily_scores populated
 
 ### Phase 12: Bug Fixes and Wiring
@@ -241,6 +241,6 @@ v1.1: 9 → 10 → 11 → 12 (parallel with 11) → 13
 | 8. AI Washing Detector Integration | 2/2 | Complete | 2026-03-29 |
 | 9. Infrastructure and Database Setup | 2/2 | Complete   | 2026-03-30 |
 | 10. Data Population | 3/3 | Complete    | 2026-03-30 |
-| 11. Detector Execution | 0/2 | Not started | - |
+| 11. Detector Execution | 1/2 | In Progress|  |
 | 12. Bug Fixes and Wiring | 0/TBD | Not started | - |
 | 13. Live Backtest and Dashboard | 0/TBD | Not started | - |

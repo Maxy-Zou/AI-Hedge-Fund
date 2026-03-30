@@ -69,7 +69,7 @@ Requirements for live end-to-end pipeline. Each maps to roadmap phases 9+.
 
 ### Detector Execution
 
-- [ ] **DET-01**: Running `ai-washer universe scan` populates the companies table with real mid-cap entities from SEC EDGAR
+- [x] **DET-01**: Running `ai-washer universe scan` populates the companies table with real mid-cap entities from SEC EDGAR
 - [ ] **DET-02**: Running the AI Washing Detector pipeline produces real `daily_scores` rows in PostgreSQL from SEC filing analysis
 - [ ] **DET-03**: The pipeline completes without manual intervention and logs progress via structlog
 
@@ -171,7 +171,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | POP-02 | Phase 10 | Complete |
 | POP-03 | Phase 10 | Complete |
 | POP-04 | Phase 10 | Complete |
-| DET-01 | Phase 11 | Pending |
+| DET-01 | Phase 11 | Complete |
 | DET-02 | Phase 11 | Pending |
 | DET-03 | Phase 11 | Pending |
 | FIX-02 | Phase 12 | Pending |

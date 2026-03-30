@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: History
-status: verifying
-stopped_at: Completed 10-03-PLAN.md
-last_updated: "2026-03-30T16:47:09.133Z"
+status: executing
+stopped_at: Completed 11-01-PLAN.md
+last_updated: "2026-03-30T18:04:57.573Z"
 last_activity: 2026-03-30
 progress:
-  total_phases: 10
+  total_phases: 11
   completed_phases: 10
-  total_plans: 25
-  completed_plans: 25
+  total_plans: 27
+  completed_plans: 26
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** Produce compelling, realistic backtest results the moment any strategy signal is ready — so investor conversations can start immediately.
-**Current focus:** Phase 10 — data-population
+**Current focus:** Phase 11 — detector-execution
 
 ## Current Position
 
-Phase: 10
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 11 (detector-execution) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-03-30
 
 Progress: [░░░░░░░░░░] 0%
@@ -79,6 +79,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 10-data-population P01 | 3 | 2 tasks | 2 files |
 | Phase 10-data-population P02 | 12min | 2 tasks | 2 files |
 | Phase 10 P03 | 45min | 3 tasks | 2 files |
+| Phase 11 P01 | 41min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -148,6 +149,8 @@ Recent decisions affecting current work:
 - [Phase 10-data-population]: Pydantic v2 requires explicit NaN->None coercion via field_validator(mode='before') for str | None fields receiving pandas float NaN values
 - [Phase 10]: PostgreSQL hard-caps bind parameters at 65,535 per statement: insert_bars() must chunk at 8191 rows (65535//8); single mega-INSERT with 274 tickers * 1257 days * 8 cols = ~2.75M params fails at runtime
 - [Phase 10]: CMC yfinance TypeError NoneType failure is acceptable: 1/274 = 0.4% failure rate, within 10% SLA; data download is idempotent
+- [Phase 11]: torch 2.2.2 installed via CPU wheel index; torch>=2.4 has no macOS x86_64 wheels — transformers 4.57.6 used for torch 2.2.2 compatibility
+- [Phase 11]: EFTS search-index API changed field names (adsh/form/period_ending); EFTSHit.from_search_index() factory method added for forward compatibility
 
 ### Pending Todos
 
@@ -164,6 +167,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-30T16:43:15.978Z
-Stopped at: Completed 10-03-PLAN.md
+Last session: 2026-03-30T18:04:57.565Z
+Stopped at: Completed 11-01-PLAN.md
 Resume file: None
