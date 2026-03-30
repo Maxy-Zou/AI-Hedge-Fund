@@ -17,6 +17,7 @@ from pathlib import Path
 import pandas as pd
 import structlog
 import typer
+import yfinance as yf
 from rich.console import Console
 from rich.table import Table
 
@@ -314,6 +315,22 @@ def run(
             price_frame.index = pd.DatetimeIndex(pd.to_datetime(price_frame.index))
             price_frame.columns.name = None
 
+            # FIX-02: Intersect signal and price date indices before adapt() to prevent
+            # all-zero returns from date mismatches. shift(1) inside SignalAdapter.adapt()
+            # is applied AFTER this intersection — do NOT pre-shift here (Phase 3 decision).
+            common_dates = signal_frame.index.intersection(price_frame.index)
+            if len(common_dates) == 0:
+                console.print("[red]Error: Signal and price data share no overlapping dates.[/red]")
+                raise typer.Exit(code=1)
+            if len(common_dates) < len(signal_frame.index):
+                _log.warning(
+                    "signal_price_date_mismatch",
+                    signal_dates=len(signal_frame.index),
+                    price_dates=len(price_frame.index),
+                    common_dates=len(common_dates),
+                )
+            signal_frame = signal_frame.loc[common_dates]
+
             # Stage 3: Adapt signal to weights
             weight_frame = SignalAdapter().adapt(signal_frame)
 
@@ -321,8 +338,25 @@ def run(
             portfolio_result = PortfolioSimulator().simulate(weight_frame, price_frame)
             _log.info("simulation_complete", n_trading_days=len(portfolio_result.net_returns))
 
+            # FIX-05: Fetch SPY benchmark for alpha/beta computation.
+            # Mirrors dashboard/app.py:_fetch_benchmark_returns() pattern.
+            # Graceful degradation: benchmark=None → alpha=0.0, beta=0.0 (no crash).
+            benchmark_returns: pd.Series | None = None
+            try:
+                spy_df = yf.download(
+                    "SPY",
+                    start=str(portfolio_result.net_returns.index[0].date()),
+                    end=str(portfolio_result.net_returns.index[-1].date()),
+                    progress=False,
+                    auto_adjust=True,
+                )
+                if not spy_df.empty:
+                    benchmark_returns = spy_df["Close"].squeeze().pct_change().dropna()
+            except Exception:
+                _log.warning("benchmark_fetch_failed", ticker="SPY")
+
             # Stage 5: Compute risk metrics
-            bundle = MetricsEngine().compute(portfolio_result)
+            bundle = MetricsEngine().compute(portfolio_result, benchmark=benchmark_returns)
             _log.info("metrics_complete", sharpe=bundle.sharpe, cagr=bundle.cagr)
 
         # Stage 6 (optional): Export

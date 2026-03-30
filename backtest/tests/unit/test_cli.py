@@ -586,26 +586,26 @@ def test_run_benchmark_passed():
                             mock_repo.get_bars.return_value = mock_bars
                             mock_repo_cls.return_value = mock_repo
 
-                        with patch("fund_backtest.cli.PortfolioSimulator") as mock_sim_cls:
-                            mock_sim = MagicMock()
-                            mock_sim.simulate.return_value = mock_portfolio_result
-                            mock_sim_cls.return_value = mock_sim
+                            with patch("fund_backtest.cli.PortfolioSimulator") as mock_sim_cls:
+                                mock_sim = MagicMock()
+                                mock_sim.simulate.return_value = mock_portfolio_result
+                                mock_sim_cls.return_value = mock_sim
 
-                            with patch("fund_backtest.cli.MetricsEngine") as mock_metrics_cls:
-                                mock_metrics = MagicMock()
-                                mock_bundle = MagicMock()
-                                mock_bundle.sharpe = 1.5
-                                mock_bundle.cagr = 0.20
-                                mock_metrics.compute.return_value = mock_bundle
-                                mock_metrics_cls.return_value = mock_metrics
+                                with patch("fund_backtest.cli.MetricsEngine") as mock_metrics_cls:
+                                    mock_metrics = MagicMock()
+                                    mock_bundle = MagicMock()
+                                    mock_bundle.sharpe = 1.5
+                                    mock_bundle.cagr = 0.20
+                                    mock_metrics.compute.return_value = mock_bundle
+                                    mock_metrics_cls.return_value = mock_metrics
 
-                                with patch("fund_backtest.cli.yf") as mock_yf:
-                                    mock_yf.download.return_value = spy_df
+                                    with patch("fund_backtest.cli.yf") as mock_yf:
+                                        mock_yf.download.return_value = spy_df
 
-                                    result = runner.invoke(
-                                        app,
-                                        ["backtest", "run", "--signal", "ai-washing"],
-                                    )
+                                        result = runner.invoke(
+                                            app,
+                                            ["backtest", "run", "--signal", "ai-washing"],
+                                        )
 
     assert result.exit_code == 0, f"exit code {result.exit_code}: {result.output}"
     compute_call = mock_metrics.compute.call_args
@@ -644,26 +644,26 @@ def test_run_benchmark_fallback():
                             mock_repo.get_bars.return_value = mock_bars
                             mock_repo_cls.return_value = mock_repo
 
-                        with patch("fund_backtest.cli.PortfolioSimulator") as mock_sim_cls:
-                            mock_sim = MagicMock()
-                            mock_sim.simulate.return_value = mock_portfolio_result
-                            mock_sim_cls.return_value = mock_sim
+                            with patch("fund_backtest.cli.PortfolioSimulator") as mock_sim_cls:
+                                mock_sim = MagicMock()
+                                mock_sim.simulate.return_value = mock_portfolio_result
+                                mock_sim_cls.return_value = mock_sim
 
-                            with patch("fund_backtest.cli.MetricsEngine") as mock_metrics_cls:
-                                mock_metrics = MagicMock()
-                                mock_bundle = MagicMock()
-                                mock_bundle.sharpe = 0.8
-                                mock_bundle.cagr = 0.05
-                                mock_metrics.compute.return_value = mock_bundle
-                                mock_metrics_cls.return_value = mock_metrics
+                                with patch("fund_backtest.cli.MetricsEngine") as mock_metrics_cls:
+                                    mock_metrics = MagicMock()
+                                    mock_bundle = MagicMock()
+                                    mock_bundle.sharpe = 0.8
+                                    mock_bundle.cagr = 0.05
+                                    mock_metrics.compute.return_value = mock_bundle
+                                    mock_metrics_cls.return_value = mock_metrics
 
-                                with patch("fund_backtest.cli.yf") as mock_yf:
-                                    mock_yf.download.side_effect = Exception("network error")
+                                    with patch("fund_backtest.cli.yf") as mock_yf:
+                                        mock_yf.download.side_effect = Exception("network error")
 
-                                    result = runner.invoke(
-                                        app,
-                                        ["backtest", "run", "--signal", "ai-washing"],
-                                    )
+                                        result = runner.invoke(
+                                            app,
+                                            ["backtest", "run", "--signal", "ai-washing"],
+                                        )
 
     assert result.exit_code == 0, f"exit code {result.exit_code}: {result.output}"
     compute_call = mock_metrics.compute.call_args
