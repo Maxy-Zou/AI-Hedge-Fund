@@ -111,7 +111,7 @@ ticker errors are silently swallowed.
 and no partial fill risk. The strategy may assume it can trade 10% of a stock's daily volume at the
 close price.
 
-**Why it happens:** Vectorized backtesting returns the arithmetic of signal × returns. Price impact
+**Why it happens:** Vectorized backtesting returns the arithmetic of signal x returns. Price impact
 modeling requires knowing position sizes relative to average daily volume, which adds significant
 complexity.
 
@@ -423,3 +423,334 @@ risk-adjusted, benchmark-relative metrics.
 - [Look-Ahead Bias Prevention and Signal Processing — Jakub Polec/Medium](https://medium.com/@jpolec_72972/look-ahead-bias-prevention-and-signal-processing-in-quantitative-trading-9def856db5a6)
 - [The Seven Sins of Quantitative Investing — Portfolio Optimization Book](https://bookdown.org/palomar/portfoliooptimizationbook/8.2-seven-sins.html)
 - [The Impact of Transaction Costs and Slippage — ResearchGate](https://www.researchgate.net/publication/384458498_The_impact_of_transactions_costs_and_slippage_on_algorithmic_trading_performance)
+
+---
+
+---
+
+# Milestone v1.1 Addendum: Live End-to-End Pipeline Pitfalls
+
+**Milestone:** v1.1 — Running the full pipeline with real data for the first time
+**Added:** 2026-03-29
+**Confidence:** HIGH — derived from direct codebase analysis
+
+This addendum covers pitfalls specific to transitioning from synthetic/demo data (used in v1.0
+development) to real data: real yfinance downloads, real SEC EDGAR ingestion, shared PostgreSQL via
+Docker, and the two-package Alembic migration setup. These are distinct from the general backtesting
+methodology pitfalls above.
+
+---
+
+## Critical Pitfalls (v1.1)
+
+---
+
+### v1.1 Pitfall 1: Alembic `alembic_version` Table Collision Between Two Packages
+
+**What goes wrong:** Both `fund_backtest` and `ai_washer` run Alembic migrations against the same
+PostgreSQL database. By default Alembic writes to a single `public.alembic_version` table with one
+row. Running either package's migrations after the other corrupts or blocks version tracking.
+
+**The collision is confirmed in this codebase:**
+- `Al Washing Detector/src/ai_washer/db/migrations/versions/` — 8 versions, revision IDs `001`–`008`
+- `backtest/src/fund_backtest/db/migrations/versions/` — 2 versions, revision IDs `001`, `002`
+- Both `env.py` files call `context.configure()` without a `version_table=` argument
+
+When `fund_backtest` runs, it writes `002` to `alembic_version`. When `ai_washer` then runs, it
+reads `002` and cannot find that revision in its own chain — raising
+`Can't locate revision identified by '002'` and refusing to migrate.
+
+**Consequences:** All subsequent migrations fail with a confusing non-obvious error. Misdiagnosis
+can lead to dropping and recreating tables, wiping all ingested data.
+
+**Prevention:**
+- In `ai_washer/db/migrations/env.py`, add `version_table="alembic_version_ai_washer"` to both
+  `context.configure()` calls (offline and online).
+- In `fund_backtest/db/migrations/env.py`, add `version_table="alembic_version_fund_backtest"` to
+  both `context.configure()` calls.
+- This must be done before any joint migration run on the shared DB instance.
+- Verify: after both packages have migrated, `psql -c "\dt alembic*"` should show two rows.
+
+**Detection:** `alembic upgrade head` from either package directory raises
+`Can't locate revision identified by 'XXX'` where `XXX` belongs to the other package.
+
+**Phase:** Docker/PostgreSQL setup phase — fix before running either package's migrations.
+
+---
+
+### v1.1 Pitfall 2: Docker PostgreSQL Data Loss on Container Recreation
+
+**What goes wrong:** Docker Compose creates anonymous volumes by default. Running
+`docker-compose down -v` or `docker system prune` destroys the PostgreSQL data volume, deleting
+5 years of price bars (~2M rows), all AI Washing Detector scores, and Alembic version tables.
+Re-downloading takes 30–60 minutes.
+
+**The `docker-compose.yml` does not yet exist in this project.** When it is created, the volume
+name must be explicit or this pitfall is guaranteed.
+
+**Prevention:**
+- Use a named volume explicitly in `docker-compose.yml`:
+  ```yaml
+  services:
+    postgres:
+      volumes:
+        - postgres_data:/var/lib/postgresql/data
+  volumes:
+    postgres_data: {}
+  ```
+- Never rely on auto-named volumes.
+- Document: "Never run `docker-compose down -v` on the development database."
+- Verify the volume is named before any production data download: `docker volume ls | grep postgres_data`.
+
+**Detection:** After `docker-compose up`, `fund-backtest data coverage` shows "Tickers with bars: 0"
+despite a previous successful download.
+
+**Phase:** Docker/PostgreSQL setup phase.
+
+---
+
+### v1.1 Pitfall 3: Signal-Price Date Index Misalignment in `backtest run`
+
+**What goes wrong:** AI Washing scores (`daily_scores.scored_at`) and price bars (`price_bars.bar_date`)
+do not share the same date set. Scores exist on any calendar day the scoring pipeline ran; price bars
+exist only on NYSE trading days. When the `PortfolioSimulator` receives both frames without explicit
+index intersection, dates that exist in one but not the other produce NaN rows — silently treated as
+0% returns.
+
+**The current `cli.py` code (lines 296–316)** loads `signal_frame` and `price_frame` independently
+without intersecting their date indices before calling `PortfolioSimulator.simulate()`.
+
+**Consequences:** With 5 years of data and ~10 US holidays/year, approximately 50 rows are silently
+set to 0% return. This understates volatility and modestly overstates Sharpe ratio.
+
+**Prevention:**
+- After loading both frames in `backtest run`, intersect the indices explicitly:
+  ```python
+  common_dates = weight_frame.index.intersection(price_frame.index)
+  weight_frame = weight_frame.loc[common_dates]
+  price_frame = price_frame.loc[common_dates]
+  ```
+- Log a count of dropped dates so the user can audit the alignment.
+
+**Detection:** `portfolio_result.net_returns.isna().sum()` > 0 after the simulation step.
+
+**Phase:** The `backtest run` integration phase.
+
+---
+
+## Moderate Pitfalls (v1.1)
+
+---
+
+### v1.1 Pitfall 4: yfinance Silent Partial Download on First Full 5-Year Load
+
+**What goes wrong:** When `yf.download()` is called with 80 tickers and a 5-year window, Yahoo
+Finance sometimes returns partial results — fewer tickers than requested — with no exception. The
+current `batch_sleep_secs=1.0` default is appropriate for incremental updates but is too aggressive
+for the initial full-history download against all 200+ active universe tickers.
+
+**Consequences:**
+- `PriceBuilder.download()` counts missing tickers as "failed" and logs a warning, but the backtest
+  still runs with a sparse `price_frame` — producing a subtly incorrect equity curve.
+- The 95% coverage alert means up to 12 tickers in a 200-ticker universe can disappear silently.
+
+**Prevention:**
+- For the first real `fund-backtest data download`, use `batch_sleep_secs=3.0` (override via config
+  YAML or env var). Use 1.0 seconds for subsequent incremental `data update` runs.
+- After the download, run `fund-backtest data coverage` and verify "Tickers with bars" is within 5%
+  of active universe count.
+- Surface the failed ticker list prominently in the CLI output, not only in warning logs.
+
+**Detection:** `coverage_below_threshold` warning in logs. Check `fund-backtest data coverage`.
+
+**Phase:** Data download phase (the first real `fund-backtest data download` run).
+
+---
+
+### v1.1 Pitfall 5: SEC EDGAR Rate Limiting Silently Skips Companies During Initial Ingestion
+
+**What goes wrong:** Running the AI Washing Detector's scoring pipeline against 200–500 companies for
+the first time triggers aggressive SEC EDGAR throttling, especially during market hours (9am–4pm ET).
+The `tenacity` retry chain (`stop_after_attempt(3)`) can exhaust all attempts for 10–20 companies,
+silently skipping them.
+
+**Consequences:** Some companies have no scores, are excluded from the backtest, and bias results
+toward companies that were easy to scrape — not a random sample of the universe.
+
+**Prevention:**
+- Run the initial AI Washing score ingestion outside market hours (evenings or weekends).
+- After the run, query `SELECT COUNT(DISTINCT company_id) FROM daily_scores` vs
+  `SELECT COUNT(*) FROM companies WHERE is_active = true`. A gap >10% warrants investigation.
+- Accept partial coverage for v1.1; document which tickers have scores and which do not.
+
+**Detection:** More than 10% of active companies have no entries in `daily_scores`.
+
+**Phase:** AI Washing score ingestion run.
+
+---
+
+### v1.1 Pitfall 6: `auto_adjust=True` Creates Price Discontinuities After Stock Splits
+
+**What goes wrong:** `yf.download(..., auto_adjust=True)` — confirmed in `downloader.py line 48` —
+adjusts all historical prices retroactively when a company splits. Because
+`PriceBarRepository.insert_bars()` uses `ON CONFLICT DO NOTHING`, the database keeps old pre-split
+prices while newly downloaded post-split bars use the adjusted scale. This creates a price
+discontinuity at the split date.
+
+**Consequences:** `detect_return_anomalies()` flags the spike, but does not correct it. The
+`PortfolioSimulator` computes a large artificial gain or loss on the split date for any position
+in that ticker.
+
+**Prevention:**
+- Monitor the `price_anomalies` table after each download or update.
+- Any `return_spike_minus` near -50% or `return_spike_plus` near +100% on a specific date is a
+  split signal — verify before running the backtest.
+- Document this known limitation in the tearsheet's "Data Limitations" footnote for v1.1.
+
+**Detection:** `price_anomalies` shows a `return_spike_minus` near -49% to -51% on a specific
+ticker. Cross-reference with that company's SEC filings for a split announcement.
+
+**Phase:** Data validation after each incremental price update.
+
+---
+
+### v1.1 Pitfall 7: Environment Variable Namespace Collision Between Two Packages
+
+**What goes wrong:** The AI Washing Detector uses `AI_WASHER_DATABASE_URL`. The backtest reads
+`DATABASE_URL` first, then `FUND_BACKTEST_DATABASE_URL` (per `env.py` line 18). If a developer
+sets up the backtest's `.env` without including `DATABASE_URL`, or sets it to a different value,
+the backtest connects to a different (or non-existent) database.
+
+**Consequences:**
+- `backtest run` reports `SignalLoadError: AI Washing Detector scores table is empty` even though
+  scores clearly exist — both packages are just talking to different databases.
+- Running migrations against different database URLs creates two separate schemas.
+
+**Prevention:**
+- Establish a single shared `.env` at the `AI Hedgefund/` root:
+  ```
+  DATABASE_URL=postgresql://postgres:postgres@localhost:5432/hedgefund
+  AI_WASHER_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/hedgefund
+  FUND_BACKTEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/hedgefund
+  ```
+- The `docker-compose.yml` environment block should set all three to the same value.
+
+**Detection:** `backtest run` reports `SignalLoadError` despite the AI Washer having ingested scores.
+Run `psql $DATABASE_URL -c "\dt"` from both package directories — same tables should appear.
+
+**Phase:** Docker/PostgreSQL setup phase — establish env var convention before any other work.
+
+---
+
+### v1.1 Pitfall 8: Alembic `%(DATABASE_URL)s` Interpolation Fails Without Exported Env Var
+
+**What goes wrong:** `backtest/alembic.ini` line 2 uses `sqlalchemy.url = %(DATABASE_URL)s`.
+This ConfigParser interpolation reads `DATABASE_URL` from the shell environment at parse time —
+before `env.py` runs. If `DATABASE_URL` is not exported in the shell session, Alembic raises
+`configparser.InterpolationMissingOptionError` before any migration logic executes.
+
+**Prevention:**
+- Export env vars before running `alembic` commands:
+  ```bash
+  export $(grep -v '^#' .env | xargs) && alembic upgrade head
+  ```
+- Or blank the URL in `alembic.ini` (matching the `ai_washer` pattern: `sqlalchemy.url =`) and
+  rely entirely on `env.py`'s override — this is simpler and less error-prone.
+
+**Detection:** `configparser.InterpolationMissingOptionError: Bad value substitution in section
+'alembic', option 'sqlalchemy.url'` when running `alembic upgrade head` from the backtest directory.
+
+**Phase:** Docker/PostgreSQL setup phase.
+
+---
+
+## Minor Pitfalls (v1.1)
+
+---
+
+### v1.1 Pitfall 9: `lookback_years * 365` Undershoots the History Window by ~2 Days
+
+**What goes wrong:** `PriceBuilder.download()` computes
+`start = date.today() - timedelta(days=lookback_years * 365)`. With `lookback_years=5`, this gives
+1825 days — but 5 calendar years contain 1826 or 1827 days due to leap years. Running from
+2026-03-29, the lookback misses approximately the first few days of January 2021.
+
+**Prevention:** Use `timedelta(days=lookback_years * 366)` or
+`date(today.year - lookback_years, today.month, today.day)` directly.
+
+**Detection:** `fund-backtest data coverage` shows "Earliest bar date" of 2021-01-05 instead of
+2021-01-01 for a 5-year lookback starting 2026-03-29.
+
+**Phase:** Pre-download verification.
+
+---
+
+### v1.1 Pitfall 10: `backtest export` Still Uses Demo Data Stubs After a Real Run
+
+**What goes wrong:** The `export` CLI command in `cli.py` (lines 345–387) uses `make_demo_result()`
+and `make_demo_bundle()` — Phase 6/7 development stubs. The `backtest run` command computes real
+metrics and logs them, but does not persist `PortfolioResult` or `MetricsBundle` to disk. Running
+`backtest export --all` after a real backtest still produces outputs from synthetic data.
+
+**Consequences:** Tearsheets and dashboards shown to investors reflect synthetic data, not actual
+AI Washing backtest results. A credibility risk if this gap is not caught before investor meetings.
+
+**Prevention:**
+- `backtest run` must serialize results to disk as JSON in `output_dir` so `export` can load real data.
+- Add a guard in `export` that warns explicitly when falling back to demo data.
+- Wire this before any investor-facing run.
+
+**Detection:** Running `backtest run --export-all` produces tearsheet metrics that do not match the
+"Pipeline complete — Sharpe: X.XX" printed by the same run.
+
+**Phase:** The `backtest run` + export integration step.
+
+---
+
+### v1.1 Pitfall 11: Wikipedia S&P 400 Seed URL Returns Stale or Restructured HTML
+
+**What goes wrong:** `UniverseSettings.seed_url` points to Wikipedia's S&P 400 page. Wikipedia
+occasionally restructures its table HTML. When that happens, the universe seeder can silently
+return 0 tickers or produce malformed ticker symbols.
+
+**Prevention:**
+- After `fund-backtest universe refresh`, run `fund-backtest universe status` and verify the active
+  ticker count is in the expected 350–430 range.
+- If the count is outside that range, inspect the first 10 tickers manually.
+
+**Detection:** `fund-backtest universe status` shows "Active tickers: 0" or implausibly low count.
+
+**Phase:** Universe setup.
+
+---
+
+## Phase-Specific Warnings (v1.1 Summary)
+
+| Phase Topic | Likely Pitfall | Mitigation |
+|-------------|---------------|------------|
+| Docker Compose setup | Anonymous volume destroyed by `docker system prune` | Named volume `postgres_data` explicitly in compose file |
+| First joint migration run | Alembic `alembic_version` collision (`001`/`002` overlap) | Add `version_table=` to both `env.py` configure calls before any migration |
+| Env var wiring | `DATABASE_URL` vs `AI_WASHER_DATABASE_URL` pointing to different hosts | Single shared `.env` at repo root with all three vars set identically |
+| Running `alembic upgrade head` | ConfigParser interpolation fails without exported env var | Export env vars first, or blank URL in `alembic.ini` |
+| Initial 5-year price download | Silent partial download, default batch sleep too aggressive | Use `batch_sleep_secs=3.0`; verify coverage count after run |
+| AI Washing score ingestion | EDGAR rate limiting during market hours exhausts retries | Run outside market hours; check `daily_scores` vs `companies` count ratio |
+| `backtest run` first execution | Signal/price date index misalignment — silent NaN returns | Intersect indices explicitly before passing to simulator |
+| Incremental price update after split | Pre-split prices persist, creating discontinuity at split date | Monitor `price_anomalies` table; review +-50% spikes before each backtest |
+| Investor-facing export | `export` command uses demo data stub, not real results | Wire result persistence in `backtest run` before investor runs |
+
+---
+
+## Sources (v1.1 Addendum)
+
+All v1.1 findings are HIGH confidence: derived from direct analysis of actual codebase files.
+No external web sources used for this addendum.
+
+- `backtest/src/fund_backtest/db/migrations/env.py` — confirms `context.configure()` lacks `version_table`
+- `backtest/alembic.ini` and `Al Washing Detector/alembic.ini` — confirms overlapping revision IDs `001`, `002`
+- `backtest/src/fund_backtest/price/downloader.py` — confirms `auto_adjust=True` and `ON CONFLICT DO NOTHING`
+- `backtest/src/fund_backtest/price/builder.py` — confirms `lookback_years * 365` and `batch_sleep_secs=1.0` default
+- `backtest/src/fund_backtest/cli.py` — confirms `export` uses demo stubs; `backtest run` no result persistence; signal/price frames loaded without index intersection
+- Domain: Alembic `version_table` — documented Alembic feature for multi-package shared DB setups (HIGH confidence)
+- Domain: yfinance partial batch response — well-established behavior (HIGH confidence)
+- Domain: Docker anonymous volume destruction — Docker documented behavior (HIGH confidence)
+- Domain: ConfigParser `%(var)s` interpolation timing vs env.py override — Python stdlib behavior (HIGH confidence)

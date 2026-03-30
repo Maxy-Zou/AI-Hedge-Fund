@@ -1,183 +1,201 @@
-# Feature Landscape: Backtesting Infrastructure
+# Feature Landscape: v1.1 Live End-to-End Pipeline
 
-**Domain:** Quantitative fund backtesting framework (vectorized, daily signals, long/short equity)
-**Researched:** 2026-03-28
-**Overall confidence:** HIGH
+**Domain:** Operational pipeline commissioning — going from demo mode to real data
+**Researched:** 2026-03-29
+**Scope:** Features needed ONLY to move from v1.0 (all demo/synthetic data) to v1.1 (real data flowing through the full stack)
+**Overall confidence:** HIGH — based on direct codebase inspection, not estimation
+
+---
+
+## Context: What Is Already Built
+
+All backtesting logic is complete and verified (185 tests, 90.27% coverage). The gap is purely
+operational: no PostgreSQL instance exists, no real data has been downloaded, the AI Washing
+Detector has never been run against real SEC filings, and the dashboard is hardcoded to
+synthetic demo data. v1.1 is a commissioning milestone, not a feature-building milestone.
+
+**Already built (v1.0, do not rebuild):**
+- Mid-cap universe management (`fund-backtest universe refresh/status`)
+- Daily OHLCV pipeline (`fund-backtest data download/update/coverage`)
+- Signal adapter + look-ahead bias prevention
+- Vectorized portfolio simulator with transaction/borrow cost models
+- Risk metrics engine (Sharpe, Sortino, Calmar, alpha, beta, drawdown, rolling windows)
+- Streamlit dashboard (demo mode — equity curve, drawdown, monthly heatmap, sector exposure)
+- PDF tearsheet + CSV/JSON exports
+- `backtest run --signal ai-washing` end-to-end CLI command
+- AI Washing Detector full pipeline: 6-signal ingestion + composite scoring + `daily_pipeline_flow`
 
 ---
 
 ## Table Stakes
 
-Features investors expect. Missing = product feels incomplete or untrustworthy.
+Features required for v1.1 to work at all. Missing any one = pipeline cannot run.
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Equity curve (cumulative returns) | First thing every allocator asks for — visualizes compounding over time | Low | Line chart, log and linear scale options |
-| Sharpe ratio | Universal risk-adjusted return metric. Institutional baseline since 1966. A fund without a Sharpe number is not a serious fund. | Low | Annualized, excess over risk-free rate (use 3-month T-bill or 0% for simplicity) |
-| Maximum drawdown | Tells investors the worst case they would have experienced. Required for any risk conversation. | Low | Peak-to-trough, absolute value, recovery date optional |
-| Sortino ratio | Variant of Sharpe that only penalizes downside volatility. Preferred by many allocators for short-focused strategies. | Low | Uses downside deviation in denominator |
-| Calmar ratio | Annual return / max drawdown. Required for commodity trading advisor and short-strategy presentations. | Low | Standard 36-month calculation |
-| Annualized return (CAGR) | Baseline "what did this make" metric — cannot omit. | Low | Compound annual growth rate |
-| Annual volatility | Risk magnitude alongside returns. Required context for Sharpe. | Low | Annualized standard deviation of daily returns |
-| Benchmark comparison | S&P 500 at minimum. Investors need to see whether this adds alpha over a passive strategy. | Medium | SPY or ^GSPC. Add Russell 2000 (IWM) for mid-cap relevance. |
-| Alpha and Beta vs. benchmark | Jensen's alpha measures skill beyond systematic exposure. Beta tells investors market sensitivity. | Medium | Requires regression against benchmark returns series |
-| Monthly returns table / heatmap | Industry-standard presentation format. Allocators read this table first before diving into other metrics. | Medium | Calendar table: rows = years, columns = months. Heat-mapped red/green. |
-| Drawdown chart | Visualizes underwater periods — how long, how deep. Paired with equity curve on every tearsheet. | Low | Plot daily drawdown from peak as negative percentage |
-| Transaction cost modeling | Backtests that ignore costs are toys. Any serious allocator asks "what are your cost assumptions?" | Medium | Commission per trade (flat or bps) + slippage model (fixed or price-impact) |
-| Short borrow cost modeling | Absolutely required for a short strategy. Hard-to-borrow stocks can cost 50bps–100%+ annually. Ignoring this overstates returns significantly. | Medium | Per-position daily cost accrual; configurable rate (default 50bps easy-to-borrow, configurable for hard-to-borrow) |
-| Win rate / hit rate | Percentage of trades (or days) with positive returns. Investors use this to assess consistency. | Low | Count of positive return periods / total periods |
-| Position count / turnover | High turnover = high costs and implementation risk. Investors ask this early. | Low | Average daily positions held, one-way turnover rate |
-| Trade log / position history | Audit trail showing what the strategy held and when. Required for due diligence. | Medium | CSV export of date, ticker, direction, entry, exit, PnL |
-| Out-of-sample split | Investors who know quant expect in-sample vs. out-of-sample presentation. Shows overfitting discipline. | Medium | Train/test split by date; display both periods separately in tearsheet |
+| Feature | Why Required | Complexity | Depends On |
+|---------|--------------|------------|------------|
+| Docker Compose for PostgreSQL | Both the backtester and Detector require `FUND_BACKTEST_DATABASE_URL` / `AI_WASHER_DATABASE_URL`. No DB = every CLI command exits 1. No Docker Compose exists in the repo today. | Low | Docker installed locally |
+| Alembic migrations for both packages | The backtest DB schema (universe_tickers, price_bars, etc.) and Detector DB schema (companies, daily_scores, etc.) must be created before any data can be written. Migrations exist but have never been run against a real DB. | Low | Docker Compose PostgreSQL running |
+| `.env` files for both packages | `FUND_BACKTEST_DATABASE_URL` and `AI_WASHER_DATABASE_URL` must point to the same PostgreSQL instance (shared DB). `AI_WASHER_EDGAR_IDENTITY` is legally required by SEC. Without these, both CLIs raise Pydantic ValidationError at startup. | Low | PostgreSQL instance URL |
+| Universe population (`fund-backtest universe refresh`) | The backtester needs active tickers before it can download price data. The Detector's universe scan is independent but targets the same companies. The price downloader queries `universe_tickers` — empty table = zero bars downloaded. | Low | Backtest migrations run |
+| Price data download (`fund-backtest data download`) | `backtest run` loads prices from `price_bars` table. Empty table = empty `price_frame` = portfolio simulator returns zero-length result = metrics engine divide-by-zero. Download takes ~10-30 min for 5 years x 200+ tickers. | Medium | Universe populated, yfinance accessible |
+| AI Washing Detector pipeline execution (`ai-washer pipeline run` or `daily_pipeline_flow`) | `AiWashingLoader.load()` queries `daily_scores JOIN companies`. Empty `daily_scores` raises `SignalLoadError("scores table is empty")` — `backtest run` exits 1 immediately. Pipeline must run at least once to produce any scores. | High | Detector migrations run, EDGAR identity configured, SEC accessible |
+| `backtest run --signal ai-washing` completing successfully | The end-to-end CLI command (`signal load → adapt → simulate → metrics`) is the v1.1 milestone. This is the integration test the whole milestone builds toward. | Low | All above complete |
 
 ---
 
 ## Differentiators
 
-Features that elevate investor conversations beyond baseline. Not expected, but valued.
+Features that make the live results *useful* and investor-ready rather than just technically
+running. Not required for pipeline to execute, but required for the output to be credible.
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| Rolling Sharpe (12-month or 24-month) | Shows whether the edge is persistent or concentrated in one lucky period. Sophisticated allocators weight this heavily. | Medium | Rolling window Sharpe plotted over time |
-| Sector exposure breakdown | Demonstrates the strategy is not just a disguised sector bet. Key for a signal derived from SEC filings (tech-heavy). | Medium | Requires ticker-to-sector mapping (GICS). Bar chart of average long/short exposure per sector. |
-| Signal quantile analysis (IC / factor returns by quintile) | Alphalens-style: shows whether the signal ranks stocks well, not just produces absolute returns. Proves the signal has real predictive power. | High | Information Coefficient (IC) and cumulative returns by signal quintile. Borrowed from Quantopian's Alphalens pattern. |
-| Regime analysis | Shows performance in different market regimes (bull, bear, crisis). Investors want to know if short alpha survives in rising markets. | High | Classify periods by market return; compare strategy metrics per regime |
-| Underwater recovery analysis | Table of all drawdown episodes: start, trough, recovery date, depth. More informative than just "max drawdown." | Medium | Ranked table of top N drawdown periods |
-| Best/worst period analysis | Table of best and worst months/quarters. Reveals tail behavior beyond summary statistics. | Low | Sort monthly returns; display top/bottom N |
-| Excess return vs. benchmark decomposition | Breaks alpha into: (1) stock selection, (2) short premium, (3) market timing. Differentiates skill from luck. | High | Requires attribution framework; expensive to build correctly |
-| PDF tearsheet generation | A polished, branded PDF is a credibility multiplier in allocator meetings. HTML dashboards stay on your machine; PDFs travel. | High | Single-page fund factsheet. Use matplotlib/reportlab for PDF rendering. |
-| Configurable position sizing methods | Shows framework sophistication. Allows sensitivity analysis: does the signal work with equal weight, signal-proportional, or risk parity? | Medium | Three modes: equal-weight, score-proportional, inverse-volatility weighting |
-| Signal correlation with future returns | Spearman rank IC at multiple forward horizons (1d, 5d, 21d). Validates that the signal has real predictive content. | Medium | Requires aligned signal/return dataframes |
+| Feature | Value Proposition | Complexity | Depends On |
+|---------|-------------------|------------|------------|
+| Dashboard live mode (replace demo data with real DB query) | Dashboard hardcodes `make_demo_result()` and `DEMO_TICKER_SECTORS`. Investor demo showing real results from real SEC filings is qualitatively different from synthetic data. Identified as INTG-02 tech debt in v1.0 audit. | Low | `backtest run` successful, DB populated |
+| Tearsheet PDF from live run path | `backtest run --export-all` currently produces CSV + JSON but skips `TearsheetBuilder`. The tearsheet is the investor-facing artifact. Identified as INTG-01 tech debt in v1.0 audit. The fix is a 5-line wiring change in `cli.py`. | Low | `backtest run` successful |
+| Benchmark returns in CLI run path | `alpha` and `beta` are hardcoded `0.0` in all CLI-path exports because `yfinance` benchmark fetch only runs inside the dashboard. SPY/IWM download exists in `dashboard/app.py` but not wired to `backtest run`. Identified as Phase 5/8 tech debt. | Low | `backtest run` successful, yfinance accessible |
+| Run documentation / operator playbook | The sequence `docker compose up → migrate → universe → download → pipeline run → backtest run → view dashboard` has never been written down. A developer joining the project cannot reproduce the live pipeline without reverse-engineering all the CLI commands. A `docs/RUNBOOK.md` or `README.md` section eliminates this. | Low | All steps known |
 
 ---
 
 ## Anti-Features
 
-Features to explicitly NOT build for v1.
+Features to explicitly NOT build in v1.1. The milestone is commissioning, not feature expansion.
 
 | Anti-Feature | Why Avoid | What to Do Instead |
 |--------------|-----------|-------------------|
-| Event-driven backtesting | Tick-level simulation is 10–100x more complex for zero benefit on daily signals. The PROJECT.md explicitly excludes this. | Vectorized is correct for daily signal cadence. Revisit only if intraday signals emerge. |
-| Live trading execution | Scope creep risk — turns a research tool into a regulated trading system. Enormous operational, legal, and testing burden. | Hard boundary: backtest only. Output is research artifact, not orders. |
-| Jupyter notebook output | Notebooks are a maintenance liability — untested cells, kernel state issues, hard to automate. Dashboard + tearsheet cover the investor use case better. | Use Streamlit for interactive output and PDF/HTML for static tearsheets. |
-| Monte Carlo simulation | Impressive but misleading for factor strategies. Path-dependence assumptions are arbitrary and sophisticated allocators distrust it. | Present out-of-sample results and regime analysis instead. |
-| Walk-forward optimization | Tempting but creates meta-overfitting risk. If you can tune the walk-forward windows, you can still overfit. | Simple in-sample / out-of-sample split with fixed date boundary is more honest. |
-| Multi-factor portfolio optimization | Black-Litterman, mean-variance optimization — complex, sensitive to estimation error, requires data the system doesn't have. | Equal-weight and signal-proportional sizing cover v1 investor conversations. |
-| Intraday data | Not available from yfinance at scale for free. No signal operates at intraday frequency. | Daily bars are sufficient and explicitly in scope. |
-| Paid data provider integration | Premature. yfinance covers the universe. Paid data adds cost, API complexity, and authentication overhead. | Re-evaluate after v1 if coverage gaps emerge. |
-| Interactive portfolio construction UI | Building a portfolio optimizer UI shifts the product from "strategy backtest" to "platform" — scope explosion. | Streamlit dashboard visualizes fixed backtest output. Parameters are code/config, not UI sliders. |
-| Statistical significance testing (p-values on returns) | Misleading — returns are non-IID, p-values misapplied to financial series create false confidence. | Use IC, regime analysis, and out-of-sample split to demonstrate robustness honestly. |
+| New signal sources or scoring changes | Adding signals during commissioning mixes "does the pipeline run?" with "is the signal correct?" — two different failure modes. | Treat existing 6-signal composite score as fixed input. Evaluate signal quality after the pipeline runs successfully. |
+| Scheduled / automated pipeline runs (cron, Prefect server) | Prefect `daily_pipeline_flow` exists but requires a Prefect server or Cloud account for scheduling. Setting up Prefect orchestration is a separate operational concern unrelated to proving the pipeline works once. | Run `daily_pipeline_flow` manually via `prefect run` or direct Python invocation for v1.1. Scheduling is v1.2+. |
+| Production deployment / cloud infrastructure | AWS/GCP/Kubernetes setup is months of work and operational risk. v1.1 target is local development proving real data flows. | Local Docker Compose is sufficient for v1.1 investor demo. Production deployment is a separate milestone. |
+| PostgreSQL performance tuning / partitioning verification | `daily_scores` has monthly RANGE partitioning in the migration. Verifying partition pruning performance requires significant data volume. | Accept whatever performance the first run produces. Tune after data volume is meaningful. |
+| New dashboard pages or chart types | The dashboard has three working tabs (Performance, Monthly Returns, Sector Exposure). Adding charts before real data is available means testing charts with no data. | Wire real data to existing charts first. New visualizations after data quality is validated. |
+| CI/CD pipeline setup | Adding GitHub Actions or Docker build pipelines adds complexity without unblocking the live pipeline. | Manual local execution for v1.1. CI/CD is a DevOps milestone. |
+| Multi-user or multi-strategy setup | The framework supports multiple strategies by design, but no second strategy exists yet. Multi-strategy configuration is premature. | One signal source (`ai-washing`) for v1.1. |
 
 ---
 
-## Feature Dependencies
+## Feature Dependencies (v1.1 Specific)
 
 ```
-Equity curve
-  requires: price data pipeline, portfolio simulation engine
-
-Sharpe / Sortino / Calmar / Alpha / Beta
-  requires: equity curve, benchmark price series, risk-free rate constant
-
-Monthly returns heatmap
-  requires: equity curve (daily returns aggregated to monthly)
-
-Drawdown chart
-  requires: equity curve
-
-Transaction cost modeling
-  requires: portfolio simulation engine (integrated, not post-hoc)
-
-Short borrow cost modeling
-  requires: transaction cost modeling, position direction tracking
-
-Win rate / hit rate
-  requires: trade log
-
-Trade log
-  requires: portfolio simulation engine with position tracking
-
-Sector exposure breakdown
-  requires: ticker-to-sector mapping (GICS), position history
-
-Rolling Sharpe
-  requires: equity curve
-
-Signal quantile analysis
-  requires: signal DataFrame, forward return computation
-
-Out-of-sample split
-  requires: date-indexed signal + price data, split configuration
-
-PDF tearsheet
-  requires: all metrics computed, chart rendering (matplotlib)
-
-Configurable position sizing
-  requires: portfolio simulation engine (parameterized)
+Docker Compose (PostgreSQL running)
+  → Alembic migrations (backtest + detector)
+    → .env files configured
+      → Universe refresh (fund-backtest universe refresh)
+        → Price data download (fund-backtest data download)  [~10-30 min]
+      → Detector universe scan (ai-washer universe scan)
+        → Detector pipeline run (ai-washer pipeline run or daily_pipeline_flow)  [hours — SEC rate-limited]
+          → backtest run --signal ai-washing
+            → Dashboard live mode (replace _load_demo_data with DB query)
+            → Tearsheet PDF (wire TearsheetBuilder into run path)
+            → Benchmark returns (wire yfinance SPY/IWM fetch into run path)
 ```
 
----
-
-## MVP Recommendation
-
-**Prioritize for v1 (investor credibility minimum):**
-
-1. Equity curve with benchmark overlay
-2. Core metrics table: Sharpe, Sortino, Calmar, CAGR, max drawdown, alpha, beta, win rate, turnover
-3. Monthly returns heatmap
-4. Drawdown chart (underwater chart)
-5. Short borrow cost modeling (non-negotiable for a short strategy — omitting this is a credibility killer)
-6. Transaction cost modeling (commission + slippage)
-7. Trade log export (CSV)
-8. Out-of-sample split (in-sample / out-of-sample presentation)
-9. Streamlit dashboard assembling the above
-10. HTML tearsheet (export from Streamlit or generate directly via quantstats)
-
-**Second priority (makes investor conversations materially better):**
-
-- Rolling Sharpe (12-month window)
-- Sector exposure breakdown (critical for SEC-filing-derived signal — proves it's not a tech bet)
-- Best/worst period table
-- Underwater recovery table (top drawdown episodes)
-
-**Defer post-v1:**
-
-- Signal quantile analysis (IC curves) — requires alphalens-style infrastructure
-- Regime analysis — requires regime classification logic
-- PDF tearsheet — HTML covers demos; PDF is polish
-- Excess return decomposition — requires attribution framework
+Critical bottleneck: The Detector pipeline is SEC EDGAR rate-limited at 10 req/sec. For 200+
+companies across 5+ years of filings, initial ingestion takes multiple hours. Everything
+downstream of the Detector pipeline is blocked until at least one batch completes.
 
 ---
 
-## Short Strategy Specific Notes
+## Operational Behaviors: Expected Patterns
 
-The AI Washing Detector is a short-only signal. This has specific feature implications that pure long-only frameworks miss:
+### PostgreSQL via Docker Compose
 
-1. **Short borrow cost is a P&L item, not optional**. Easy-to-borrow mid-caps run 25–100bps annually. Hard-to-borrow (heavily shorted names) can hit 5–20%+. Backtests that omit this systematically overstate net returns. Default assumption: 50bps/yr flat rate for mid-cap universe; expose as configurable parameter.
+Standard pattern for local development. The shared DB approach means both packages write to
+the same PostgreSQL instance but separate tables:
+- Backtest package owns: `universe_tickers`, `universe_snapshots`, `price_bars`, `price_anomalies`
+- Detector package owns: `companies`, `daily_scores`, `signal_details`, `sec_filings`, `xbrl_facts`, `patents`, `github_repos`, `earnings_transcripts`, `job_postings`, `pipeline_runs`, `data_source_status`
+- No foreign keys cross package boundaries — integration is via raw SQL in `AiWashingLoader`
 
-2. **Dividend liability on shorts**. When short, you owe dividends paid by the company to the lender. This is a cash outflow. Magnitude: small for growth mid-caps, but notable for value names. Requires corporate action data that yfinance provides inconsistently — note this as a known gap and use a dividend-stub estimate or ignore with documented assumption.
+Expected behavior: `docker compose up -d` → postgres container starts → both `FUND_BACKTEST_DATABASE_URL` and `AI_WASHER_DATABASE_URL` point to `postgresql://localhost:5432/hedgefund` → both `alembic upgrade head` commands succeed → all tables exist.
 
-3. **Short squeeze risk is real but not modelable in backtest**. A squeeze causes realized losses that no historical simulation can replicate. Flag this in tearsheet assumptions section rather than attempting to model it.
+Risk: Port conflicts if local PostgreSQL is already running on 5432. Standard mitigation: use 5433 in Docker Compose and document the non-standard port.
 
-4. **Market impact on entry/exit**. Short positions require locate + borrow before shorting. In practice, this creates execution lag. Model as 1-day delay between signal and execution (signal on date T, execute at open of T+1).
+### Bulk Historical Price Data Download
+
+yfinance downloads in 80-ticker batches with 1-second sleep between batches. For 200 tickers
+over 5 years:
+- Expected duration: 3-8 minutes (network-dependent)
+- Expected bars inserted: ~250,000 (200 tickers x 252 trading days x 5 years)
+- Expected failures: 1-5 tickers with gaps or delistings (handled by `failed` list in summary)
+- Rate limiting: yfinance has undocumented rate limits — the 1-second batch sleep is the existing mitigation. If rate-limited, download resumes from where it left off on next run (incremental update logic already built)
+
+Expected behavior: `fund-backtest data download` → Rich table showing "Tickers requested: 200 / Tickers successful: 197 / Bars inserted: 248,000". Non-zero `failed` count is normal and non-blocking.
+
+### AI Washing Detector Pipeline Execution
+
+The `daily_pipeline_flow` Prefect flow runs 5 sequential ingestion stages + scoring. Sequential
+execution is required for SEC EDGAR rate compliance (10 req/sec limit).
+
+For initial run on 200+ companies:
+- SEC filings stage: 2-6 hours (rate-limited at 10 req/sec, hundreds of filings per company)
+- Patents stage: 30-60 minutes (USPTO PatentsView API is more permissive)
+- GitHub stage: 10-30 minutes (5,000 req/hr with token)
+- Earnings stage: 1-2 hours (depends on data source availability)
+- Jobs stage: 20-40 minutes (python-jobspy scraping)
+- Scoring stage: 5-15 minutes (local FinBERT inference, CPU-only)
+
+Total: 4-10 hours for first full run. Subsequent daily runs are incremental (only new filings).
+
+Expected behavior: `ai-washer pipeline run` → Prefect flow logs per stage → `daily_scores` table populated → `AiWashingLoader.load()` returns non-empty SignalFrame.
+
+Known degradation modes: PatentsView API key missing → patent stage skips with warning (graceful degradation built in). GitHub token missing → GitHub stage runs at 60 req/hr unauthenticated rate. EDGAR rate limit hit → tenacity exponential backoff retries automatically.
+
+### End-to-End Backtest Execution
+
+`backtest run --signal ai-washing` runs a 5-stage in-process pipeline:
+1. `AiWashingLoader.load()` — single SQL query, < 1 second
+2. `PriceBarRepository.get_bars()` — indexed query, < 5 seconds for full universe
+3. `SignalAdapter.adapt()` — pandas operations, < 1 second
+4. `PortfolioSimulator.simulate()` — vectorized pandas, < 5 seconds for 5-year daily
+5. `MetricsEngine.compute()` — scalar calculations, < 1 second
+
+Total expected runtime: < 15 seconds after data is loaded. The pipeline itself is fast — the data loading phases are the one-time setup cost.
+
+Expected output: `Pipeline complete — Sharpe: X.XX, CAGR: X.X%` printed to console. If `--export-all` flag set: CSV files + JSON written to `--output-dir`.
+
+---
+
+## MVP Recommendation for v1.1 Phases
+
+Suggested phase sequence based on dependency order:
+
+1. **Infrastructure provisioning** — Docker Compose + `.env` files + Alembic migrations for both packages. No code changes, just configuration files. Unblocks everything else. Duration: 1-2 hours.
+
+2. **Data population** — Run `universe refresh` + `data download` for backtest; run `universe scan` for Detector. These run in parallel (no dependency between backtest universe and Detector universe — different table ownership). Duration: 30-60 minutes.
+
+3. **Detector pipeline first run** — Execute `daily_pipeline_flow` to populate `daily_scores`. This is the long pole: 4-10 hours for initial ingestion. Can run overnight. Duration: 4-10 hours (background).
+
+4. **Backtest execution + tech debt fixes** — Run `backtest run --signal ai-washing`. Fix the three v1.0 tech debt items (tearsheet wiring, benchmark fetch, dashboard live mode) while Detector pipeline runs. Duration: 1-2 hours coding + run time.
+
+5. **Dashboard live mode** — Wire `backtest run` output into the dashboard (replace `_load_demo_data()` with real DB queries + pass live `PortfolioResult`/`MetricsBundle`). Duration: 1-2 hours.
+
+**Defer to v1.2:**
+- Scheduled/automated pipeline runs (Prefect server setup)
+- Production cloud deployment
+- Second signal source
+
+---
+
+## Tech Debt from v1.0 That Must Be Fixed in v1.1
+
+These are not new features — they are completion items from the v1.0 audit that only become
+observable when real data flows through the system.
+
+| Item | File | Fix Description | Complexity |
+|------|------|-----------------|------------|
+| INTG-01: Tearsheet missing from live run path | `backtest/src/fund_backtest/cli.py` | Add `TearsheetBuilder.build()` call in `run` command's `export_all` branch (5 lines) | Low |
+| INTG-02: Dashboard sector chart hardcoded to demo data | `backtest/src/fund_backtest/dashboard/app.py` | Query `UniverseTicker.gics_sector` from DB when `DATABASE_URL` is set; fall back to demo sectors otherwise | Low |
+| Phase 5/8: Benchmark returns absent from CLI path | `backtest/src/fund_backtest/cli.py` | Fetch SPY/IWM via yfinance in `run` command and pass to `MetricsEngine.compute(benchmark=...)` | Low |
+
+All three fixes are < 20 lines of code each. They are not blocked by any new infrastructure.
 
 ---
 
 ## Sources
 
-- [Resonanz Capital: Quant Hedge Fund Due Diligence 2026](https://resonanzcapital.com/insights/quant-hedge-funds-in-2026-a-due-diligence-framework-by-strategy-type) — allocator expectations for quant strategies
-- [Resonanz Capital: Hedge Fund Quantitative Metrics Cheatsheet](https://resonanzcapital.com/insights/understanding-hedge-fund-quantitative-metrics-a-handy-cheatsheet-for-investors) — alpha, beta, Sharpe, Sortino, Calmar definitions
-- [Harvard Business School: Hedge Fund Analysis Metrics](https://online.hbs.edu/blog/post/hedge-fund-analysis) — four core metrics investors use
-- [Visible.vc: How to Build Tearsheets for Your Fund in 2026](https://visible.vc/blog/tear-sheets/) — tearsheet design standards
-- [Hedge Fund Law Blog: Tearsheets](https://hedgefundlawblog.com/hedge-fund-tearsheets.html) — standard tearsheet components
-- [Gate 39 Media: 8 Tearsheet Design Mistakes to Avoid](https://www.gate39media.com/blog/8-hedge-fund-tear-sheet-design-mistakes-avoid) — common tearsheet errors
-- [QuantStats GitHub](https://github.com/ranaroussi/quantstats) — full metrics list and tearsheet types
-- [VectorBT Features](https://vectorbt.dev/getting-started/features/) — vectorized backtesting capabilities
-- [Alphalens GitHub](https://github.com/quantopian/alphalens) — factor analysis tearsheet patterns
-- [Acadian Asset Management: Incredible Cost of Short Selling](https://www.acadian-asset.com/investment-insights/owenomics/the-incredible-cost-of-short-selling) — borrow cost reality
-- [Interactive Brokers: Risks of Shorting — Borrow Fees](https://www.interactivebrokers.com/campus/traders-insight/securities/short-selling/the-risks-of-shorting-series-part-ii-borrow-fees/) — borrow fee ranges (25bps to 100%+)
-- [QuantRocket: Is There Alpha in Borrow Fees?](https://www.quantrocket.com/blog/borrow-fees-alpha/) — net vs. gross return impact on short strategies
-- [QuantStart: Backtesting Frameworks in Python](https://www.quantstart.com/articles/backtesting-systematic-trading-strategies-in-python-considerations-and-open-source-frameworks/) — framework comparison
-- [Frontier Ledger: Why Most Backtests Fail](https://frontierledger.ai/foundations-core-concepts/why-most-backtests-fail-overfitting-look-ahead-bias-and-data-snooping) — overfitting, lookahead bias, data snooping
-- [Walk-Forward Analysis vs. Backtesting](https://surmount.ai/blogs/walk-forward-analysis-vs-backtesting-pros-cons-best-practices) — validation methodology tradeoffs
-- [ML for Factor Investing: Chapter 12 Portfolio Backtesting](http://www.mlfactor.com/backtest.html) — institutional backtesting standards
+- Direct codebase inspection: `backtest/src/fund_backtest/cli.py`, `dashboard/app.py`, `signal/loaders/ai_washing.py`
+- `.planning/milestones/v1.0-MILESTONE-AUDIT.md` — integration gaps INTG-01, INTG-02, Phase 5/8 tech debt
+- `.planning/STATE.md` — known blockers and accumulated decisions
+- `Al Washing Detector/src/ai_washer/pipeline/daily_flow.py` — Prefect flow structure and stage sequence
+- `Al Washing Detector/CLAUDE.md` — Detector stack (Prefect, FinBERT, SEC EDGAR rate limits)
+- `.planning/PROJECT.md` — v1.1 milestone target features
+- Confidence: HIGH — all findings from direct code inspection, not estimation

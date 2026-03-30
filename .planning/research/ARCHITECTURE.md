@@ -1,317 +1,357 @@
-# Architecture Patterns: Vectorized Backtesting Infrastructure
+# Architecture Patterns: Live End-to-End Pipeline Integration
 
-**Domain:** Vectorized backtesting engine with data pipeline and reporting
-**Researched:** 2026-03-28
-**Confidence:** HIGH (cross-validated via VectorBT docs, QuantStart, IBKR campus, O'Reilly)
+**Domain:** Two-package shared-database integration via Docker Compose
+**Researched:** 2026-03-29
+**Confidence:** HIGH — derived entirely from live codebase inspection, not training data
+
+---
+
+## Context
+
+This document supersedes the v1.0 architecture doc for milestone v1.1. The static backtesting architecture (signal contract, vectorized simulator, layers) is already built and correct. This document focuses on **how the two packages connect at runtime** to produce real backtest results from real AI Washing Detector scores.
+
+The core integration challenge: `ai_washer` and `fund_backtest` are two separate Python packages in two separate directories, both targeting the same PostgreSQL instance, with independent Alembic migration chains and independent environment variable namespaces. Running the live pipeline requires both packages to be configured, migrated, and executed in the right order against the same database.
 
 ---
 
 ## Recommended Architecture
 
-The architecture separates into five layers. Each layer has exactly one responsibility and exposes a typed interface to adjacent layers. No layer skips a boundary.
+### Integration Topology
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│  EXTERNAL SIGNALS  (AI Washing Detector, future strategy modules)        │
-│  Input: date-indexed, ticker-indexed DataFrame of raw scores             │
-└────────────────────────────┬────────────────────────────────────────────┘
-                             │  SignalFrame (date x ticker → float score)
-                             ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│  SIGNAL ADAPTER                                                          │
-│  Normalises, validates, and ranks raw scores into [-1, +1] weights       │
-└────────────────────────────┬────────────────────────────────────────────┘
-                             │  WeightFrame (date x ticker → float weight)
-                             ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│  PORTFOLIO SIMULATOR                                                     │
-│  Applies position sizing, transaction costs, and produces daily P&L      │
-└──────────┬──────────────────────────────────────┬───────────────────────┘
-           │ PriceFrame                           │ PortfolioResult
-           │ (date x ticker → OHLCV)              │ (daily returns, positions,
-           ▼                                      │  trades, turnover)
-┌──────────────────────────┐                      │
-│  DATA LAYER              │                      ▼
-│  yfinance → PostgreSQL   │   ┌──────────────────────────────────────────┐
-│  OHLCV + universe cache  │   │  RISK ENGINE                             │
-└──────────────────────────┘   │  Computes Sharpe, Sortino, drawdown,     │
-                               │  Calmar, hit rate, turnover, borrow cost  │
-                               └───────────────────┬──────────────────────┘
-                                                   │ MetricsBundle
-                                                   ▼
-                               ┌──────────────────────────────────────────┐
-                               │  REPORTING LAYER                          │
-                               │  Streamlit dashboard + PDF tearsheet +    │
-                               │  CSV/JSON export                          │
-                               └──────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│  Docker Compose                                                               │
+│                                                                               │
+│  ┌───────────────────┐         ┌──────────────────────────────────────────┐  │
+│  │  PostgreSQL 16    │◄────────┤  Shared Database: ai_hedge_fund          │  │
+│  │  port 5432        │         │                                          │  │
+│  │  (single instance)│         │  ai_washer tables (Alembic chain A):     │  │
+│  └───────────────────┘         │    companies, daily_scores,              │  │
+│           │                    │    signal_details, pipeline_runs,        │  │
+│           │                    │    sec_filings, xbrl_facts, patents,     │  │
+│           │                    │    github_repos, earnings_transcripts,   │  │
+│           │                    │    job_postings, data_source_status      │  │
+│           │                    │                                          │  │
+│           │                    │  fund_backtest tables (Alembic chain B): │  │
+│           │                    │    universe_tickers, universe_snapshots, │  │
+│           │                    │    price_bars, price_anomalies           │  │
+│           │                    └──────────────────────────────────────────┘  │
+│           │                                                                   │
+│  ┌────────┴──────────────────────────────────────────────────────────────┐   │
+│  │  Host (developer machine)                                             │   │
+│  │                                                                       │   │
+│  │  Al Washing Detector/           backtest/                            │   │
+│  │    ai-washer CLI                  fund-backtest CLI                  │   │
+│  │    (separate venv)                (separate venv)                    │   │
+│  │    env: AI_WASHER_*               env: FUND_BACKTEST_*               │   │
+│  │    connects to localhost:5432     connects to localhost:5432          │   │
+│  └───────────────────────────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
+
+The database is the **only coupling point** between the two packages. There are no Python imports across package boundaries. `fund_backtest.signal.loaders.ai_washing` executes a raw SQL `JOIN` query against `daily_scores JOIN companies` — it reads `ticker`, `scored_at::date`, and `composite_score` and nothing else. This is explicitly enforced by the comment on line 6 of `ai_washing.py`: "no Python imports cross package boundaries."
 
 ---
 
 ## Component Boundaries
 
-| Component | Responsibility | Input | Output | Communicates With |
-|-----------|---------------|-------|--------|-------------------|
-| Data Layer | Fetch, cache, and serve daily OHLCV for the mid-cap universe | yfinance API, PostgreSQL | `PriceFrame` (MultiIndex DataFrame: date x ticker) | Portfolio Simulator (provides prices), Universe Manager |
-| Universe Manager | Maintain and refresh the list of in-scope tickers by market cap | Screener or static list, PostgreSQL | `universe: list[str]` of tickers | Data Layer (controls which tickers to fetch) |
-| Signal Adapter | Accept raw strategy scores, validate schema, normalize to weights | `SignalFrame` from external module | `WeightFrame` (date x ticker, values in [-1, +1]) | Portfolio Simulator (provides weights) |
-| Portfolio Simulator | Core vectorized engine — apply weights to prices, subtract costs, compute daily portfolio P&L | `WeightFrame`, `PriceFrame`, `CostConfig` | `PortfolioResult` (returns series, positions frame, trade log) | Risk Engine (provides result), Data Layer (reads prices) |
-| Cost Model | Encapsulate slippage, commission, and short-borrow cost logic | `CostConfig` (dataclass), trade direction/size | Per-trade cost scalars | Portfolio Simulator (called internally) |
-| Risk Engine | Compute all performance and risk statistics from daily returns | `PortfolioResult`, benchmark returns series | `MetricsBundle` (dict of named metrics) | Reporting Layer (provides metrics) |
-| Reporting Layer | Render dashboard and tearsheet; export raw data | `MetricsBundle`, `PortfolioResult` | Streamlit UI, PDF file, CSV/JSON files | Risk Engine (reads metrics), Portfolio Simulator (reads raw results) |
+| Component | Package | Responsibility | Communicates With |
+|-----------|---------|---------------|-------------------|
+| `daily_pipeline_flow` (Prefect) | `ai_washer` | Orchestrates all 5 ingestion stages + scoring, writes `daily_scores` | PostgreSQL (writes) |
+| `ScoringOrchestrator` | `ai_washer` | Reads Filing/XBRL/Patent/GitHub/Earnings/Job rows, calls pure scorers, writes `SignalDetail` and `DailyScore` | PostgreSQL (reads + writes) |
+| `ai_washer` Alembic | `ai_washer` | Manages 10 tables: companies → data_source_status | PostgreSQL (DDL) |
+| `AiWashingLoader` | `fund_backtest` | Raw SQL JOIN against `daily_scores JOIN companies`, pivots to `SignalFrame` | PostgreSQL (reads only) |
+| `UniverseBuilder` | `fund_backtest` | Scrapes S&P 400 from Wikipedia, validates market caps via yfinance, writes `universe_tickers` | PostgreSQL (writes), yfinance, Wikipedia |
+| `PriceBuilder` | `fund_backtest` | Downloads OHLCV via yfinance, writes `price_bars` | PostgreSQL (writes), yfinance |
+| `fund_backtest` Alembic | `fund_backtest` | Manages 4 tables: universe_tickers, universe_snapshots, price_bars, price_anomalies | PostgreSQL (DDL) |
+| `fund-backtest backtest run` | `fund_backtest` | End-to-end backtest: load signal → adapt → simulate → metrics | PostgreSQL (reads both packages' tables) |
 
 ---
 
-## Data Flow
+## Data Flow: Live End-to-End Execution
+
+The complete data flow for a real backtest run, in dependency order:
 
 ```
-yfinance.download(tickers, start, end)
-        │
-        │ raw MultiIndex DataFrame (date x ticker x OHLCV)
-        ▼
-Data Layer: validate, deduplicate, store in PostgreSQL price_ohlcv table
-        │
-        │ SELECT * FROM price_ohlcv WHERE date >= ? AND ticker IN (?)
-        ▼
-PriceFrame: pd.DataFrame, index=DatetimeIndex, columns=MultiIndex(ticker, field)
-        │
-        │  (joined by aligned date index)
-        │
-SignalFrame enters from AI Washing Detector:
-  pd.DataFrame, index=DatetimeIndex, columns=ticker list, values=float scores
-        │
-        ▼
-Signal Adapter:
-  1. Assert index alignment with PriceFrame date range
-  2. Clip/reject out-of-universe tickers
-  3. Normalise scores: rank within cross-section → map to [-1, +1]
-  4. Apply rebalance frequency mask (e.g., weekly rebalance on daily data)
-        │
-        ▼
-WeightFrame: same shape as SignalFrame but values are portfolio weights
-        │
-        ▼
-Portfolio Simulator (fully vectorized — no Python loops over dates):
-  1. Shift weights by 1 period (trade at next-day open, avoid lookahead)
-  2. Compute weight_changes → identify turnover
-  3. Apply CostModel to turnover rows: subtract slippage + commission
-  4. Apply borrow_cost_bps to short positions (negative weights) daily
-  5. Compute daily gross_returns = (close[t] / close[t-1] - 1) * weight[t-1]
-  6. Compute daily net_returns = gross_returns - costs
-  7. Compute portfolio_returns = weighted sum across tickers
-  8. Compute cumulative NAV series
-        │
-        ▼
-PortfolioResult:
-  - returns: pd.Series (daily portfolio net returns)
-  - positions: pd.DataFrame (date x ticker, daily weight held)
-  - trade_log: pd.DataFrame (date, ticker, direction, size, cost)
-  - gross_returns: pd.Series
-        │
-        ▼
-Risk Engine (vectorized):
-  - Sharpe ratio (annualized, 252-day)
-  - Sortino ratio (downside deviation only)
-  - Max drawdown (peak-to-trough on NAV series)
-  - Calmar ratio (CAGR / max drawdown)
-  - Hit rate (% of profitable days)
-  - Win/loss ratio (avg win / avg loss)
-  - Annualized turnover
-  - Benchmark comparison (alpha, beta, information ratio vs S&P 500 / Russell 2000)
-        │
-        ▼
-MetricsBundle: dict[str, float | pd.Series] — all scalar metrics + rolling metrics
-        │
-        ▼
-Reporting Layer:
-  - Streamlit: equity curve, drawdown chart, rolling Sharpe, sector exposure
-  - PDF tearsheet via WeasyPrint or reportlab: single-page fund factsheet
-  - CSV export: daily_returns.csv, positions.csv, trade_log.csv
-  - JSON export: metrics.json (machine-readable for downstream consumers)
+Step 0: Infrastructure
+  docker compose up -d postgres
+  [waits for postgres to accept connections]
+
+Step 1: Migrate ai_washer schema
+  cd "Al Washing Detector/"
+  AI_WASHER_DATABASE_URL=postgresql+psycopg://... alembic upgrade head
+  → creates: companies, daily_scores (partitioned), signal_details,
+             pipeline_runs, sec_filings, xbrl_facts, patents,
+             github_repos, earnings_transcripts, job_postings,
+             data_source_status
+
+Step 2: Migrate fund_backtest schema
+  cd backtest/
+  DATABASE_URL=postgresql+psycopg://... alembic upgrade head
+  → creates: universe_tickers, universe_snapshots, price_bars,
+             price_anomalies
+
+Step 3: Seed fund_backtest universe
+  fund-backtest universe refresh
+  → scrapes S&P 400, validates market caps via yfinance
+  → writes universe_tickers rows (200-400 active tickers)
+  → writes universe_snapshots record
+
+Step 4: Populate ai_washer companies (must match fund_backtest universe)
+  ai-washer universe scan
+  → queries SEC EDGAR EFTS for AI-mentioning companies
+  → validates market caps, resolves entity aliases
+  → writes companies rows with ticker + CIK
+
+Step 5: Download price data
+  fund-backtest data download
+  → reads active universe_tickers from PostgreSQL
+  → downloads 5yr OHLCV via yfinance in 80-ticker batches
+  → writes price_bars rows (append-only, ~250K rows for 200 tickers × 1250 days)
+
+Step 6: Run AI Washing Detector pipeline
+  ai-washer pipeline run   (or trigger daily_pipeline_flow via Prefect)
+  → collect_sec_filings_stage  → writes sec_filings, xbrl_facts
+  → collect_patents_stage      → writes patents
+  → collect_github_stage       → writes github_repos
+  → collect_earnings_stage     → writes earnings_transcripts
+  → collect_jobs_stage         → writes job_postings
+  → score_all_stage            → writes signal_details
+  → compute_composites_stage   → writes daily_scores
+
+Step 7: Run backtest
+  fund-backtest backtest run --signal ai-washing
+  Stage 1: AiWashingLoader reads daily_scores JOIN companies
+           → pivots to SignalFrame (DatetimeIndex × tickers, float scores)
+  Stage 2: PriceBarRepository reads price_bars for signal tickers/dates
+           → pivots to PriceFrame (DatetimeIndex × tickers, close prices)
+  Stage 3: SignalAdapter.adapt(signal_frame)
+           → cross-sectional rank → weights → shift(1) → WeightFrame
+  Stage 4: PortfolioSimulator.simulate(weight_frame, price_frame)
+           → daily returns + trade log + positions → PortfolioResult
+  Stage 5: MetricsEngine.compute(portfolio_result)
+           → Sharpe, CAGR, drawdown, etc. → MetricsBundle
+  [Stage 6: optional --export-all → CSV/JSON exports]
+
+Step 8: Launch dashboard
+  cd backtest/
+  streamlit run src/fund_backtest/dashboard/app.py
+  → reads PortfolioResult + MetricsBundle (from file or in-memory)
+  → renders equity curve, drawdown, monthly heatmap, sector exposure
 ```
 
 ---
 
-## Signal Contract
+## Integration Points: New vs Modified
 
-This is the critical interface between strategy modules and the backtester.
+### New Components Required for v1.1
 
-### Input: SignalFrame
+| Component | Type | Why Needed |
+|-----------|------|-----------|
+| `docker-compose.yml` | New file (root of repo) | No Docker Compose exists yet. PostgreSQL must be containerized for local development — hardcoded localhost:5432 is not reproducible across machines. |
+| `.env` for `backtest/` | New file | `backtest/` has `.env.example` missing (unlike `Al Washing Detector/` which has `.env.example`). Need `FUND_BACKTEST_DATABASE_URL` pointing to the Docker Compose postgres. |
+| `docker-compose.yml` healthcheck | New (inside compose file) | Both packages' CLIs will fail immediately if postgres is not ready. Healthcheck ensures `pg_isready` passes before any CLI is invoked. |
+| Migration run order script / README | New file (optional) | Steps 1–8 above must be documented. Currently there is no runbook for the full v1.1 pipeline. |
 
-```python
-# Type definition
-SignalFrame = pd.DataFrame
-# index: pd.DatetimeIndex, UTC, daily frequency
-# columns: list[str] — ticker symbols (e.g. "AAPL", "NVDA")
-# values: float — raw strategy scores, arbitrary scale
-# NaN: allowed — interpreted as "no position" for that ticker/date
-# Range: unrestricted — Signal Adapter normalizes internally
+### Modified Components for v1.1
+
+| Component | Current State | Required Change |
+|-----------|---------------|----------------|
+| `ai_washer` Alembic `env.py` | Reads `AI_WASHER_DATABASE_URL` | No change needed — already correct |
+| `fund_backtest` Alembic `env.py` | Reads `DATABASE_URL` or `FUND_BACKTEST_DATABASE_URL` | No change needed — already has dual env var support |
+| `fund-backtest backtest run` CLI | Already wired to `AiWashingLoader` | No functional change — just needs live data |
+| `AiWashingLoader` | Reads `daily_scores JOIN companies` | No change needed — already correct |
+
+### Confirmed Working Integration Code
+
+`backtest/src/fund_backtest/signal/loaders/ai_washing.py` already executes:
+
+```sql
+SELECT companies.ticker,
+       daily_scores.scored_at::date AS signal_date,
+       daily_scores.composite_score
+FROM daily_scores
+JOIN companies ON daily_scores.company_id = companies.id
+ORDER BY signal_date, ticker
 ```
 
-**Contract rules enforced by Signal Adapter:**
-1. Index must be a `DatetimeIndex` with `freq='B'` (business days) or daily.
-2. All column values must be ticker strings present in the active universe or they are silently dropped with a warning log.
-3. A NaN value means no signal — the position for that ticker/date is zeroed.
-4. The adapter does NOT require the strategy to normalize scores. Raw scores (e.g., AI Washing Risk Score 0–100) are accepted and ranked cross-sectionally.
-5. The adapter enforces a `min_coverage` threshold: if fewer than N tickers have non-NaN scores on a given date, that date is skipped (no rebalance).
+This is the complete integration surface. There is no other cross-package coupling.
 
-### Normalization Pipeline (inside Signal Adapter)
+---
+
+## Environment Configuration
+
+### ai_washer `.env` (in `Al Washing Detector/`)
 
 ```
-raw_score (float, arbitrary scale)
-    → cross_section_rank (percentile 0–100 within date)
-    → map to weight_direction: top decile → short (-1 side), bottom → no position
-    → scale by position_sizing_rule (equal weight / score-proportional)
-    → clip to max_position_size (e.g., 5% per ticker)
-    → result: weight in [-max_gross_exposure, +max_gross_exposure]
+AI_WASHER_DATABASE_URL=postgresql+psycopg://hedge:hedge@localhost:5432/ai_hedge_fund
+AI_WASHER_EDGAR_IDENTITY=YourName yourname@example.com
+AI_WASHER_GITHUB_TOKEN=ghp_...
+AI_WASHER_PATENTSVIEW_API_KEY=...
+AI_WASHER_EARNINGSCALL_API_KEY=...
+AI_WASHER_LOG_LEVEL=INFO
 ```
 
-For the AI Washing Detector specifically: high AI Washing Risk Score → short candidate → negative weight.
+### fund_backtest `.env` (in `backtest/`)
 
-### Output: WeightFrame
-
-```python
-WeightFrame = pd.DataFrame
-# index: pd.DatetimeIndex — same as SignalFrame after alignment
-# columns: list[str] — tickers (universe-filtered)
-# values: float in [-1.0, +1.0]
-# Invariant: abs(weights).sum(axis=1) <= gross_exposure_limit (default 1.0)
-# Sign convention: negative = short, positive = long, zero = flat
+```
+FUND_BACKTEST_DATABASE_URL=postgresql+psycopg://hedge:hedge@localhost:5432/ai_hedge_fund
+FUND_BACKTEST_LOG_LEVEL=INFO
 ```
 
-### Configuration Contract (CostConfig)
+Both packages point to **the same database name** (`ai_hedge_fund`). They use different table namespaces (no schema-level separation — both in `public`). The env var prefixes (`AI_WASHER_` vs `FUND_BACKTEST_`) prevent collision.
 
-```python
-@dataclass(frozen=True)
-class CostConfig:
-    commission_bps: float = 5.0          # one-way, basis points
-    slippage_bps: float = 10.0           # half-spread estimate, basis points
-    borrow_cost_bps_annual: float = 50.0 # annualized short borrow, basis points
-    rebalance_freq: str = "W-FRI"        # pandas offset alias for rebalance
-    max_position_size: float = 0.05      # per-ticker cap as fraction of NAV
-    gross_exposure_limit: float = 1.0    # total abs(weights) cap
+### Docker Compose (to be created at repo root)
+
+```yaml
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: hedge
+      POSTGRES_PASSWORD: hedge
+      POSTGRES_DB: ai_hedge_fund
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hedge -d ai_hedge_fund"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
 ```
 
-All cost and sizing parameters are external configuration — never hardcoded in the simulator.
+The `docker-compose.yml` belongs at the repo root (`AI Hedgefund/`) so it is shared by both packages. Neither package-level directory should own it.
+
+---
+
+## Migration Ordering and Schema Ownership
+
+The two Alembic chains are **fully independent**. They share a database but do not share a migration history. Each chain manages its own tables:
+
+| Alembic Chain | Tables Owned | Run From |
+|--------------|-------------|---------|
+| `ai_washer` (001_initial → 008_add_data_source_status) | companies, daily_scores, signal_details, pipeline_runs, sec_filings, xbrl_facts, patents, github_repos, earnings_transcripts, job_postings, data_source_status | `Al Washing Detector/` |
+| `fund_backtest` (001_universe_schema, 002_price_bars_schema) | universe_tickers, universe_snapshots, price_bars, price_anomalies | `backtest/` |
+
+Order matters for the cross-package JOIN: `ai_washer` migrations must run before `fund_backtest` migrations only if `fund_backtest` had a foreign-key dependency on `ai_washer` tables — which it does **not**. The JOIN in `AiWashingLoader` is raw SQL at query time. Both migration chains can run in any order.
+
+However, the **data population order** matters strictly (Steps 3–6 above):
+- `ai_washer` `companies` must be populated before scoring can write `daily_scores`.
+- `fund_backtest` `universe_tickers` must be populated before `price_bars` can be downloaded.
+- Both `daily_scores` and `price_bars` must have data before `fund-backtest backtest run` succeeds.
+
+---
+
+## Ticker Overlap: Critical Dependency
+
+The `AiWashingLoader` query returns only tickers present in the `ai_washer` `companies` table that also have `daily_scores`. The `PriceBarRepository` query returns only tickers present in `fund_backtest` `price_bars`.
+
+For the backtest to produce meaningful results, the tickers in `ai_washer` `companies` must **overlap significantly** with tickers in `fund_backtest` `universe_tickers`.
+
+**Current state:** These are populated independently:
+- `ai_washer` universe comes from SEC EDGAR EFTS queries for AI-mentioning companies, filtered by market cap
+- `fund_backtest` universe comes from Wikipedia S&P 400 list, filtered by market cap
+
+**Risk:** Overlap may be partial. `AiWashingLoader` handles this gracefully — it returns whatever tickers have scores, and `SignalAdapter` will drop tickers without price data automatically. The backtest still runs with partial overlap, but coverage will be lower.
+
+**Verification step:** After running both universe seeds, verify overlap:
+
+```sql
+SELECT
+  COUNT(DISTINCT c.ticker) AS ai_washer_tickers,
+  COUNT(DISTINCT ut.ticker) AS fund_backtest_tickers,
+  COUNT(DISTINCT c.ticker) FILTER (WHERE ut.ticker IS NOT NULL) AS overlap
+FROM companies c
+LEFT JOIN universe_tickers ut ON ut.ticker = c.ticker
+WHERE c.is_active = TRUE AND ut.is_active = TRUE;
+```
 
 ---
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: Lookahead Bias
-**What:** Using today's close price to compute a signal, then immediately trading at today's close.
-**Why bad:** Impossible in practice — you don't know today's close until the day ends.
-**Prevention:** Always shift weights by 1 period. Signals computed on day T execute at open/close of day T+1. This is a single `.shift(1)` call in the Portfolio Simulator — easy to get right once, catastrophic if missed.
+### Anti-Pattern 1: Running Migrations Against Wrong Database
+**What goes wrong:** `alembic upgrade head` runs against a different database URL than the application uses. This creates schema in one place and the app connects to another.
+**Prevention:** Both Alembic `env.py` files read from environment variables (not `alembic.ini`). Always set `AI_WASHER_DATABASE_URL` or `DATABASE_URL` before running migrations. Never hardcode credentials in `alembic.ini`.
 
-### Anti-Pattern 2: Survivorship Bias
-**What:** Only backtesting on tickers that still exist today.
-**Why bad:** Removes companies that went bankrupt or were acquired — inflates strategy performance.
-**Prevention:** Universe snapshot table must store historical composition (which tickers were in-scope on each date). The Data Layer joins against the snapshot, not the current universe. Point-in-time universe is a separate architectural concern.
-**Phase impact:** This is a medium-complexity problem. V1 can use current universe with a documented caveat. Full survivorship-bias correction is a Phase 2+ concern.
+### Anti-Pattern 2: Two Separate PostgreSQL Instances
+**What goes wrong:** Developer starts two separate postgres containers (one per package). The `AiWashingLoader` SQL JOIN finds no rows because `companies` and `daily_scores` are in different databases.
+**Prevention:** One `docker-compose.yml` at the repo root. One postgres container. Both packages point to the same `DATABASE_URL`. The compose file must live at repo root, not inside either package directory.
 
-### Anti-Pattern 3: Signal Leakage Through Shared State
-**What:** Strategy module writes directly to the backtester's internal state instead of passing through the SignalFrame interface.
-**Why bad:** Couples modules together; makes testing impossible; causes subtle data ordering bugs.
-**Prevention:** The Signal Adapter is the single entry point. Strategy modules produce a SignalFrame file or DataFrame and call `BacktestRunner.run(signal_frame, cost_config)`. No shared mutable state.
+### Anti-Pattern 3: Scoring Before Universe Population
+**What goes wrong:** Running `ai-washer pipeline run` before `ai-washer universe scan`. The `ScoringOrchestrator.score_all()` queries `companies WHERE is_active = TRUE AND cik IS NOT NULL` — if `companies` is empty, no scoring occurs and `daily_scores` stays empty. `AiWashingLoader` then raises `SignalLoadError: scores table is empty`.
+**Prevention:** Follow execution order in Step 4 before Step 6. Verify `SELECT COUNT(*) FROM companies WHERE is_active = TRUE` returns non-zero before triggering the pipeline.
 
-### Anti-Pattern 4: Python Loop Over Dates
-**What:** Iterating `for date in dates: portfolio[date] = compute(...)` instead of vectorized operations.
-**Why bad:** 200 tickers x 1,250 days (5 years) = 250,000 iterations. Python loop is 100-1,000x slower than vectorized pandas/numpy.
-**Prevention:** All portfolio math uses `.mul()`, `.shift()`, `.cumsum()`, `.rolling()` — pandas vectorized methods operating on entire DataFrames at once. Cost model applies via masked array operations on turnover frames.
+### Anti-Pattern 4: `daily_scores` Partitions Missing Future Dates
+**What goes wrong:** `ai_washer` migration `001_initial` creates monthly partitions from 2026-01 through 2027-06. If scoring runs after 2027-06, the insert fails with a partition-not-found error.
+**Prevention:** For v1.1, partition range covers 18 months (sufficient). Add a monitoring alert or extend partitions in a future migration if the project runs past mid-2027.
 
-### Anti-Pattern 5: Overwriting Historical Price Data
-**What:** `UPDATE price_ohlcv SET close = new_value WHERE date = ? AND ticker = ?`
-**Why bad:** Violates the fund-wide immutability convention; destroys audit trail; breaks reproducibility of historical backtests.
-**Prevention:** Data Layer is append-only. New fetches use `INSERT ... ON CONFLICT DO NOTHING`. Corrections are tracked as separate entries with a `source_revision` column.
-
----
-
-## Build Order
-
-Components have strict dependency ordering. Build bottom-up: data before simulation, simulation before risk, risk before reporting.
-
-```
-Phase 1: Data Foundation
-├── Universe Manager (which tickers to track)
-└── Data Layer (yfinance fetch + PostgreSQL cache)
-    Dependency: nothing external
-    Deliverable: populated price_ohlcv table, universe snapshots
-
-Phase 2: Backtesting Core
-├── Signal Adapter (validates + normalizes incoming SignalFrames)
-├── Cost Model (transaction cost dataclass + calculation functions)
-└── Portfolio Simulator (vectorized engine)
-    Dependency: Data Layer (prices), Signal Adapter (weights)
-    Deliverable: PortfolioResult from any valid SignalFrame
-
-Phase 3: Risk Engine
-└── Risk Engine (all performance metrics from PortfolioResult)
-    Dependency: Portfolio Simulator output
-    Deliverable: MetricsBundle with all standard quant metrics
-
-Phase 4: Reporting
-├── Streamlit dashboard
-├── PDF tearsheet
-└── CSV/JSON export
-    Dependency: Risk Engine (MetricsBundle), Portfolio Simulator (PortfolioResult)
-    Deliverable: investor-ready outputs
-
-Phase 5: Integration
-└── Wire AI Washing Detector's scores into SignalFrame format
-    Dependency: All above layers, plus Detector's score output
-    Deliverable: first end-to-end backtest run
-```
-
-**Why this order:**
-- The Signal Adapter and Portfolio Simulator are the core. Everything else is input (Data Layer) or output (Risk Engine, Reporting).
-- The Risk Engine depends only on `returns: pd.Series` — it can be built and tested independently with synthetic data.
-- The Reporting Layer depends only on `MetricsBundle` and `PortfolioResult` — can be built with hardcoded fixtures.
-- Integration (Phase 5) is last because it tests the contract between two independently-developed modules.
+### Anti-Pattern 5: Separate `.env` Files Out of Sync
+**What goes wrong:** Developer updates `AI_WASHER_DATABASE_URL` to point to a new host but forgets `FUND_BACKTEST_DATABASE_URL`. Scoring writes to one postgres, backtest reads from another.
+**Prevention:** Document that both `.env` files must have matching host/port/db. Consider a shared `.env` at repo root with a symlink or source-include pattern, though this adds complexity.
 
 ---
 
 ## Scalability Considerations
 
-| Concern | At 200 tickers (v1) | At 500 tickers | At 2,000 tickers |
-|---------|---------------------|----------------|------------------|
-| Price storage | Single table, fine | Single table, fine | Partition by year |
-| yfinance download | Batched requests, ~2 min | ~5 min | Need async batching |
-| Portfolio simulation | Sub-second (vectorized) | Sub-second | May need Numba for cost loops |
-| Memory (5yr daily data) | ~50MB DataFrame | ~125MB | ~500MB — consider chunked reads |
-| Risk computation | Instantaneous | Instantaneous | Rolling windows get heavy |
-| Reporting render | Streamlit, <5s | <5s | May need cached pre-computation |
-
-V1 (200 tickers) is fully covered by pure pandas/numpy. No Numba, no chunking, no async downloads needed at this scale.
+| Concern | v1.1 (live run) | Future |
+|---------|----------------|--------|
+| postgres storage | ~500MB estimated (5yr prices + all signal data) | Fine on developer machine |
+| `daily_scores` partition expiry | Covered to 2027-06 | Add migration to extend partitions |
+| Scoring runtime | Sequential per SEC rate limits (~hours for full universe) | Acceptable for daily batch |
+| Price download runtime | ~5-10 min for 200 tickers (80-ticker batches, 1s sleep) | Acceptable for initial load |
+| `AiWashingLoader` query | Full table scan — no date filter applied | Add date range filter if perf degrades |
+| Docker Compose network | localhost port-forward — fine for local dev | For production, use named network and service discovery |
 
 ---
 
-## Key Libraries for Each Layer
+## Build Order for v1.1 Milestone
 
-| Layer | Primary Library | Purpose |
-|-------|----------------|---------|
-| Data Layer | yfinance | OHLCV fetch |
-| Data Layer | SQLAlchemy + psycopg | PostgreSQL persistence |
-| Signal Adapter | pandas | DataFrame normalization, ranking |
-| Portfolio Simulator | pandas + numpy | Vectorized P&L computation |
-| Cost Model | Plain Python dataclass | Cost parameter container |
-| Risk Engine | quantstats | Sharpe, Sortino, drawdown, tearsheet metrics |
-| Reporting | Streamlit | Interactive dashboard |
-| Reporting | WeasyPrint or reportlab | PDF tearsheet generation |
+Phases ordered by data dependency (each step depends on the previous):
 
-**On quantstats:** The `quantstats.stats` module computes all standard quant metrics from a daily returns series. Use it as a computation library inside the Risk Engine rather than as a reporting framework — keep the Risk Engine output as a plain `dict` / `MetricsBundle` so reporting is decoupled from metric computation.
+```
+1. Infrastructure
+   [NEW] docker-compose.yml at repo root
+   [NEW] backtest/.env with FUND_BACKTEST_DATABASE_URL
+   [VERIFY] Al Washing Detector/.env with AI_WASHER_DATABASE_URL
 
-**On pyfolio:** Pyfolio is Quantopian-origin and minimally maintained. quantstats is the actively maintained successor for pure Python reporting. Use quantstats.
+2. Schema
+   ai_washer: alembic upgrade head  (from Al Washing Detector/)
+   fund_backtest: alembic upgrade head  (from backtest/)
+
+3. Universe Population
+   ai-washer universe scan          (writes ai_washer.companies)
+   fund-backtest universe refresh   (writes fund_backtest.universe_tickers)
+
+4. Data Collection
+   fund-backtest data download      (writes fund_backtest.price_bars, ~hours first run)
+   ai-washer pipeline run           (writes all signal + score tables, ~hours first run)
+
+5. First Live Backtest
+   fund-backtest backtest run --signal ai-washing [--export-all]
+
+6. Dashboard
+   streamlit run backtest/src/fund_backtest/dashboard/app.py
+```
 
 ---
 
 ## Sources
 
-- [VectorBT documentation](https://vectorbt.dev/) — vectorized architecture and NumPy/Numba patterns (HIGH confidence)
-- [IBKR: Vector-Based vs Event-Based Backtesting](https://www.interactivebrokers.com/campus/ibkr-quant-news/a-practical-breakdown-of-vector-based-vs-event-based-backtesting/) — paradigm comparison (HIGH confidence)
-- [QuantStart: Research Backtesting in Python with pandas](https://www.quantstart.com/articles/Research-Backtesting-Environments-in-Python-with-pandas/) — component design patterns (HIGH confidence)
-- [QuantStart: Backtesting Systematic Strategies — Considerations](https://www.quantstart.com/articles/backtesting-systematic-trading-strategies-in-python-considerations-and-open-source-frameworks/) — anti-patterns and pitfalls (HIGH confidence)
-- [O'Reilly: Python for Algorithmic Trading — Ch4 Vectorized Backtesting](https://www.oreilly.com/library/view/python-for-algorithmic/9781492053347/ch04.html) — signal matrix and cross-sectional portfolio construction (HIGH confidence)
-- [QuantStats GitHub](https://github.com/ranaroussi/quantstats) — reporting module architecture (MEDIUM confidence — verify active maintenance before use)
-- [pyfolio (Quantopian)](https://quantopian.github.io/pyfolio/) — tearsheet pattern (LOW confidence — minimally maintained, use quantstats instead)
-- [Hudson & Thames backtest tutorial](https://github.com/hudson-and-thames/backtest_tutorial) — transaction cost notebook (MEDIUM confidence)
-- [yfinance API reference](https://ranaroussi.github.io/yfinance/reference/index.html) — bulk download and caching (HIGH confidence)
+All findings derived from direct codebase inspection (HIGH confidence):
+
+- `/Users/maxzou/Documents/projects/AI Hedgefund/backtest/src/fund_backtest/signal/loaders/ai_washing.py` — integration SQL query, no cross-package imports
+- `/Users/maxzou/Documents/projects/AI Hedgefund/backtest/src/fund_backtest/cli.py` — `backtest run` pipeline stages
+- `/Users/maxzou/Documents/projects/AI Hedgefund/backtest/src/fund_backtest/config.py` — `FUND_BACKTEST_DATABASE_URL` env var
+- `/Users/maxzou/Documents/projects/AI Hedgefund/Al Washing Detector/src/ai_washer/config.py` — `AI_WASHER_DATABASE_URL` env var
+- `/Users/maxzou/Documents/projects/AI Hedgefund/backtest/src/fund_backtest/db/migrations/env.py` — reads `DATABASE_URL` or `FUND_BACKTEST_DATABASE_URL`
+- `/Users/maxzou/Documents/projects/AI Hedgefund/Al Washing Detector/src/ai_washer/db/migrations/env.py` — reads `AI_WASHER_DATABASE_URL`
+- `/Users/maxzou/Documents/projects/AI Hedgefund/Al Washing Detector/src/ai_washer/db/models.py` — `daily_scores` (partitioned), `companies`, and 9 other tables
+- `/Users/maxzou/Documents/projects/AI Hedgefund/backtest/src/fund_backtest/db/models.py` — `universe_tickers`, `price_bars`, and 2 other tables
+- `/Users/maxzou/Documents/projects/AI Hedgefund/Al Washing Detector/src/ai_washer/pipeline/daily_flow.py` — 5-stage Prefect pipeline orchestration
+- `/Users/maxzou/Documents/projects/AI Hedgefund/Al Washing Detector/.env.example` — env var names and format

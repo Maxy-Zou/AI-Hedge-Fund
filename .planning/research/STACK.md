@@ -1,108 +1,125 @@
-# Technology Stack: Backtesting Infrastructure
+# Technology Stack
 
-**Project:** Shared Backtesting Infrastructure
-**Researched:** 2026-03-28
-**Overall confidence:** MEDIUM-HIGH
+**Project:** Shared Backtesting Infrastructure — v1.1 Live End-to-End Pipeline
+**Researched:** 2026-03-29
+**Milestone scope:** Stack additions/changes needed to run the full pipeline with real data.
+**NOT re-researched:** Python 3.12, uv, SQLAlchemy 2.0, Alembic, Pydantic, Typer CLI, yfinance, quantstats-lumi, Streamlit, Plotly, psycopg3, structlog, testcontainers. These are already validated in `.planning/research/STACK.md` from v1.0.
 
 ---
 
-## Recommended Stack
+## What v1.1 Adds
 
-### Backtesting Engine
+v1.0 built and tested the full pipeline in-process with synthetic data. v1.1 runs that same pipeline against:
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| vectorbt | >=0.28.5 | Vectorized backtesting engine | pandas/NumPy-native, Numba-accelerated. `Portfolio.from_signals()` accepts signal DataFrames directly — maps perfectly to the fund's "date x ticker → score" contract. Simulates 1M orders in 70-100ms on Apple M1. Open-source, no subscription. Version 0.28.5 released March 2026. |
+1. A real PostgreSQL instance (not testcontainers)
+2. Real OHLCV data downloaded from yfinance
+3. Real AI Washing Risk Scores produced by the AI Washing Detector from SEC filings
 
-**NOT** vectorbt PRO: PRO is invite-only, paid ($20/month), closed-source. The open-source version covers all requirements — `from_signals`, short positions, transaction costs, borrow costs, frequency='d'. PRO is only needed for parameter grid searches at massive scale, which is not a requirement here.
+The stack delta is small: one Docker Compose file, one `.env.example` for the backtest module, and confirmation that the EDGAR API requirements are already satisfied by the Detector's `AI_WASHER_EDGAR_IDENTITY` configuration.
 
-**NOT** backtesting.py (0.6.5): Single-asset oriented, event-loop based under the hood, not designed for 200-500 ticker universes. Good for prototyping a single strategy, wrong for a multi-ticker daily portfolio simulation.
+---
 
-**NOT** Zipline-Reloaded: Requires a Zipline data bundle (non-trivial setup), tightly coupled to Quantopian-era patterns, harder to feed arbitrary signal DataFrames into. Overkill for a custom signal interface.
+## New Capabilities Required
 
-### Market Data
-
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| yfinance | >=1.2.0 | Daily OHLCV price data for mid-cap universe | Free, no API key, daily OHLCV for any equity. Version 1.0 released stable (no breaking changes from 0.2.x). v1.2.0 is current as of February 2026. `yf.download()` bulk API handles multi-ticker downloads in one call. |
-
-**yfinance known limitations (MEDIUM confidence):**
-- Rate-limited by Yahoo Finance's undocumented limits — bulk requests beyond ~100 tickers in a single call can trigger 429 errors
-- Mitigation: chunk downloads to ~80 tickers, add 1-2s jitter between chunks, cache to PostgreSQL on first pull (incremental updates daily)
-- Not an official API — Yahoo could restrict access at any time; no SLA
-- Corporate actions adjustment is "best effort" — verify split-adjusted data on ingestion
-
-**NOT** paid providers (Alpha Vantage, Polygon, Tiingo) for v1: project constraint is free data only.
-
-### Data Caching and Storage
+### Local PostgreSQL via Docker Compose
 
 | Technology | Version | Purpose | Why |
 |------------|---------|---------|-----|
-| PostgreSQL | >=16 | Persistent OHLCV cache + score history + backtest results | Shared with AI Washing Detector (same instance). ACID compliance for append-only financial data. JSONB for flexible backtest metadata. Already in the fund's infrastructure. |
-| SQLAlchemy | >=2.0.48 | ORM for price data, backtest runs, trade log | 2.0-style with type annotations. Same version as the Detector — no new dependency. `mapped_column()` declarative models, repository pattern. |
-| pandas | >=3.0.1 | DataFrame manipulation for OHLCV and signal matrices | PyArrow backend by default in 3.0. Used as the primary data structure passed between yfinance, vectorbt, and the scoring engine. Same version as the Detector. |
+| Docker Compose | v2 (compose spec) | Local PostgreSQL for development and integration testing | Both the backtest module and AI Washing Detector need a real PostgreSQL instance to run end-to-end. testcontainers spins up isolated containers per test — correct for unit/integration tests, but not for persistent dev data. Docker Compose gives a stable, persistent local PostgreSQL that both modules can share via the same connection string. |
+| postgres image | 16-alpine | PostgreSQL database | `16-alpine` is the smallest stable image: 85MB vs 379MB for full `16`. Alpine has no bash (use `sh`), but the health check only needs `pg_isready`. No extensions required — TimescaleDB was deferred to v2. |
 
-**Partitioning note:** Native PostgreSQL range partitioning on `date` is sufficient for OHLCV at 200-500 tickers x 5 years (~500K rows). TimescaleDB would add value at >10M rows but adds an extension dependency — defer to v2 if query performance degrades.
+**Compose file location:** `backtest/docker-compose.yml` (backtest module owns it; Detector can use the same instance by pointing at the same port)
 
-### Analytics and Metrics
+**Required services:**
+- `postgres` — PostgreSQL 16 with health check via `pg_isready`
+- No Redis, no broker, no additional services needed for v1.1
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| quantstats-lumi | >=1.1.0 | Portfolio analytics, risk metrics, HTML tearsheet | Active fork of quantstats, maintained by Lumiwealth. Version 1.1.0 released March 17, 2026. Computes Sharpe, Sortino, max drawdown, Calmar, hit rate, win/loss from a returns Series. `qs.reports.html()` generates a complete HTML tearsheet. Original `quantstats` (0.0.77) has maintenance gaps — use the lumi fork. |
-| numpy | >=2.0 | Numerical computation for custom metrics | Required by pandas and vectorbt. Use for score normalization, borrow cost modeling, and statistical operations not covered by quantstats. |
+**Health check pattern (HIGH confidence — standard Docker Compose v2 pattern):**
+```yaml
+healthcheck:
+  test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-fund} -d ${POSTGRES_DB:-fund_backtest}"]
+  interval: 5s
+  timeout: 5s
+  retries: 5
+  start_period: 10s
+```
 
-**NOT** pyfolio or pyfolio-reloaded: pyfolio is tightly coupled to Zipline's return format. pyfolio-reloaded is better but still Zipline-centric. quantstats-lumi accepts a plain pandas Series of daily returns — simpler integration.
+**Why not Docker Compose v1 (`docker-compose`):** Docker Compose v1 (the Python binary) is EOL as of July 2023. Docker Desktop bundles Compose v2 (`docker compose` plugin) — the Compose Spec format is the correct target.
 
-### Dashboard
+**Why not a managed PostgreSQL (RDS, Supabase):** Over-engineered for local development. Docker Compose gives identical PostgreSQL behavior with zero cost and no external dependency.
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Streamlit | >=1.55.0 | Interactive backtesting dashboard | Already in the fund's stack. Fast to build investor-facing UIs. Version 1.55.0 (March 2026) added dynamic containers. Proven combination with vectorbt and Plotly for equity curves and drawdown charts. |
-| plotly | >=6.6.0 | Interactive charts (equity curve, drawdown, rolling metrics) | Version 6.6.0 (March 2026). Native Streamlit integration via `st.plotly_chart()`. Handles time-series financial charts well — hover tooltips, zoom, range selectors. |
+### Environment Configuration for Backtest Module
 
-**NOT** Dash: More complex setup than Streamlit, no advantage for internal/investor demo tooling. Overkill when Streamlit integration already exists in the project.
+The backtest module currently has no `.env.example`. v1.1 requires one because the live pipeline needs a real database URL and (when running with Detector integration) the EDGAR identity.
 
-### PDF Tearsheet Generation
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `FUND_DATABASE_URL` | Yes | PostgreSQL connection string for backtest data |
+| `FUND_LOG_LEVEL` | No (default: INFO) | Logging level |
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| matplotlib | >=3.10 | Chart rendering for PDF tearsheet | `PdfPages` from `matplotlib.backends.backend_pdf` is the lowest-friction path to a multi-page PDF. Each figure becomes a page. Vector output — prints cleanly. No system-level dependencies. |
-| WeasyPrint | >=65.0 | (Optional) HTML-to-PDF for polished layout | If the tearsheet needs CSS-styled tables, branding, and complex layout, render Jinja2 HTML template → WeasyPrint → PDF. Requires Pango/Cairo system libraries (Linux install needed). Use this path if the matplotlib-only output looks too plain. |
+**Not needed in backtest `.env`:** `EDGAR_IDENTITY`, API keys — those live in the Detector's `.env`. The backtest module reads pre-computed scores from PostgreSQL; it does not call EDGAR directly.
 
-**Recommended tearsheet approach — two-stage decision:**
+**Connection string format (psycopg3 sync driver):**
+```
+FUND_DATABASE_URL=postgresql+psycopg://fund:fund@localhost:5432/fund_backtest
+```
 
-1. **Start with matplotlib PdfPages**: Generate charts with matplotlib (equity curve, drawdown, rolling Sharpe, sector breakdown), use `fig.text()` for metric tables, save multi-page PDF. Zero system dependencies, ships fast.
-2. **Upgrade to WeasyPrint if branding matters**: Investor-facing factsheets benefit from CSS layout. Render metrics into an HTML template, embed matplotlib PNGs, convert with WeasyPrint. Worth the system dependency if visual polish is required.
+Note: The existing `backtest/pyproject.toml` uses `psycopg[binary]>=3.2` (sync driver). The connection string prefix must be `postgresql+psycopg` (not `postgresql+asyncpg`) to match. This is already consistent with the Detector's `AI_WASHER_DATABASE_URL` pattern in `Al Washing Detector/.env.example`.
 
-**NOT** ReportLab for v1: Low-level PDF drawing API requires positioning every element manually — high implementation cost for modest visual payoff at this stage. Use ReportLab only if layout precision requirements exceed what matplotlib + WeasyPrint can deliver.
+### SEC EDGAR API — Already Satisfied
 
-### Templating (for WeasyPrint path)
+The AI Washing Detector's stack already handles all EDGAR API requirements:
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Jinja2 | >=3.1 | HTML templates for WeasyPrint tearsheet | Already a transitive dependency of many packages. Separates data from presentation. Simple variable substitution for metrics tables and chart embedding. |
+| Requirement | Status | Where |
+|-------------|--------|-------|
+| User-Agent header (`name email`) | Done | `AI_WASHER_EDGAR_IDENTITY` env var, passed to all `edgartools` / `httpx` calls |
+| Rate limiting (10 req/sec max) | Done | `tenacity` retry with 0.1s inter-request delay in `FilingCollector` |
+| edgartools >=5.26.1 | Done | `Al Washing Detector/pyproject.toml` dependency |
 
-### Workflow Orchestration
+The backtest module does not call EDGAR. It reads scores the Detector has already written to PostgreSQL. No EDGAR-related additions are needed in the backtest stack.
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| Prefect | >=3.6.23 | Daily data refresh + backtest pipeline scheduling | Already in the fund's stack (AI Washing Detector). Same `@flow`/`@task` pattern. Handles retry logic, caching, and monitoring. The backtester's daily data refresh and signal-to-tearsheet pipeline maps cleanly to a Prefect flow. |
+---
 
-### Resilience
+## No New Python Dependencies
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| tenacity | >=9.1.4 | Retry logic for yfinance downloads | Already in the fund's stack. Exponential backoff with jitter for 429 rate-limit errors from Yahoo Finance. Essential given the documented rate-limit issues with bulk yfinance downloads. |
+The backtest `pyproject.toml` already has everything needed for the live pipeline:
 
-### Tooling
+```
+yfinance>=1.2.0       # real OHLCV download
+sqlalchemy>=2.0.48    # read scores from shared DB
+psycopg[binary]>=3.2  # PostgreSQL driver
+tenacity>=9.1.4       # retry on yfinance 429 errors
+structlog>=25.5.0     # operational logging
+```
 
-| Technology | Version | Purpose | Why |
-|------------|---------|---------|-----|
-| uv | >=0.11.2 | Package management | Consistent with the fund's existing toolchain. |
-| ruff | >=0.15.7 | Linting and formatting | Consistent with the fund's existing toolchain. |
-| pytest + pytest-cov | >=9.0.2 / >=7.1.0 | Testing | Consistent with the fund's existing toolchain. |
-| freezegun | latest | Time mocking in tests | Mock "today's date" for testing daily batch logic and incremental data refresh. Essential for deterministic backtesting tests. |
-| factory-boy | latest | Test data factories | Generate realistic OHLCV DataFrames and signal matrices for unit tests without hitting yfinance. |
+No new `uv add` commands are required for the backtest module in v1.1.
+
+The AI Washing Detector's `pyproject.toml` similarly already has `prefect>=3.6.23` for pipeline scheduling if a daily run is desired — no additions there either.
+
+---
+
+## Operational Tooling
+
+### What to Build (Not Install)
+
+v1.1 requires authoring three files that do not yet exist:
+
+| File | Purpose |
+|------|---------|
+| `backtest/docker-compose.yml` | Spin up local PostgreSQL 16 |
+| `backtest/.env.example` | Document `FUND_DATABASE_URL` and `FUND_LOG_LEVEL` |
+| `backtest/.env` | Local dev values (gitignored, derived from `.env.example`) |
+
+No new CLI tools, no new services, no new Python packages.
+
+### Alembic Migrations
+
+Both modules have Alembic configured. For v1.1, the shared PostgreSQL instance can use separate databases or separate schemas:
+
+- **Separate databases (recommended):** `fund_backtest` for backtest, `ai_washer` for Detector. Connection string isolation, no migration conflicts, simpler per-module `alembic upgrade head`.
+- **Separate schemas in one database:** Works but complicates Alembic's `env.py` in each module.
+
+Use separate databases. One Compose file, two `POSTGRES_DB` values, two `alembic upgrade head` commands.
 
 ---
 
@@ -110,95 +127,56 @@
 
 | Category | Recommended | Alternative | Why Not |
 |----------|-------------|-------------|---------|
-| Backtesting | vectorbt (open-source) | vectorbt PRO | PRO is invite-only, paid, closed-source. Open-source covers all requirements. |
-| Backtesting | vectorbt | backtesting.py | Single-asset focus, not designed for multi-ticker portfolio simulation. |
-| Backtesting | vectorbt | Zipline-Reloaded | Complex data bundle setup, Zipline-centric signal format, harder integration. |
-| Market data | yfinance | Polygon, Tiingo | Paid — project constraint is free data only for v1. |
-| Market data | yfinance | pandas-datareader | Unmaintained, Yahoo backend was removed, EOL. |
-| Analytics | quantstats-lumi | pyfolio-reloaded | Zipline-centric return format, heavier dependency surface. |
-| Analytics | quantstats-lumi | original quantstats | Maintenance gaps, open PRs neglected. Use lumi fork. |
-| PDF | matplotlib PdfPages | ReportLab | High implementation cost — manual element positioning for every table/chart. Not worth it for v1. |
-| PDF | matplotlib PdfPages | fpdf2 | Similar manual positioning burden as ReportLab without the ecosystem. |
-| Dashboard | Streamlit | Plotly Dash | More complex setup, no advantage for internal/investor demo tooling. |
-| Storage | plain PostgreSQL | TimescaleDB | Adds extension dependency. At 200-500 tickers x 5 years, native PG is sufficient. Revisit at v2. |
+| Local PostgreSQL | Docker Compose | Homebrew `postgresql@16` | Brew install pollutes the host; version management fragile; no easy reset. Docker gives hermetic, reproducible environments. |
+| Local PostgreSQL | Docker Compose | testcontainers per-run | testcontainers is per-test-session; data doesn't persist between runs. Fine for tests, wrong for a dev environment where you accumulate real data over days. |
+| Local PostgreSQL | `postgres:16-alpine` | `postgres:16` (full image) | Full image is 4x larger (379MB vs 85MB). No functional difference for development. Alpine constraint: no bash, use `sh` in override commands. |
+| DB layout | Separate databases | Separate schemas | Separate schemas require coordinating Alembic `version_table` names and `include_schemas` config. More error-prone. Separate databases are conceptually clean. |
 
 ---
 
-## Installation
+## Integration Points
 
-```bash
-# Backtesting + data
-uv add vectorbt yfinance pandas numpy
+### How the Live Pipeline Uses the Stack
 
-# Database (already in Detector stack)
-uv add sqlalchemy asyncpg "psycopg[binary]" alembic
+```
+[Docker Compose] → PostgreSQL 16 (localhost:5432)
+    ├── database: ai_washer    ← Detector writes DailyScore rows here
+    └── database: fund_backtest ← Backtest reads scores, writes results here
 
-# Analytics
-uv add quantstats-lumi
+[AI Washing Detector]
+    ├── reads: SEC EDGAR via edgartools + httpx
+    ├── writes: DailyScore rows to ai_washer DB
+    └── driven by: Prefect flow or CLI `ai-washer collect all`
 
-# Dashboard
-uv add streamlit plotly
-
-# PDF tearsheet
-uv add matplotlib
-# Optional: uv add weasyprint jinja2  (if polished layout required)
-
-# Orchestration + resilience (already in Detector stack)
-uv add prefect tenacity
-
-# Logging (already in Detector stack)
-uv add structlog
-
-# Dev/test
-uv add --dev pytest pytest-cov pytest-asyncio factory-boy freezegun ruff
+[fund-backtest CLI]
+    ├── reads: DailyScore from ai_washer DB (SignalAdapter)
+    ├── reads: OHLCV from fund_backtest DB (PriceRepository) + yfinance fallback
+    ├── runs: vectorbt Portfolio.from_signals()
+    ├── computes: quantstats-lumi metrics
+    └── writes: results to fund_backtest DB + Streamlit dashboard + PDF tearsheet
 ```
 
----
-
-## Key Integration Contract
-
-The backtester's core input interface:
-
-```python
-# Signal DataFrame: rows = dates, columns = tickers, values = AI Washing Risk Score (0-100)
-# Higher score = stronger short signal
-signals: pd.DataFrame  # shape (trading_days, n_tickers), dtype float64
-
-# Entry: score > threshold → initiate short
-# Exit: score < threshold → close short
-# Position sizing: configurable (equal weight, score-proportional, risk-parity)
-```
-
-vectorbt's `Portfolio.from_signals()` accepts this directly with `short_entries` / `short_exits` boolean masks derived from the signal thresholds. This maps without transformation from the AI Washing Detector's output schema.
+The shared PostgreSQL instance is the only coupling point between the two modules. This preserves the "no hard dependency on Detector internals" constraint from PROJECT.md.
 
 ---
 
 ## Confidence Assessment
 
-| Component | Confidence | Basis |
-|-----------|------------|-------|
-| vectorbt open-source | HIGH | PyPI v0.28.5 (March 2026), GitHub active, strong community, docs confirm `from_signals` short support |
-| yfinance | MEDIUM | PyPI v1.2.0 (Feb 2026), but Yahoo rate limits are undocumented and tightening — 429 errors well-documented on GitHub issues |
-| quantstats-lumi | MEDIUM | PyPI v1.1.0 (March 2026), Lumiwealth fork actively maintained, but smaller community than original |
-| PostgreSQL + SQLAlchemy | HIGH | Same as Detector stack, verified, production-grade |
-| Streamlit + Plotly | HIGH | Streamlit 1.55.0 + Plotly 6.6.0 both released March 2026, verified on PyPI, well-documented |
-| matplotlib PdfPages (PDF) | HIGH | Matplotlib 3.10.x, official docs, zero system dependencies, vector output |
-| WeasyPrint (optional PDF) | MEDIUM | Active library, but requires Pango/Cairo system libs — Linux CI setup adds friction |
-| Prefect | HIGH | Same as Detector stack, verified |
+| Area | Confidence | Reason |
+|------|------------|--------|
+| Docker Compose v2 / postgres:16-alpine | HIGH | Official Docker Hub image, Compose Spec v2 is current standard, `pg_isready` health check is documented pattern |
+| EDGAR requirements already satisfied | HIGH | Verified in Al Washing Detector pyproject.toml (edgartools>=5.26.1) and .env.example (EDGAR_IDENTITY) |
+| No new Python dependencies | HIGH | Verified against backtest/pyproject.toml — all live-pipeline libraries already present |
+| Separate databases (not schemas) | MEDIUM | Alembic multi-schema config is documented but has known pitfalls; separate databases sidestep those issues |
+| psycopg3 connection string prefix | HIGH | Verified against existing Detector .env.example which uses identical pattern |
 
 ---
 
 ## Sources
 
-- [vectorbt PyPI](https://pypi.org/project/vectorbt/) — v0.28.5, March 26 2026
-- [vectorbt GitHub](https://github.com/polakowo/vectorbt) — open-source, MIT-compatible
-- [vectorbt docs: Portfolio.from_signals](https://vectorbt.dev/api/portfolio/base/) — signal-based simulation API
-- [yfinance PyPI](https://pypi.org/project/yfinance/) — v1.2.0, February 2026
-- [yfinance rate limit issues #2614](https://github.com/ranaroussi/yfinance/issues/2614) — documented 429 errors on bulk download
-- [quantstats-lumi PyPI](https://pypi.org/project/quantstats-lumi/) — v1.1.0, March 17 2026
-- [quantstats-lumi GitHub](https://github.com/Lumiwealth/quantstats_lumi) — Lumiwealth fork
-- [Streamlit PyPI](https://pypi.org/project/streamlit/) — v1.55.0, March 2026
-- [Plotly PyPI](https://pypi.org/project/plotly/) — v6.6.0, March 2026
-- [Matplotlib multipage PDF docs](https://matplotlib.org/stable/gallery/misc/multipage_pdf.html) — official PdfPages guide
-- [WeasyPrint vs ReportLab comparison](https://dev.to/claudeprime/generate-pdfs-in-python-weasyprint-vs-reportlab-ifi)
-- [vectorbt + Streamlit backtesting app pattern](https://github.com/marketcalls/VectorBT-Streamlit) — community reference implementation
+- Docker Hub `postgres:16-alpine` image — official image, 85MB
+- Docker Compose Spec v2 healthcheck documentation — `pg_isready` pattern
+- `Al Washing Detector/pyproject.toml` — edgartools>=5.26.1, tenacity>=9.1.4 verified
+- `Al Washing Detector/.env.example` — EDGAR_IDENTITY and DATABASE_URL format verified
+- `backtest/pyproject.toml` — confirmed all live-pipeline dependencies already present (yfinance, sqlalchemy, psycopg, tenacity, structlog)
+- SEC EDGAR developer FAQ — 10 req/sec rate limit, User-Agent requirement (name + email)
