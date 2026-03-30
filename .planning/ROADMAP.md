@@ -179,7 +179,12 @@ Plans:
   2. Running `fund-backtest data download` completes and `price_bars` contains at least 5 years of daily OHLCV bars; the coverage report confirms 95%+ ticker coverage
   3. Running `ai-washer universe scan` completes and the `companies` table contains real mid-cap entities sourced from SEC EDGAR
   4. A manual or scripted overlap check confirms that enough tickers appear in both universes to meet `SignalAdapter.min_coverage=5`, making a live backtest viable
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 10-01-PLAN.md — Fix testcontainers install + patch CLI download to auto-load config/price.yaml (batch_sleep_secs=3.0)
+- [ ] 10-02-PLAN.md — Run universe refresh: populate universe_tickers with S&P 400 mid-cap tickers
+- [ ] 10-03-PLAN.md — Run data download: populate price_bars with 5yr OHLCV; verify coverage >=95%; document POP-04 overlap query
 
 ### Phase 11: Detector Execution
 **Goal**: The AI Washing Detector runs its full filing analysis pipeline against real SEC EDGAR data and writes daily AI Washing Risk Scores into the shared PostgreSQL database, completing without manual intervention
