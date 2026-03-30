@@ -77,8 +77,8 @@ Requirements for live end-to-end pipeline. Each maps to roadmap phases 9+.
 
 - [x] **FIX-01**: Alembic `env.py` in both packages sets a distinct `version_table` to prevent migration collisions
 - [x] **FIX-02**: `backtest run` intersects signal and price date indices before calling the simulator (no silent 0% returns)
-- [ ] **FIX-03**: `backtest export` uses real backtest results instead of `make_demo_result()` demo stubs
-- [ ] **FIX-04**: Dashboard renders real backtest data instead of hardcoded demo data when results are available
+- [x] **FIX-03**: `backtest export` uses real backtest results instead of `make_demo_result()` demo stubs
+- [x] **FIX-04**: Dashboard renders real backtest data instead of hardcoded demo data when results are available
 - [x] **FIX-05**: Benchmark alpha/beta values are correctly computed and included in CLI exports
 
 ### Live Backtest
@@ -175,8 +175,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DET-02 | Phase 11 | Complete |
 | DET-03 | Phase 11 | Complete |
 | FIX-02 | Phase 12 | Complete |
-| FIX-03 | Phase 12 | Pending |
-| FIX-04 | Phase 12 | Pending |
+| FIX-03 | Phase 12 | Complete |
+| FIX-04 | Phase 12 | Complete |
 | FIX-05 | Phase 12 | Complete |
 | LIVE-01 | Phase 13 | Pending |
 | LIVE-02 | Phase 13 | Pending |

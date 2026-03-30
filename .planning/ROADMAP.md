@@ -28,7 +28,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 9: Infrastructure and Database Setup** - Docker Compose PostgreSQL instance running, shared .env convention established, and both Alembic migration chains applied without collision (completed 2026-03-30)
 - [x] **Phase 10: Data Population** - Real mid-cap universe and 5 years of price data land in PostgreSQL; ticker overlap between the two packages is verified as sufficient for backtesting (completed 2026-03-30)
 - [x] **Phase 11: Detector Execution** - AI Washing Detector runs end-to-end against real SEC filings and writes daily_scores rows to the shared database (completed 2026-03-30)
-- [ ] **Phase 12: Bug Fixes and Wiring** - Signal-price alignment, export stubs, dashboard demo data, and benchmark computation are all corrected before the live backtest
+- [x] **Phase 12: Bug Fixes and Wiring** - Signal-price alignment, export stubs, dashboard demo data, and benchmark computation are all corrected before the live backtest (completed 2026-03-30)
 - [ ] **Phase 13: Live Backtest and Dashboard** - Full pipeline executes with real data; dashboard and tearsheet display actual AI Washing backtest results
 
 ## Phase Details
@@ -214,7 +214,7 @@ Plans:
 Plans:
 - [x] 12-01-PLAN.md — FIX-02 + FIX-05: date intersection before adapt() and SPY benchmark in cli.py:run()
 - [x] 12-02-PLAN.md — FIX-03: _run_pipeline() helper + export --signal live pipeline
-- [ ] 12-03-PLAN.md — FIX-04: dashboard live mode with _load_live_data() and _load_data() dispatcher
+- [x] 12-03-PLAN.md — FIX-04: dashboard live mode with _load_live_data() and _load_data() dispatcher
 
 ### Phase 13: Live Backtest and Dashboard
 **Goal**: The full end-to-end pipeline executes with real AI Washing scores and real price data, producing a PortfolioResult and MetricsBundle that the dashboard and tearsheet render as actual investment results
@@ -246,5 +246,5 @@ v1.1: 9 → 10 → 11 → 12 (parallel with 11) → 13
 | 9. Infrastructure and Database Setup | 2/2 | Complete   | 2026-03-30 |
 | 10. Data Population | 3/3 | Complete    | 2026-03-30 |
 | 11. Detector Execution | 2/2 | Complete   | 2026-03-30 |
-| 12. Bug Fixes and Wiring | 2/3 | In Progress|  |
+| 12. Bug Fixes and Wiring | 3/3 | Complete   | 2026-03-30 |
 | 13. Live Backtest and Dashboard | 0/TBD | Not started | - |

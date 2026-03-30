@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: History
-status: executing
-stopped_at: Completed 12-02-PLAN.md — _run_pipeline() extracted and export() --signal wired
-last_updated: "2026-03-30T19:44:33.946Z"
+status: verifying
+stopped_at: Completed 12-03-PLAN.md — dashboard live mode wired (FIX-04)
+last_updated: "2026-03-30T19:49:39.303Z"
 last_activity: 2026-03-30
 progress:
   total_phases: 12
-  completed_phases: 11
+  completed_phases: 12
   total_plans: 30
-  completed_plans: 29
+  completed_plans: 30
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-29)
 
 Phase: 12 (bug-fixes-and-wiring) — EXECUTING
 Plan: 3 of 3
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-03-30
 
 Progress: [░░░░░░░░░░] 0%
@@ -83,6 +83,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 11 P02 | 90min | 2 tasks | 0 files |
 | Phase 12-bug-fixes-and-wiring P01 | 9 | 2 tasks | 2 files |
 | Phase 12-bug-fixes-and-wiring P02 | 8 | 2 tasks | 2 files |
+| Phase 12-bug-fixes-and-wiring P03 | 4min | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -161,6 +162,8 @@ Recent decisions affecting current work:
 - [Phase 12-bug-fixes-and-wiring]: FIX-05 uses SPY only as benchmark; graceful None fallback matches MetricsEngine documented default
 - [Phase 12-bug-fixes-and-wiring]: _run_pipeline() placed before run() command — pipeline logic co-located with primary consumer
 - [Phase 12-bug-fixes-and-wiring]: export() demo path prints deprecation warning — deterministic test assertions for 'demo'/'deprecated'
+- [Phase 12-bug-fixes-and-wiring]: FIX-04 live mode uses lazy imports inside _load_live_data() — NOT importing from cli.py — to avoid Typer registering commands in Streamlit context
+- [Phase 12-bug-fixes-and-wiring]: ticker_sectors passed dynamically to build_sector_exposure_chart(); DEMO_TICKER_SECTORS remains as fallback in _load_data() only — not in main()
 
 ### Pending Todos
 
@@ -177,6 +180,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-30T19:44:33.937Z
-Stopped at: Completed 12-02-PLAN.md — _run_pipeline() extracted and export() --signal wired
+Last session: 2026-03-30T19:49:39.288Z
+Stopped at: Completed 12-03-PLAN.md — dashboard live mode wired (FIX-04)
 Resume file: None
