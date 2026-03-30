@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: History
-status: executing
-stopped_at: Completed 11-01-PLAN.md
-last_updated: "2026-03-30T18:04:57.573Z"
+status: verifying
+stopped_at: Completed 11-02-PLAN.md — pipeline launched and running (PID 38668)
+last_updated: "2026-03-30T19:04:44.932Z"
 last_activity: 2026-03-30
 progress:
   total_phases: 11
-  completed_phases: 10
+  completed_phases: 11
   total_plans: 27
-  completed_plans: 26
+  completed_plans: 27
   percent: 0
 ---
 
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-03-29)
 
 Phase: 11 (detector-execution) — EXECUTING
 Plan: 2 of 2
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-03-30
 
 Progress: [░░░░░░░░░░] 0%
@@ -80,6 +80,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 10-data-population P02 | 12min | 2 tasks | 2 files |
 | Phase 10 P03 | 45min | 3 tasks | 2 files |
 | Phase 11 P01 | 41min | 2 tasks | 2 files |
+| Phase 11 P02 | 90min | 2 tasks | 0 files |
 
 ## Accumulated Context
 
@@ -151,6 +152,9 @@ Recent decisions affecting current work:
 - [Phase 10]: CMC yfinance TypeError NoneType failure is acceptable: 1/274 = 0.4% failure rate, within 10% SLA; data download is idempotent
 - [Phase 11]: torch 2.2.2 installed via CPU wheel index; torch>=2.4 has no macOS x86_64 wheels — transformers 4.57.6 used for torch 2.2.2 compatibility
 - [Phase 11]: EFTS search-index API changed field names (adsh/form/period_ending); EFTSHit.from_search_index() factory method added for forward compatibility
+- [Phase 11]: OMP_NUM_THREADS=1 required for torch x86 on ARM64 macOS — prevents Rosetta2 Metal/ANE deadlock during torch initialization
+- [Phase 11]: Venv space-N duplicate files (macOS Finder bug) fix: delete all '* N' files/dirs, run uv sync --frozen, reinstall torch and pin transformers==4.57.6
+- [Phase 11]: Pipeline run time ~1min/company for SEC stage; 815 companies = 13+ hours full run; daily_scores written after scoring stage
 
 ### Pending Todos
 
@@ -167,6 +171,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-30T18:04:57.565Z
-Stopped at: Completed 11-01-PLAN.md
+Last session: 2026-03-30T19:04:44.928Z
+Stopped at: Completed 11-02-PLAN.md — pipeline launched and running (PID 38668)
 Resume file: None
