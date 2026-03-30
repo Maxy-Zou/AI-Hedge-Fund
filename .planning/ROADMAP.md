@@ -182,7 +182,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 10-01-PLAN.md — Fix testcontainers install + patch CLI download to auto-load config/price.yaml (batch_sleep_secs=3.0)
+- [x] 10-01-PLAN.md — Fix testcontainers install + patch CLI download to auto-load config/price.yaml (batch_sleep_secs=3.0)
 - [ ] 10-02-PLAN.md — Run universe refresh: populate universe_tickers with S&P 400 mid-cap tickers
 - [ ] 10-03-PLAN.md — Run data download: populate price_bars with 5yr OHLCV; verify coverage >=95%; document POP-04 overlap query
 
@@ -236,7 +236,7 @@ v1.1: 9 → 10 → 11 → 12 (parallel with 11) → 13
 | 7. Tearsheet and Data Exports | 2/2 | Complete | 2026-03-29 |
 | 8. AI Washing Detector Integration | 2/2 | Complete | 2026-03-29 |
 | 9. Infrastructure and Database Setup | 2/2 | Complete   | 2026-03-30 |
-| 10. Data Population | 0/TBD | Not started | - |
+| 10. Data Population | 1/3 | In Progress|  |
 | 11. Detector Execution | 0/TBD | Not started | - |
 | 12. Bug Fixes and Wiring | 0/TBD | Not started | - |
 | 13. Live Backtest and Dashboard | 0/TBD | Not started | - |
