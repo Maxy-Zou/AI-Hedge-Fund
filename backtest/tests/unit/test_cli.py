@@ -672,3 +672,88 @@ def test_run_benchmark_fallback():
     assert benchmark_arg is None, (
         f"Expected benchmark=None on SPY fetch failure, got: {benchmark_arg}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Tests for FIX-03: export --signal runs live pipeline (_run_pipeline helper)
+# ---------------------------------------------------------------------------
+
+def test_export_live_pipeline(tmp_path):
+    """backtest export --signal ai-washing --csv runs real pipeline and writes daily_returns.csv."""
+    signal_frame = _make_minimal_signal_frame()
+
+    # Build mock price bars for all 10 signal dates and 3 tickers
+    signal_dates = pd.date_range("2024-01-02", periods=10, freq="B")
+    mock_bars = _make_mock_price_bars(signal_dates, ("AAPL", "MSFT", "GOOG"))
+    mock_session = _make_mock_session()
+
+    # Portfolio result needs real DatetimeIndex for SPY fetch bounds
+    mock_portfolio_result = MagicMock()
+    net_returns = pd.Series(
+        data=[0.01] * 9, index=pd.date_range("2024-01-02", periods=9, freq="B")
+    )
+    mock_portfolio_result.net_returns = net_returns
+    mock_portfolio_result.positions = pd.DataFrame()
+    mock_portfolio_result.trade_log = pd.DataFrame()
+
+    with patch("fund_backtest.cli.load_app_settings"):
+        with patch("fund_backtest.cli.configure_logging"):
+            with patch("fund_backtest.cli.create_engine_from_settings"):
+                with patch("fund_backtest.cli.get_session_factory") as mock_factory:
+                    mock_factory.return_value.return_value = mock_session
+
+                    with patch("fund_backtest.cli.AiWashingLoader") as mock_loader_cls:
+                        mock_loader = MagicMock()
+                        mock_loader.load.return_value = signal_frame
+                        mock_loader_cls.return_value = mock_loader
+
+                        with patch("fund_backtest.cli.PriceBarRepository") as mock_repo_cls:
+                            mock_repo = MagicMock()
+                            mock_repo.get_bars.return_value = mock_bars
+                            mock_repo_cls.return_value = mock_repo
+
+                            with patch("fund_backtest.cli.PortfolioSimulator") as mock_sim_cls:
+                                mock_sim = MagicMock()
+                                mock_sim.simulate.return_value = mock_portfolio_result
+                                mock_sim_cls.return_value = mock_sim
+
+                                with patch("fund_backtest.cli.MetricsEngine") as mock_metrics_cls:
+                                    mock_metrics = MagicMock()
+                                    mock_bundle = MagicMock()
+                                    mock_bundle.sharpe = 1.5
+                                    mock_bundle.cagr = 0.18
+                                    mock_metrics.compute.return_value = mock_bundle
+                                    mock_metrics_cls.return_value = mock_metrics
+
+                                    with patch("fund_backtest.cli.yf") as mock_yf:
+                                        mock_yf.download.return_value = pd.DataFrame()
+
+                                        result = runner.invoke(
+                                            app,
+                                            [
+                                                "backtest", "export",
+                                                "--signal", "ai-washing",
+                                                "--csv",
+                                                "--output-dir", str(tmp_path),
+                                            ],
+                                        )
+
+    assert result.exit_code == 0, f"exit code {result.exit_code}: {result.output}"
+    assert (tmp_path / "daily_returns.csv").exists(), (
+        f"daily_returns.csv missing; output: {result.output}"
+    )
+
+
+def test_export_demo_fallback(tmp_path):
+    """backtest export --csv (no --signal) uses demo data and mentions 'demo' or 'deprecated'."""
+    result = runner.invoke(
+        app, ["backtest", "export", "--csv", "--output-dir", str(tmp_path)]
+    )
+    assert result.exit_code == 0, f"exit code {result.exit_code}: {result.output}"
+    assert (tmp_path / "daily_returns.csv").exists(), (
+        f"daily_returns.csv missing; output: {result.output}"
+    )
+    lower = result.output.lower()
+    assert "demo" in lower or "deprecated" in lower, (
+        f"Expected 'demo' or 'deprecated' in output, got: {result.output}"
+    )
