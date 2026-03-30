@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: History
-status: verifying
-stopped_at: Completed 11-02-PLAN.md — pipeline launched and running (PID 38668)
-last_updated: "2026-03-30T19:04:44.932Z"
+status: executing
+stopped_at: Completed 12-01-PLAN.md — FIX-02 date intersection and FIX-05 benchmark wired
+last_updated: "2026-03-30T19:34:43.005Z"
 last_activity: 2026-03-30
 progress:
-  total_phases: 11
+  total_phases: 12
   completed_phases: 11
-  total_plans: 27
-  completed_plans: 27
+  total_plans: 30
+  completed_plans: 28
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** Produce compelling, realistic backtest results the moment any strategy signal is ready — so investor conversations can start immediately.
-**Current focus:** Phase 11 — detector-execution
+**Current focus:** Phase 12 — bug-fixes-and-wiring
 
 ## Current Position
 
-Phase: 11 (detector-execution) — EXECUTING
-Plan: 2 of 2
-Status: Phase complete — ready for verification
+Phase: 12 (bug-fixes-and-wiring) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-03-30
 
 Progress: [░░░░░░░░░░] 0%
@@ -81,6 +81,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 10 P03 | 45min | 3 tasks | 2 files |
 | Phase 11 P01 | 41min | 2 tasks | 2 files |
 | Phase 11 P02 | 90min | 2 tasks | 0 files |
+| Phase 12-bug-fixes-and-wiring P01 | 9 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -155,6 +156,8 @@ Recent decisions affecting current work:
 - [Phase 11]: OMP_NUM_THREADS=1 required for torch x86 on ARM64 macOS — prevents Rosetta2 Metal/ANE deadlock during torch initialization
 - [Phase 11]: Venv space-N duplicate files (macOS Finder bug) fix: delete all '* N' files/dirs, run uv sync --frozen, reinstall torch and pin transformers==4.57.6
 - [Phase 11]: Pipeline run time ~1min/company for SEC stage; 815 companies = 13+ hours full run; daily_scores written after scoring stage
+- [Phase 12-bug-fixes-and-wiring]: FIX-02 intersection placed before SignalAdapter.adapt() per Phase 3 constraint: shift(1) must only happen inside the adapter
+- [Phase 12-bug-fixes-and-wiring]: FIX-05 uses SPY only as benchmark; graceful None fallback matches MetricsEngine documented default
 
 ### Pending Todos
 
@@ -171,6 +174,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-30T19:04:44.928Z
-Stopped at: Completed 11-02-PLAN.md — pipeline launched and running (PID 38668)
+Last session: 2026-03-30T19:34:42.999Z
+Stopped at: Completed 12-01-PLAN.md — FIX-02 date intersection and FIX-05 benchmark wired
 Resume file: None
