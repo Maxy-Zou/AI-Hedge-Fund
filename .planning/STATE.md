@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: History
 status: executing
-stopped_at: Completed 10-01-PLAN.md
-last_updated: "2026-03-30T15:41:00.617Z"
+stopped_at: Completed 10-02-PLAN.md
+last_updated: "2026-03-30T15:56:00.191Z"
 last_activity: 2026-03-30
 progress:
   total_phases: 10
   completed_phases: 9
   total_plans: 25
-  completed_plans: 23
+  completed_plans: 24
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-29)
 ## Current Position
 
 Phase: 10 (data-population) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-03-30
 
@@ -77,6 +77,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 09-infrastructure-and-database-setup P01 | 2 | 2 tasks | 6 files |
 | Phase 09-infrastructure-and-database-setup P02 | 5min | 2 tasks | 1 files |
 | Phase 10-data-population P01 | 3 | 2 tasks | 2 files |
+| Phase 10-data-population P02 | 12min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -142,6 +143,8 @@ Recent decisions affecting current work:
 - [Phase 09-infrastructure-and-database-setup]: PYTHONPATH must be set explicitly for alembic in this repo — Python 3.12 skips pth files in venvs when project path contains spaces; use .venv/bin/alembic with PYTHONPATH instead of uv run alembic
 - [Phase 10-data-population]: uv pip install --force-reinstall testcontainers[postgres] resolves Python 3.12 .pth-skipping ' 2'-suffix directory naming bug cleanly without symlinks
 - [Phase 10-data-population]: price.yaml in backtest/config/ auto-loaded by CLI via Path(__file__).parent.parent.parent (3 .parent calls) — consistent with load_universe_settings pattern
+- [Phase 10-data-population]: urllib.request with browser User-Agent is the clean fix for Wikipedia 403 — pd.read_html(url) sends Python-urllib/3.x which Wikipedia blocks; fetch HTML bytes first, pass as BytesIO
+- [Phase 10-data-population]: Pydantic v2 requires explicit NaN->None coercion via field_validator(mode='before') for str | None fields receiving pandas float NaN values
 
 ### Pending Todos
 
@@ -158,6 +161,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-30T15:41:00.614Z
-Stopped at: Completed 10-01-PLAN.md
+Last session: 2026-03-30T15:56:00.187Z
+Stopped at: Completed 10-02-PLAN.md
 Resume file: None

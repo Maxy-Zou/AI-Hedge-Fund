@@ -62,7 +62,7 @@ Requirements for live end-to-end pipeline. Each maps to roadmap phases 9+.
 
 ### Data Population
 
-- [ ] **POP-01**: Running `fund-backtest universe refresh` populates the universe_tickers table with real mid-cap tickers
+- [x] **POP-01**: Running `fund-backtest universe refresh` populates the universe_tickers table with real mid-cap tickers
 - [x] **POP-02**: Running `fund-backtest data download` populates price_bars with 5 years of real OHLCV data for all universe tickers
 - [ ] **POP-03**: Running `fund-backtest data coverage` confirms ≥95% ticker coverage after download
 - [ ] **POP-04**: Ticker overlap between `ai_washer` companies and `fund_backtest` universe is verified and sufficient for backtesting
@@ -167,7 +167,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFRA-03 | Phase 9 | Complete |
 | INFRA-04 | Phase 9 | Complete |
 | FIX-01 | Phase 9 | Complete |
-| POP-01 | Phase 10 | Pending |
+| POP-01 | Phase 10 | Complete |
 | POP-02 | Phase 10 | Complete |
 | POP-03 | Phase 10 | Pending |
 | POP-04 | Phase 10 | Pending |
