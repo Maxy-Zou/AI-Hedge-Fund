@@ -58,7 +58,7 @@ Requirements for live end-to-end pipeline. Each maps to roadmap phases 9+.
 - [x] **INFRA-01**: PostgreSQL 16 runs locally via Docker Compose with a named volume for data persistence
 - [x] **INFRA-02**: A shared `.env` convention configures both packages (`ai_washer` and `fund_backtest`) to connect to the same database
 - [x] **INFRA-03**: Alembic `version_table` is unique per package so both migration chains run without collision
-- [ ] **INFRA-04**: Both Alembic migration chains run successfully against the Docker PostgreSQL instance
+- [x] **INFRA-04**: Both Alembic migration chains run successfully against the Docker PostgreSQL instance
 
 ### Data Population
 
@@ -165,7 +165,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INFRA-01 | Phase 9 | Complete |
 | INFRA-02 | Phase 9 | Complete |
 | INFRA-03 | Phase 9 | Complete |
-| INFRA-04 | Phase 9 | Pending |
+| INFRA-04 | Phase 9 | Complete |
 | FIX-01 | Phase 9 | Complete |
 | POP-01 | Phase 10 | Pending |
 | POP-02 | Phase 10 | Pending |

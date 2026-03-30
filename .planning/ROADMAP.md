@@ -25,7 +25,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 ### v1.1 Active
 
-- [ ] **Phase 9: Infrastructure and Database Setup** - Docker Compose PostgreSQL instance running, shared .env convention established, and both Alembic migration chains applied without collision
+- [x] **Phase 9: Infrastructure and Database Setup** - Docker Compose PostgreSQL instance running, shared .env convention established, and both Alembic migration chains applied without collision (completed 2026-03-30)
 - [ ] **Phase 10: Data Population** - Real mid-cap universe and 5 years of price data land in PostgreSQL; ticker overlap between the two packages is verified as sufficient for backtesting
 - [ ] **Phase 11: Detector Execution** - AI Washing Detector runs end-to-end against real SEC filings and writes daily_scores rows to the shared database
 - [ ] **Phase 12: Bug Fixes and Wiring** - Signal-price alignment, export stubs, dashboard demo data, and benchmark computation are all corrected before the live backtest
@@ -230,7 +230,7 @@ v1.1: 9 → 10 → 11 → 12 (parallel with 11) → 13
 | 6. Streamlit Dashboard | 3/3 | Complete | 2026-03-29 |
 | 7. Tearsheet and Data Exports | 2/2 | Complete | 2026-03-29 |
 | 8. AI Washing Detector Integration | 2/2 | Complete | 2026-03-29 |
-| 9. Infrastructure and Database Setup | 1/2 | In Progress|  |
+| 9. Infrastructure and Database Setup | 2/2 | Complete   | 2026-03-30 |
 | 10. Data Population | 0/TBD | Not started | - |
 | 11. Detector Execution | 0/TBD | Not started | - |
 | 12. Bug Fixes and Wiring | 0/TBD | Not started | - |
