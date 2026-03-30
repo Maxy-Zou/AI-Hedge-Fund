@@ -161,7 +161,8 @@ def download(
     ),
 ) -> None:
     """Download 5 years of daily OHLCV bars for all active universe tickers."""
-    price_settings = load_price_settings()
+    _price_yaml = Path(__file__).parent.parent.parent / "config" / "price.yaml"
+    price_settings = load_price_settings(config_path=_price_yaml if _price_yaml.exists() else None)
     if dry_run:
         console.print("[yellow]dry-run mode — no database writes will occur[/yellow]")
         console.print(
@@ -205,7 +206,11 @@ def update() -> None:
         engine = create_engine_from_settings(settings)
         session_factory = get_session_factory(engine)
         with session_factory() as session:
-            builder = PriceBuilder(session=session, settings=load_price_settings())
+            _price_yaml = Path(__file__).parent.parent.parent / "config" / "price.yaml"
+            builder = PriceBuilder(
+                session=session,
+                settings=load_price_settings(config_path=_price_yaml if _price_yaml.exists() else None),
+            )
             summary = builder.update()
 
         table = Table(title="Incremental Update Complete", show_header=True)
