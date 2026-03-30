@@ -209,8 +209,12 @@ Plans:
   2. Running `backtest export --csv` and `backtest export --tearsheet` uses actual `PortfolioResult` data from the last run, not the `make_demo_result()` stub
   3. Opening the Streamlit dashboard when a real backtest result is available shows real equity curve and sector data — the demo data fallback only activates when no result exists
   4. Alpha and beta values in CLI export JSON are non-zero when benchmark data is available and are numerically consistent with the MetricsBundle values
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 3 plans
+
+Plans:
+- [ ] 12-01-PLAN.md — FIX-02 + FIX-05: date intersection before adapt() and SPY benchmark in cli.py:run()
+- [ ] 12-02-PLAN.md — FIX-03: _run_pipeline() helper + export --signal live pipeline
+- [ ] 12-03-PLAN.md — FIX-04: dashboard live mode with _load_live_data() and _load_data() dispatcher
 
 ### Phase 13: Live Backtest and Dashboard
 **Goal**: The full end-to-end pipeline executes with real AI Washing scores and real price data, producing a PortfolioResult and MetricsBundle that the dashboard and tearsheet render as actual investment results
