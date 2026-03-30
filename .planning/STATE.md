@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: History
 status: executing
-stopped_at: Completed 12-01-PLAN.md — FIX-02 date intersection and FIX-05 benchmark wired
-last_updated: "2026-03-30T19:34:43.005Z"
+stopped_at: Completed 12-02-PLAN.md — _run_pipeline() extracted and export() --signal wired
+last_updated: "2026-03-30T19:44:33.946Z"
 last_activity: 2026-03-30
 progress:
   total_phases: 12
   completed_phases: 11
   total_plans: 30
-  completed_plans: 28
+  completed_plans: 29
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-03-29)
 ## Current Position
 
 Phase: 12 (bug-fixes-and-wiring) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-03-30
 
@@ -82,6 +82,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 11 P01 | 41min | 2 tasks | 2 files |
 | Phase 11 P02 | 90min | 2 tasks | 0 files |
 | Phase 12-bug-fixes-and-wiring P01 | 9 | 2 tasks | 2 files |
+| Phase 12-bug-fixes-and-wiring P02 | 8 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -158,6 +159,8 @@ Recent decisions affecting current work:
 - [Phase 11]: Pipeline run time ~1min/company for SEC stage; 815 companies = 13+ hours full run; daily_scores written after scoring stage
 - [Phase 12-bug-fixes-and-wiring]: FIX-02 intersection placed before SignalAdapter.adapt() per Phase 3 constraint: shift(1) must only happen inside the adapter
 - [Phase 12-bug-fixes-and-wiring]: FIX-05 uses SPY only as benchmark; graceful None fallback matches MetricsEngine documented default
+- [Phase 12-bug-fixes-and-wiring]: _run_pipeline() placed before run() command — pipeline logic co-located with primary consumer
+- [Phase 12-bug-fixes-and-wiring]: export() demo path prints deprecation warning — deterministic test assertions for 'demo'/'deprecated'
 
 ### Pending Todos
 
@@ -174,6 +177,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-30T19:34:42.999Z
-Stopped at: Completed 12-01-PLAN.md — FIX-02 date intersection and FIX-05 benchmark wired
+Last session: 2026-03-30T19:44:33.937Z
+Stopped at: Completed 12-02-PLAN.md — _run_pipeline() extracted and export() --signal wired
 Resume file: None
