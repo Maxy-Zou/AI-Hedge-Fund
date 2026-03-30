@@ -2,12 +2,12 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Live End-to-End Pipeline
-status: defining_requirements
+status: roadmap_created
 stopped_at: null
 last_updated: "2026-03-29T00:00:00.000Z"
 last_activity: 2026-03-29
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** Produce compelling, realistic backtest results the moment any strategy signal is ready — so investor conversations can start immediately.
-**Current focus:** Defining requirements for v1.1
+**Current focus:** Phase 9 — Infrastructure and Database Setup
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 9 — Infrastructure and Database Setup
 Plan: —
-Status: Defining requirements
-Last activity: 2026-03-29 — Milestone v1.1 started
+Status: Not started
+Last activity: 2026-03-29 — Roadmap created for v1.1
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -52,6 +52,8 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+
+**v1.0 Velocity Reference:**
 | Phase 01-universe-and-sector-data P01 | 5 | 2 tasks | 19 files |
 | Phase 01-universe-and-sector-data P02 | 5 | 2 tasks | 7 files |
 | Phase 01-universe-and-sector-data P03 | 7 | 2 tasks | 5 files |
@@ -121,7 +123,7 @@ Recent decisions affecting current work:
 - [Phase 06-streamlit-dashboard]: _annotate_drawdown_episodes handles open-ended trailing episodes (no closing transition at end of series)
 - [Phase 06-streamlit-dashboard]: width="stretch" used for all st.plotly_chart calls (Streamlit 1.45+ API; use_container_width deprecated and absent)
 - [Phase 06-streamlit-dashboard]: Benchmark fetch (SPY/IWM) gracefully degrades to empty dict — equity chart renders strategy-only on yfinance failure
-- [Phase 07-tearsheet-and-data-exports]: Matplotlib Agg backend guarded with get_backend() \!= 'Agg' check before use() call to avoid double-switching when already set
+- [Phase 07-tearsheet-and-data-exports]: Matplotlib Agg backend guarded with get_backend() != 'Agg' check before use() call to avoid double-switching when already set
 - [Phase 07-tearsheet-and-data-exports]: Rolling Series fields excluded from JSON by explicit key enumeration (not model_dump) for type safety
 - [Phase 07-tearsheet-and-data-exports]: export command placed directly on backtest_app (not nested sub-typer) — Typer sub-typer requires extra command level incompatible with test invocation pattern
 - [Phase 07-tearsheet-and-data-exports]: dashboard/app.py added to coverage omit — Streamlit UI cannot be unit-tested; 5 data-command error-path tests added to reach 80% coverage
@@ -129,6 +131,9 @@ Recent decisions affecting current work:
 - [Phase 08-ai-washing-detector-integration]: pivot_table(aggfunc='last') deduplication in AiWashingLoader — most recently inserted row wins when multiple scores share (ticker, date)
 - [Phase 08-ai-washing-detector-integration]: Signal guard before load_app_settings(): unknown signal exits 1 without requiring DATABASE_URL env var
 - [Phase 08-ai-washing-detector-integration]: Module-level imports for AiWashingLoader/PortfolioSimulator/MetricsEngine in cli.py: required for unittest.mock.patch to target fund_backtest.cli.* namespace
+- [v1.1 Roadmap]: FIX-01 and INFRA-03 are the same fix (Alembic version_table) — both mapped to Phase 9 so the fix is authoritatively done once before any migration run
+- [v1.1 Roadmap]: Phase 12 (Bug Fixes) can execute concurrently with Phase 11 (Detector run) since Detector is 4-10h and fixes touch only backtest code, not Detector internals
+- [v1.1 Roadmap]: Docker Compose placed at repo root — shared volume between both packages; named volume prevents data loss on docker system prune
 
 ### Pending Todos
 
@@ -136,12 +141,15 @@ None yet.
 
 ### Blockers/Concerns
 
-- Phase 2: FINRA short interest data ingestion pipeline for tiered borrow cost model not yet researched — address in Phase 4 planning
-- Phase 2: Dividend liability on shorts — yfinance coverage inconsistent for historical periods; document as known limitation in tearsheet
-- Phase 6/7: WeasyPrint (CSS PDF) requires Pango/Cairo on Linux CI — use matplotlib PdfPages for v1 PDF instead
+- Phase 9: Alembic version table collision must be fixed before running either migration chain — INFRA-03/FIX-01 are the hard prerequisite
+- Phase 10: yfinance 429 errors likely on first bulk download of 200-500 tickers — verify batch_sleep_secs=3.0 is configured before starting
+- Phase 10: AI_WASHER_EDGAR_IDENTITY must be a valid email in User-Agent format for SEC EDGAR compliance
+- Phase 11: First Detector run against real SEC filings takes 4-10 hours due to rate limits — plan to run overnight or in background
+- Phase 11/12 parallel: Phase 12 bug fixes are safe to develop while Phase 11 executes, but merge/test against real scores only after Phase 11 completes
+- Phase 13: SignalAdapter.min_coverage=5 requires at least 5 ticker overlap between ai_washer companies and fund_backtest universe — verify in Phase 10 before proceeding
 
 ## Session Continuity
 
-Last session: 2026-03-29T19:33:34.834Z
-Stopped at: Completed 08-ai-washing-detector-integration 08-02-PLAN.md
+Last session: 2026-03-29
+Stopped at: Roadmap created for v1.1 — ready to plan Phase 9
 Resume file: None

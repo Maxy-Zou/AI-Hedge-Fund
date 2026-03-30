@@ -2,7 +2,7 @@
 
 ## Overview
 
-Eight phases take this module from a clean Python package to a fully integrated, investor-ready backtesting framework. The pipeline flows in strict dependency order: universe and price data must exist before the simulator can run, the simulator must produce a PortfolioResult before risk metrics can be computed, and risk metrics must exist before the reporting layer can render them. Integration with the AI Washing Detector is last — the contract must be stable before live data crosses module boundaries.
+Eight phases built the full backtesting framework (v1.0). Five phases commission it with real data (v1.1). The v1.1 pipeline flows in strict operational order: infrastructure must exist before data can land, data must populate before the Detector can run, the Detector produces scores that unlock the live backtest, and bug fixes are wired in while the long-running Detector executes so nothing blocks Phase 13.
 
 ## Phases
 
@@ -12,6 +12,8 @@ Eight phases take this module from a clean Python package to a fully integrated,
 
 Decimal phases appear between their surrounding integers in numeric order.
 
+### v1.0 History (Completed 2026-03-29)
+
 - [x] **Phase 1: Universe and Sector Data** - Build and maintain the mid-cap ticker universe with GICS sector classification (completed 2026-03-28)
 - [x] **Phase 2: Price Data Pipeline** - Download, cache, validate, and incrementally update daily OHLCV data for the full universe (completed 2026-03-29)
 - [x] **Phase 3: Signal Adapter and Integration Contract** - Define the signal DataFrame contract and build the adapter that normalizes raw strategy scores into portfolio weights (completed 2026-03-29)
@@ -20,6 +22,14 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 6: Streamlit Dashboard** - Interactive investor-facing dashboard showing equity curves, drawdown, sector exposure, and monthly returns (completed 2026-03-29)
 - [x] **Phase 7: Tearsheet and Data Exports** - PDF tearsheet, CSV/JSON exports, and explicit cost labeling on all outputs (completed 2026-03-29)
 - [x] **Phase 8: AI Washing Detector Integration** - Wire live AI Washing Risk Scores into the backtester and validate the end-to-end pipeline (completed 2026-03-29)
+
+### v1.1 Active
+
+- [ ] **Phase 9: Infrastructure and Database Setup** - Docker Compose PostgreSQL instance running, shared .env convention established, and both Alembic migration chains applied without collision
+- [ ] **Phase 10: Data Population** - Real mid-cap universe and 5 years of price data land in PostgreSQL; ticker overlap between the two packages is verified as sufficient for backtesting
+- [ ] **Phase 11: Detector Execution** - AI Washing Detector runs end-to-end against real SEC filings and writes daily_scores rows to the shared database
+- [ ] **Phase 12: Bug Fixes and Wiring** - Signal-price alignment, export stubs, dashboard demo data, and benchmark computation are all corrected before the live backtest
+- [ ] **Phase 13: Live Backtest and Dashboard** - Full pipeline executes with real data; dashboard and tearsheet display actual AI Washing backtest results
 
 ## Phase Details
 
@@ -149,18 +159,79 @@ Plans:
 - [x] 08-01-PLAN.md — AiWashingLoader: signal/loaders/ package, raw SQL query, SignalLoadError, TDD unit tests (INT-02)
 - [x] 08-02-PLAN.md — CLI backtest run command + integration test against PostgreSQL testcontainer (INT-03)
 
+### Phase 9: Infrastructure and Database Setup
+**Goal**: A running PostgreSQL 16 instance is reachable by both packages via a shared .env convention, and both Alembic migration chains apply cleanly without version table collision
+**Depends on**: Phase 8
+**Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-04, FIX-01
+**Success Criteria** (what must be TRUE):
+  1. Running `docker compose up -d` starts a PostgreSQL 16 container with a named volume; the container survives `docker compose restart` with data intact
+  2. A single `.env` file at the repo root (or package level) configures `DATABASE_URL`, `AI_WASHER_DATABASE_URL`, and `FUND_BACKTEST_DATABASE_URL` to the same connection string — both CLI tools connect without additional setup
+  3. Running `alembic upgrade head` in both package directories completes without error and without either chain overwriting the other's version row
+  4. Both packages' `env.py` files declare a distinct `version_table` name so migration state is tracked independently
+**Plans**: TBD
+
+### Phase 10: Data Population
+**Goal**: Real mid-cap universe tickers and five years of OHLCV price data are loaded into PostgreSQL, and the ticker overlap between the Detector's company universe and the backtester's price universe is confirmed as sufficient for a live backtest
+**Depends on**: Phase 9
+**Requirements**: POP-01, POP-02, POP-03, POP-04
+**Success Criteria** (what must be TRUE):
+  1. Running `fund-backtest universe refresh` completes and the `universe_tickers` table contains real mid-cap tickers from the S&P 400 list
+  2. Running `fund-backtest data download` completes and `price_bars` contains at least 5 years of daily OHLCV bars; the coverage report confirms 95%+ ticker coverage
+  3. Running `ai-washer universe scan` completes and the `companies` table contains real mid-cap entities sourced from SEC EDGAR
+  4. A manual or scripted overlap check confirms that enough tickers appear in both universes to meet `SignalAdapter.min_coverage=5`, making a live backtest viable
+**Plans**: TBD
+
+### Phase 11: Detector Execution
+**Goal**: The AI Washing Detector runs its full filing analysis pipeline against real SEC EDGAR data and writes daily AI Washing Risk Scores into the shared PostgreSQL database, completing without manual intervention
+**Depends on**: Phase 10
+**Requirements**: DET-01, DET-02, DET-03
+**Success Criteria** (what must be TRUE):
+  1. Running the Detector's score-generation pipeline against the populated `companies` table produces rows in `daily_scores` for at least the companies with ticker overlap
+  2. The pipeline runs to completion without manual restarts; structlog output shows per-company progress and a final summary row count
+  3. The `daily_scores` table contains entries spanning at least 12 months, confirming sufficient signal history for a meaningful backtest
+**Plans**: TBD
+
+### Phase 12: Bug Fixes and Wiring
+**Goal**: The four known bugs blocking a clean live run are corrected: signal-price date alignment, export demo stubs, dashboard hardcoded data, and benchmark alpha/beta computation
+**Depends on**: Phase 9 (can run concurrently with Phase 11)
+**Requirements**: FIX-02, FIX-03, FIX-04, FIX-05
+**Success Criteria** (what must be TRUE):
+  1. Running `backtest run --signal ai-washing` with misaligned signal and price date ranges produces correctly aligned returns — no silent 0% return rows from unmatched dates
+  2. Running `backtest export --csv` and `backtest export --tearsheet` uses actual `PortfolioResult` data from the last run, not the `make_demo_result()` stub
+  3. Opening the Streamlit dashboard when a real backtest result is available shows real equity curve and sector data — the demo data fallback only activates when no result exists
+  4. Alpha and beta values in CLI export JSON are non-zero when benchmark data is available and are numerically consistent with the MetricsBundle values
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 13: Live Backtest and Dashboard
+**Goal**: The full end-to-end pipeline executes with real AI Washing scores and real price data, producing a PortfolioResult and MetricsBundle that the dashboard and tearsheet render as actual investment results
+**Depends on**: Phase 11, Phase 12
+**Requirements**: LIVE-01, LIVE-02, LIVE-03
+**Success Criteria** (what must be TRUE):
+  1. Running `fund-backtest backtest run --signal ai-washing` completes and prints a non-empty MetricsBundle with real Sharpe, drawdown, and CAGR values sourced from actual SEC filing scores
+  2. Opening the Streamlit dashboard shows a real equity curve with benchmark overlays, a non-trivial drawdown chart, a populated monthly heatmap, and a sector exposure breakdown — none of the panels display demo or placeholder data
+  3. Running `backtest export --all` produces a PDF tearsheet, three CSV files, and a JSON metrics file where every output header identifies the actual slippage, commission, and borrow rate used in the run
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
+v1.0: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 (complete)
+v1.1: 9 → 10 → 11 → 12 (parallel with 11) → 13
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Universe and Sector Data | 3/3 | Complete   | 2026-03-28 |
-| 2. Price Data Pipeline | 4/4 | Complete   | 2026-03-29 |
-| 3. Signal Adapter and Integration Contract | 2/2 | Complete   | 2026-03-29 |
-| 4. Cost Model and Portfolio Simulator | 2/2 | Complete   | 2026-03-29 |
-| 5. Risk Metrics Engine | 2/2 | Complete   | 2026-03-29 |
-| 6. Streamlit Dashboard | 3/3 | Complete   | 2026-03-29 |
-| 7. Tearsheet and Data Exports | 2/2 | Complete   | 2026-03-29 |
-| 8. AI Washing Detector Integration | 2/2 | Complete   | 2026-03-29 |
+| 1. Universe and Sector Data | 3/3 | Complete | 2026-03-28 |
+| 2. Price Data Pipeline | 4/4 | Complete | 2026-03-29 |
+| 3. Signal Adapter and Integration Contract | 2/2 | Complete | 2026-03-29 |
+| 4. Cost Model and Portfolio Simulator | 2/2 | Complete | 2026-03-29 |
+| 5. Risk Metrics Engine | 2/2 | Complete | 2026-03-29 |
+| 6. Streamlit Dashboard | 3/3 | Complete | 2026-03-29 |
+| 7. Tearsheet and Data Exports | 2/2 | Complete | 2026-03-29 |
+| 8. AI Washing Detector Integration | 2/2 | Complete | 2026-03-29 |
+| 9. Infrastructure and Database Setup | 0/TBD | Not started | - |
+| 10. Data Population | 0/TBD | Not started | - |
+| 11. Detector Execution | 0/TBD | Not started | - |
+| 12. Bug Fixes and Wiring | 0/TBD | Not started | - |
+| 13. Live Backtest and Dashboard | 0/TBD | Not started | - |

@@ -162,6 +162,25 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INT-01 | Phase 3 | Complete |
 | INT-02 | Phase 8 | Complete |
 | INT-03 | Phase 8 | Complete |
+| INFRA-01 | Phase 9 | Pending |
+| INFRA-02 | Phase 9 | Pending |
+| INFRA-03 | Phase 9 | Pending |
+| INFRA-04 | Phase 9 | Pending |
+| FIX-01 | Phase 9 | Pending |
+| POP-01 | Phase 10 | Pending |
+| POP-02 | Phase 10 | Pending |
+| POP-03 | Phase 10 | Pending |
+| POP-04 | Phase 10 | Pending |
+| DET-01 | Phase 11 | Pending |
+| DET-02 | Phase 11 | Pending |
+| DET-03 | Phase 11 | Pending |
+| FIX-02 | Phase 12 | Pending |
+| FIX-03 | Phase 12 | Pending |
+| FIX-04 | Phase 12 | Pending |
+| FIX-05 | Phase 12 | Pending |
+| LIVE-01 | Phase 13 | Pending |
+| LIVE-02 | Phase 13 | Pending |
+| LIVE-03 | Phase 13 | Pending |
 
 **v1 Coverage:**
 - v1 requirements: 27 total
@@ -170,9 +189,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 **v1.1 Coverage:**
 - v1.1 requirements: 18 total
-- Mapped to phases: 0 (pending roadmap creation)
-- Unmapped: 18
+- Mapped to phases: 18
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-28*
-*Last updated: 2026-03-30 — v1.1 requirements added (18 new)*
+*Last updated: 2026-03-29 — v1.1 traceability complete (phases 9-13)*
