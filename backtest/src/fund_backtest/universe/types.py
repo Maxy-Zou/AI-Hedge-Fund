@@ -7,9 +7,22 @@ Provides:
 """
 from __future__ import annotations
 
+import math
+
 from pydantic import BaseModel, Field, field_validator
 
 from fund_backtest.config import UniverseSettings
+
+
+def _nan_to_none(v: object) -> object:
+    """Convert float NaN (pandas missing value) to None.
+
+    pandas uses float('nan') for missing string cells; Pydantic v2 does not
+    coerce NaN to None automatically for str | None fields.
+    """
+    if isinstance(v, float) and math.isnan(v):
+        return None
+    return v
 
 
 class SeedRow(BaseModel):
@@ -29,6 +42,12 @@ class SeedRow(BaseModel):
     def strip_ticker(cls, v: str) -> str:
         """Strip leading/trailing whitespace from ticker symbol."""
         return v.strip()
+
+    @field_validator("gics_sector", "gics_sub_industry", mode="before")
+    @classmethod
+    def coerce_nan_to_none(cls, v: object) -> object:
+        """Convert pandas float NaN to None for optional string fields."""
+        return _nan_to_none(v)
 
 
 class UniverseEntry(BaseModel):
