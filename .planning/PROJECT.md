@@ -81,6 +81,17 @@ Produce compelling, realistic backtest results the moment any strategy signal is
 | Strategy-agnostic interface | Future strategies plug in without modifying the backtester | -- Pending |
 | Separate branch workflow | Other terminal actively building Detector on main; avoid git conflicts | -- Pending |
 
+## Current Milestone: v1.1 Live End-to-End Pipeline
+
+**Goal:** Run the full pipeline with real data so the dashboard shows actual backtest results from real AI Washing Detector scores.
+
+**Target features:**
+- PostgreSQL setup via Docker Compose for local development
+- Download real OHLCV price data for the mid-cap universe
+- Run the AI Washing Detector against real SEC filings to produce scores
+- Execute a real backtest (signal → simulate → metrics)
+- Dashboard and tearsheet displaying actual results
+
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
@@ -99,4 +110,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-29 after Phase 5 completion*
+*Last updated: 2026-03-29 — Milestone v1.1 started*
