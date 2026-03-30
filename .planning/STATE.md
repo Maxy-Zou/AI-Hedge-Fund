@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Live End-to-End Pipeline
-status: roadmap_created
-stopped_at: null
-last_updated: "2026-03-29T00:00:00.000Z"
-last_activity: 2026-03-29
+milestone: v1.0
+milestone_name: History
+status: executing
+stopped_at: Completed 09-01-PLAN.md
+last_updated: "2026-03-30T15:12:00.724Z"
+last_activity: 2026-03-30
 progress:
-  total_phases: 5
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_phases: 9
+  completed_phases: 8
+  total_plans: 22
+  completed_plans: 21
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-29)
 
 **Core value:** Produce compelling, realistic backtest results the moment any strategy signal is ready — so investor conversations can start immediately.
-**Current focus:** Phase 9 — Infrastructure and Database Setup
+**Current focus:** Phase 09 — infrastructure-and-database-setup
 
 ## Current Position
 
-Phase: 9 — Infrastructure and Database Setup
-Plan: —
-Status: Not started
-Last activity: 2026-03-29 — Roadmap created for v1.1
+Phase: 09 (infrastructure-and-database-setup) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
+Last activity: 2026-03-30
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -74,6 +74,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 07 P02 | 13min | 2 tasks | 3 files |
 | Phase 08-ai-washing-detector-integration P01 | 1min | 2 tasks | 3 files |
 | Phase 08-ai-washing-detector-integration P02 | 5min | 2 tasks | 3 files |
+| Phase 09-infrastructure-and-database-setup P01 | 2 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -134,6 +135,8 @@ Recent decisions affecting current work:
 - [v1.1 Roadmap]: FIX-01 and INFRA-03 are the same fix (Alembic version_table) — both mapped to Phase 9 so the fix is authoritatively done once before any migration run
 - [v1.1 Roadmap]: Phase 12 (Bug Fixes) can execute concurrently with Phase 11 (Detector run) since Detector is 4-10h and fixes touch only backtest code, not Detector internals
 - [v1.1 Roadmap]: Docker Compose placed at repo root — shared volume between both packages; named volume prevents data loss on docker system prune
+- [Phase 09-infrastructure-and-database-setup]: Both packages share ai_hedge_fund database; Alembic collision prevented by version_table namespacing (fund_backtest_alembic_version, ai_washer_alembic_version)
+- [Phase 09-infrastructure-and-database-setup]: Named Docker volume ai_hedge_fund_pgdata prevents data loss on docker system prune; repo-root .env.example is canonical reference for all packages
 
 ### Pending Todos
 
@@ -150,6 +153,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-29
-Stopped at: Roadmap created for v1.1 — ready to plan Phase 9
+Last session: 2026-03-30T15:12:00.721Z
+Stopped at: Completed 09-01-PLAN.md
 Resume file: None

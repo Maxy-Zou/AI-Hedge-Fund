@@ -55,9 +55,9 @@ Requirements for live end-to-end pipeline. Each maps to roadmap phases 9+.
 
 ### Infrastructure
 
-- [ ] **INFRA-01**: PostgreSQL 16 runs locally via Docker Compose with a named volume for data persistence
-- [ ] **INFRA-02**: A shared `.env` convention configures both packages (`ai_washer` and `fund_backtest`) to connect to the same database
-- [ ] **INFRA-03**: Alembic `version_table` is unique per package so both migration chains run without collision
+- [x] **INFRA-01**: PostgreSQL 16 runs locally via Docker Compose with a named volume for data persistence
+- [x] **INFRA-02**: A shared `.env` convention configures both packages (`ai_washer` and `fund_backtest`) to connect to the same database
+- [x] **INFRA-03**: Alembic `version_table` is unique per package so both migration chains run without collision
 - [ ] **INFRA-04**: Both Alembic migration chains run successfully against the Docker PostgreSQL instance
 
 ### Data Population
@@ -75,7 +75,7 @@ Requirements for live end-to-end pipeline. Each maps to roadmap phases 9+.
 
 ### Bug Fixes & Wiring
 
-- [ ] **FIX-01**: Alembic `env.py` in both packages sets a distinct `version_table` to prevent migration collisions
+- [x] **FIX-01**: Alembic `env.py` in both packages sets a distinct `version_table` to prevent migration collisions
 - [ ] **FIX-02**: `backtest run` intersects signal and price date indices before calling the simulator (no silent 0% returns)
 - [ ] **FIX-03**: `backtest export` uses real backtest results instead of `make_demo_result()` demo stubs
 - [ ] **FIX-04**: Dashboard renders real backtest data instead of hardcoded demo data when results are available
@@ -162,11 +162,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INT-01 | Phase 3 | Complete |
 | INT-02 | Phase 8 | Complete |
 | INT-03 | Phase 8 | Complete |
-| INFRA-01 | Phase 9 | Pending |
-| INFRA-02 | Phase 9 | Pending |
-| INFRA-03 | Phase 9 | Pending |
+| INFRA-01 | Phase 9 | Complete |
+| INFRA-02 | Phase 9 | Complete |
+| INFRA-03 | Phase 9 | Complete |
 | INFRA-04 | Phase 9 | Pending |
-| FIX-01 | Phase 9 | Pending |
+| FIX-01 | Phase 9 | Complete |
 | POP-01 | Phase 10 | Pending |
 | POP-02 | Phase 10 | Pending |
 | POP-03 | Phase 10 | Pending |

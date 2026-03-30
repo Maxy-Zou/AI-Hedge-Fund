@@ -230,7 +230,7 @@ v1.1: 9 → 10 → 11 → 12 (parallel with 11) → 13
 | 6. Streamlit Dashboard | 3/3 | Complete | 2026-03-29 |
 | 7. Tearsheet and Data Exports | 2/2 | Complete | 2026-03-29 |
 | 8. AI Washing Detector Integration | 2/2 | Complete | 2026-03-29 |
-| 9. Infrastructure and Database Setup | 0/TBD | Not started | - |
+| 9. Infrastructure and Database Setup | 1/2 | In Progress|  |
 | 10. Data Population | 0/TBD | Not started | - |
 | 11. Detector Execution | 0/TBD | Not started | - |
 | 12. Bug Fixes and Wiring | 0/TBD | Not started | - |
