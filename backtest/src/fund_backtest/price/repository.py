@@ -19,6 +19,14 @@ from fund_backtest.price.types import PriceAnomalyRecord, PriceBar
 
 log = structlog.get_logger(__name__)
 
+# PostgreSQL hard limit: 65,535 bind parameters per query.
+# Each PriceBarORM row uses 8 columns → max 65535 // 8 = 8191 rows per INSERT.
+_PG_MAX_PARAMS = 65_535
+_PRICE_BAR_COLS = 8
+_INSERT_CHUNK_SIZE = _PG_MAX_PARAMS // _PRICE_BAR_COLS  # 8191
+_ANOMALY_COLS = 6
+_ANOMALY_CHUNK_SIZE = _PG_MAX_PARAMS // _ANOMALY_COLS  # 10922
+
 
 class PriceBarRepository:
     """Repository for price_bars and price_anomalies tables.
@@ -61,20 +69,27 @@ class PriceBarRepository:
             }
             for b in bars
         ]
-        stmt = (
-            pg_insert(PriceBarORM)
-            .values(rows)
-            .on_conflict_do_nothing(index_elements=["ticker", "bar_date"])
-            .returning(PriceBarORM.id)
-        )
-        result = self._session.execute(stmt)
-        self._session.commit()
-        # Use len(result.all()) instead of rowcount: psycopg3 returns -1 for
-        # multi-row ON CONFLICT DO NOTHING inserts.  RETURNING gives the exact
-        # set of IDs actually inserted.
-        inserted = len(result.all())
-        log.info("insert_bars_complete", requested=len(bars), inserted=inserted)
-        return inserted
+        # PostgreSQL allows at most 65,535 bind params per INSERT statement.
+        # Each row uses _PRICE_BAR_COLS columns, so we chunk at _INSERT_CHUNK_SIZE
+        # rows to stay within the limit.  All chunks commit atomically via separate
+        # transactions; idempotency is preserved by ON CONFLICT DO NOTHING.
+        total_inserted = 0
+        for chunk_start in range(0, len(rows), _INSERT_CHUNK_SIZE):
+            chunk = rows[chunk_start : chunk_start + _INSERT_CHUNK_SIZE]
+            stmt = (
+                pg_insert(PriceBarORM)
+                .values(chunk)
+                .on_conflict_do_nothing(index_elements=["ticker", "bar_date"])
+                .returning(PriceBarORM.id)
+            )
+            result = self._session.execute(stmt)
+            self._session.commit()
+            # Use len(result.all()) instead of rowcount: psycopg3 returns -1 for
+            # multi-row ON CONFLICT DO NOTHING inserts.  RETURNING gives the exact
+            # set of IDs actually inserted.
+            total_inserted += len(result.all())
+        log.info("insert_bars_complete", requested=len(bars), inserted=total_inserted)
+        return total_inserted
 
     def insert_anomalies(self, anomalies: list[PriceAnomalyRecord]) -> int:
         """Insert anomaly records. Skips duplicates via ON CONFLICT DO NOTHING.
@@ -98,15 +113,20 @@ class PriceBarRepository:
             }
             for a in anomalies
         ]
-        stmt = (
-            pg_insert(PriceAnomalyORM)
-            .values(rows)
-            .on_conflict_do_nothing(index_elements=["ticker", "bar_date", "anomaly_type"])
-            .returning(PriceAnomalyORM.id)
-        )
-        result = self._session.execute(stmt)
-        self._session.commit()
-        return len(result.all())
+        # Chunk to stay within PostgreSQL's 65,535 bind-parameter limit.
+        total_inserted = 0
+        for chunk_start in range(0, len(rows), _ANOMALY_CHUNK_SIZE):
+            chunk = rows[chunk_start : chunk_start + _ANOMALY_CHUNK_SIZE]
+            stmt = (
+                pg_insert(PriceAnomalyORM)
+                .values(chunk)
+                .on_conflict_do_nothing(index_elements=["ticker", "bar_date", "anomaly_type"])
+                .returning(PriceAnomalyORM.id)
+            )
+            result = self._session.execute(stmt)
+            self._session.commit()
+            total_inserted += len(result.all())
+        return total_inserted
 
     def get_last_dates(self, tickers: list[str]) -> dict[str, date]:
         """Return {ticker: max(bar_date)} for all requested tickers that have bars.
