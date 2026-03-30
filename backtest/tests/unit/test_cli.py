@@ -459,3 +459,216 @@ def test_backtest_run_unknown_signal_exits_1():
 
     assert result.exit_code == 1, f"expected exit 1, got {result.exit_code}: {result.output}"
     assert "unknown" in result.output.lower(), f"expected 'unknown' in output: {result.output}"
+
+
+# ---------------------------------------------------------------------------
+# Tests for FIX-02 (date intersection) and FIX-05 (benchmark alpha/beta)
+# ---------------------------------------------------------------------------
+
+def _make_mock_price_bars(dates, tickers=("AAPL", "MSFT", "GOOG"), close_cents=15000):
+    """Build mock PriceBarORM objects for the given dates and tickers."""
+    bars = []
+    for ticker in tickers:
+        for d in dates:
+            bar = MagicMock()
+            bar.ticker = ticker
+            bar.bar_date = d.date() if hasattr(d, "date") else d
+            bar.close_cents = close_cents
+            bars.append(bar)
+    return bars
+
+
+def _make_mock_portfolio_result(n_periods=8):
+    """Build a mock PortfolioResult with a net_returns DatetimeIndex."""
+    mock_result = MagicMock()
+    dates = pd.date_range("2024-01-04", periods=n_periods, freq="B")
+    mock_result.net_returns = pd.Series(
+        [0.001] * n_periods, index=dates, dtype=float
+    )
+    return mock_result
+
+
+def test_run_date_intersection():
+    """FIX-02: SignalAdapter.adapt() is called with only common-date rows.
+
+    signal_frame has 10 dates, price_frame has only the last 8 of those dates.
+    The intersection must trim signal_frame to 8 rows before adapt() is called.
+    """
+    signal_dates = pd.date_range("2024-01-02", periods=10, freq="B")
+    price_dates = signal_dates[2:]  # 8 dates — first 2 signal dates excluded
+    tickers = ["AAPL", "MSFT", "GOOG"]
+    data = np.random.uniform(40, 80, (10, 3))
+    signal_frame = pd.DataFrame(data, index=signal_dates, columns=tickers)
+
+    mock_bars = _make_mock_price_bars(price_dates, tickers)
+    mock_session = _make_mock_session()
+    mock_portfolio_result = _make_mock_portfolio_result(n_periods=8)
+
+    with patch("fund_backtest.cli.load_app_settings"):
+        with patch("fund_backtest.cli.configure_logging"):
+            with patch("fund_backtest.cli.create_engine_from_settings"):
+                with patch("fund_backtest.cli.get_session_factory") as mock_factory:
+                    mock_factory.return_value.return_value = mock_session
+
+                    with patch("fund_backtest.cli.AiWashingLoader") as mock_loader_cls:
+                        mock_loader = MagicMock()
+                        mock_loader.load.return_value = signal_frame
+                        mock_loader_cls.return_value = mock_loader
+
+                        with patch("fund_backtest.cli.PriceBarRepository") as mock_repo_cls:
+                            mock_repo = MagicMock()
+                            mock_repo.get_bars.return_value = mock_bars
+                            mock_repo_cls.return_value = mock_repo
+
+                            with patch("fund_backtest.cli.SignalAdapter") as mock_adapter_cls:
+                                mock_adapter = MagicMock()
+                                mock_adapter_cls.return_value = mock_adapter
+
+                                with patch("fund_backtest.cli.PortfolioSimulator") as mock_sim_cls:
+                                    mock_sim = MagicMock()
+                                    mock_sim.simulate.return_value = mock_portfolio_result
+                                    mock_sim_cls.return_value = mock_sim
+
+                                    with patch("fund_backtest.cli.MetricsEngine") as mock_metrics_cls:
+                                        mock_metrics = MagicMock()
+                                        mock_bundle = MagicMock()
+                                        mock_bundle.sharpe = 1.0
+                                        mock_bundle.cagr = 0.10
+                                        mock_metrics.compute.return_value = mock_bundle
+                                        mock_metrics_cls.return_value = mock_metrics
+
+                                        with patch("fund_backtest.cli.yf") as mock_yf:
+                                            mock_yf.download.return_value = pd.DataFrame()
+
+                                            result = runner.invoke(
+                                                app,
+                                                ["backtest", "run", "--signal", "ai-washing"],
+                                            )
+
+    assert result.exit_code == 0, f"exit code {result.exit_code}: {result.output}"
+    # The adapt() call must have received a DataFrame with 8 rows, not 10
+    call_args = mock_adapter.adapt.call_args
+    assert call_args is not None, "SignalAdapter.adapt() was never called"
+    passed_frame = call_args[0][0]
+    assert len(passed_frame) == 8, (
+        f"Expected adapt() to receive 8-row frame (intersection), got {len(passed_frame)} rows"
+    )
+
+
+def test_run_benchmark_passed():
+    """FIX-05: MetricsEngine.compute() receives a non-None benchmark when SPY fetch succeeds."""
+    signal_dates = pd.date_range("2024-01-02", periods=10, freq="B")
+    tickers = ["AAPL", "MSFT", "GOOG"]
+    data = np.random.uniform(40, 80, (10, 3))
+    signal_frame = pd.DataFrame(data, index=signal_dates, columns=tickers)
+
+    mock_bars = _make_mock_price_bars(signal_dates, tickers)
+    mock_session = _make_mock_session()
+    mock_portfolio_result = _make_mock_portfolio_result(n_periods=9)
+
+    # Build a non-empty SPY DataFrame mimicking yfinance output
+    spy_dates = pd.date_range("2024-01-03", periods=9, freq="B")
+    spy_df = pd.DataFrame({"Close": [450.0 + i for i in range(9)]}, index=spy_dates)
+
+    with patch("fund_backtest.cli.load_app_settings"):
+        with patch("fund_backtest.cli.configure_logging"):
+            with patch("fund_backtest.cli.create_engine_from_settings"):
+                with patch("fund_backtest.cli.get_session_factory") as mock_factory:
+                    mock_factory.return_value.return_value = mock_session
+
+                    with patch("fund_backtest.cli.AiWashingLoader") as mock_loader_cls:
+                        mock_loader = MagicMock()
+                        mock_loader.load.return_value = signal_frame
+                        mock_loader_cls.return_value = mock_loader
+
+                        with patch("fund_backtest.cli.PriceBarRepository") as mock_repo_cls:
+                            mock_repo = MagicMock()
+                            mock_repo.get_bars.return_value = mock_bars
+                            mock_repo_cls.return_value = mock_repo
+
+                        with patch("fund_backtest.cli.PortfolioSimulator") as mock_sim_cls:
+                            mock_sim = MagicMock()
+                            mock_sim.simulate.return_value = mock_portfolio_result
+                            mock_sim_cls.return_value = mock_sim
+
+                            with patch("fund_backtest.cli.MetricsEngine") as mock_metrics_cls:
+                                mock_metrics = MagicMock()
+                                mock_bundle = MagicMock()
+                                mock_bundle.sharpe = 1.5
+                                mock_bundle.cagr = 0.20
+                                mock_metrics.compute.return_value = mock_bundle
+                                mock_metrics_cls.return_value = mock_metrics
+
+                                with patch("fund_backtest.cli.yf") as mock_yf:
+                                    mock_yf.download.return_value = spy_df
+
+                                    result = runner.invoke(
+                                        app,
+                                        ["backtest", "run", "--signal", "ai-washing"],
+                                    )
+
+    assert result.exit_code == 0, f"exit code {result.exit_code}: {result.output}"
+    compute_call = mock_metrics.compute.call_args
+    assert compute_call is not None, "MetricsEngine.compute() was never called"
+    benchmark_arg = compute_call.kwargs.get("benchmark")
+    assert benchmark_arg is not None, (
+        f"Expected non-None benchmark= in MetricsEngine.compute(), got None. "
+        f"Call kwargs: {compute_call.kwargs}"
+    )
+
+
+def test_run_benchmark_fallback():
+    """FIX-05: When yfinance raises, run() exits 0 and compute() receives benchmark=None."""
+    signal_dates = pd.date_range("2024-01-02", periods=10, freq="B")
+    tickers = ["AAPL", "MSFT", "GOOG"]
+    data = np.random.uniform(40, 80, (10, 3))
+    signal_frame = pd.DataFrame(data, index=signal_dates, columns=tickers)
+
+    mock_bars = _make_mock_price_bars(signal_dates, tickers)
+    mock_session = _make_mock_session()
+    mock_portfolio_result = _make_mock_portfolio_result(n_periods=9)
+
+    with patch("fund_backtest.cli.load_app_settings"):
+        with patch("fund_backtest.cli.configure_logging"):
+            with patch("fund_backtest.cli.create_engine_from_settings"):
+                with patch("fund_backtest.cli.get_session_factory") as mock_factory:
+                    mock_factory.return_value.return_value = mock_session
+
+                    with patch("fund_backtest.cli.AiWashingLoader") as mock_loader_cls:
+                        mock_loader = MagicMock()
+                        mock_loader.load.return_value = signal_frame
+                        mock_loader_cls.return_value = mock_loader
+
+                        with patch("fund_backtest.cli.PriceBarRepository") as mock_repo_cls:
+                            mock_repo = MagicMock()
+                            mock_repo.get_bars.return_value = mock_bars
+                            mock_repo_cls.return_value = mock_repo
+
+                        with patch("fund_backtest.cli.PortfolioSimulator") as mock_sim_cls:
+                            mock_sim = MagicMock()
+                            mock_sim.simulate.return_value = mock_portfolio_result
+                            mock_sim_cls.return_value = mock_sim
+
+                            with patch("fund_backtest.cli.MetricsEngine") as mock_metrics_cls:
+                                mock_metrics = MagicMock()
+                                mock_bundle = MagicMock()
+                                mock_bundle.sharpe = 0.8
+                                mock_bundle.cagr = 0.05
+                                mock_metrics.compute.return_value = mock_bundle
+                                mock_metrics_cls.return_value = mock_metrics
+
+                                with patch("fund_backtest.cli.yf") as mock_yf:
+                                    mock_yf.download.side_effect = Exception("network error")
+
+                                    result = runner.invoke(
+                                        app,
+                                        ["backtest", "run", "--signal", "ai-washing"],
+                                    )
+
+    assert result.exit_code == 0, f"exit code {result.exit_code}: {result.output}"
+    compute_call = mock_metrics.compute.call_args
+    assert compute_call is not None, "MetricsEngine.compute() was never called"
+    benchmark_arg = compute_call.kwargs.get("benchmark")
+    assert benchmark_arg is None, (
+        f"Expected benchmark=None on SPY fetch failure, got: {benchmark_arg}"
+    )
