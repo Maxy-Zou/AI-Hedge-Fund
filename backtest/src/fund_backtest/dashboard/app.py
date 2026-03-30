@@ -19,6 +19,8 @@ its own server and conflicts with Typer's event loop.
 
 from __future__ import annotations
 
+import os
+
 import pandas as pd
 import streamlit as st
 import structlog
@@ -131,6 +133,132 @@ def _load_demo_data() -> tuple[PortfolioResult, MetricsBundle]:
     return result, bundle
 
 
+@st.cache_data
+def _load_live_data() -> tuple[PortfolioResult, MetricsBundle, dict[str, str]] | None:
+    """Run the backtest pipeline and return real results + sector map.
+
+    Uses lazy imports to avoid Typer/Click initialization from importing cli.py.
+    Creates its own engine and session — cannot accept session as argument
+    because st.cache_data cannot serialize SQLAlchemy objects.
+
+    Returns:
+        Tuple of (PortfolioResult, MetricsBundle, ticker_sectors dict) on success.
+        None if DATABASE_URL is not configured or pipeline raises any exception.
+    """
+    if not os.environ.get("FUND_BACKTEST_DATABASE_URL"):
+        return None
+    try:
+        # Lazy imports — avoids Typer app initialization at module load time.
+        from pydantic import ValidationError
+
+        from fund_backtest.config import load_app_settings
+        from fund_backtest.db.models import UniverseTicker
+        from fund_backtest.db.session import create_engine_from_settings, get_session_factory
+        from fund_backtest.metrics.engine import MetricsEngine
+        from fund_backtest.price.repository import PriceBarRepository
+        from fund_backtest.signal.adapter import SignalAdapter
+        from fund_backtest.signal.loaders import AiWashingLoader
+        from fund_backtest.simulator.engine import PortfolioSimulator
+        import yfinance as yf
+
+        try:
+            settings = load_app_settings()
+        except ValidationError:
+            logger.warning("live_data_load_failed", reason="DATABASE_URL validation failed")
+            return None
+
+        engine = create_engine_from_settings(settings)
+        session_factory = get_session_factory(engine)
+
+        with session_factory() as session:
+            # Stage 1: Load signal
+            loader = AiWashingLoader(session)
+            signal_frame = loader.load()
+            logger.info(
+                "live_signal_loaded",
+                n_dates=len(signal_frame),
+                n_tickers=len(signal_frame.columns),
+            )
+
+            # Stage 2: Load price data
+            repo = PriceBarRepository(session)
+            tickers = list(signal_frame.columns)
+            start = signal_frame.index.min().date()
+            end = signal_frame.index.max().date()
+            bars = repo.get_bars(tickers=tickers, start_date=start, end_date=end)
+            records = [
+                {"date": b.bar_date, "ticker": b.ticker, "close": b.close_cents / 100}
+                for b in bars
+            ]
+            price_df = pd.DataFrame(records)
+            price_frame = price_df.pivot_table(
+                index="date", columns="ticker", values="close"
+            )
+            price_frame.index = pd.DatetimeIndex(pd.to_datetime(price_frame.index))
+            price_frame.columns.name = None
+
+            # FIX-02: Intersect dates before adapt() (mirrors cli.py fix)
+            common_dates = signal_frame.index.intersection(price_frame.index)
+            if len(common_dates) == 0:
+                logger.warning("live_data_load_failed", reason="no overlapping dates")
+                return None
+            signal_frame = signal_frame.loc[common_dates]
+
+            # Stage 3: Adapt
+            weight_frame = SignalAdapter().adapt(signal_frame)
+
+            # Stage 4: Simulate
+            portfolio_result = PortfolioSimulator().simulate(weight_frame, price_frame)
+
+            # FIX-05: Benchmark fetch (mirrors cli.py fix)
+            benchmark_returns: pd.Series | None = None
+            try:
+                spy_df = yf.download(
+                    "SPY",
+                    start=str(portfolio_result.net_returns.index[0].date()),
+                    end=str(portfolio_result.net_returns.index[-1].date()),
+                    progress=False,
+                    auto_adjust=True,
+                )
+                if not spy_df.empty:
+                    benchmark_returns = spy_df["Close"].squeeze().pct_change().dropna()
+            except Exception:
+                logger.warning("benchmark_fetch_failed", ticker="SPY")
+
+            # Stage 5: Metrics
+            bundle = MetricsEngine().compute(portfolio_result, benchmark=benchmark_returns)
+
+            # Sector map: query active tickers for real GICS data
+            active_tickers = session.query(UniverseTicker).filter_by(is_active=True).all()
+            ticker_sectors: dict[str, str] = {
+                t.ticker: t.gics_sector
+                for t in active_tickers
+                if t.gics_sector
+            }
+
+        logger.info("live_data_loaded", n_days=len(portfolio_result.net_returns))
+        return portfolio_result, bundle, ticker_sectors
+
+    except Exception as exc:
+        logger.warning("live_data_load_failed", error=str(exc))
+        return None
+
+
+def _load_data() -> tuple[PortfolioResult, MetricsBundle, dict[str, str], bool]:
+    """Load backtest data: live mode if DATABASE_URL is set, demo otherwise.
+
+    Returns:
+        Tuple of (PortfolioResult, MetricsBundle, ticker_sectors, is_live).
+        is_live=True when real pipeline data was loaded.
+    """
+    live = _load_live_data()
+    if live is not None:
+        result, bundle, ticker_sectors = live
+        return result, bundle, ticker_sectors, True
+    result, bundle = _load_demo_data()
+    return result, bundle, DEMO_TICKER_SECTORS, False
+
+
 # ---------------------------------------------------------------------------
 # Main dashboard layout
 # ---------------------------------------------------------------------------
@@ -145,10 +273,17 @@ def main() -> None:
         3. Tabs: Performance | Monthly Returns | Sector Exposure
     """
     st.title("AI Hedge Fund — Backtest Dashboard")
-    st.caption("Demo mode: showing synthetic 5-year backtest (2021–2025)")
 
-    # Load data (demo mode for Phase 6 — Phase 8 will wire real DB data).
-    result, bundle = _load_demo_data()
+    result, bundle, ticker_sectors, is_live = _load_data()
+    if is_live:
+        st.caption("Live mode — AI Washing signal, real SEC filing data")
+    else:
+        st.caption("Demo mode: showing synthetic 5-year backtest (2021–2025)")
+        if os.environ.get("FUND_BACKTEST_DATABASE_URL"):
+            st.warning(
+                "Database URL is set but pipeline failed to load live data. "
+                "Check logs for details."
+            )
 
     # Fetch benchmark returns for equity chart overlay.
     start_date = str(result.net_returns.index[0].date())
@@ -179,7 +314,7 @@ def main() -> None:
     heatmap_fig = build_monthly_heatmap(result.net_returns)
     sector_fig = build_sector_exposure_chart(
         positions=result.positions,
-        ticker_sectors=DEMO_TICKER_SECTORS,
+        ticker_sectors=ticker_sectors,
     )
 
     # Tab layout — each tab shows one chart.
