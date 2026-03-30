@@ -49,6 +49,44 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **INT-02**: AI Washing Detector scores can be loaded and converted to the signal contract format
 - [x] **INT-03**: End-to-end pipeline runs from signal input to dashboard output without manual steps
 
+## v1.1 Requirements
+
+Requirements for live end-to-end pipeline. Each maps to roadmap phases 9+.
+
+### Infrastructure
+
+- [ ] **INFRA-01**: PostgreSQL 16 runs locally via Docker Compose with a named volume for data persistence
+- [ ] **INFRA-02**: A shared `.env` convention configures both packages (`ai_washer` and `fund_backtest`) to connect to the same database
+- [ ] **INFRA-03**: Alembic `version_table` is unique per package so both migration chains run without collision
+- [ ] **INFRA-04**: Both Alembic migration chains run successfully against the Docker PostgreSQL instance
+
+### Data Population
+
+- [ ] **POP-01**: Running `fund-backtest universe refresh` populates the universe_tickers table with real mid-cap tickers
+- [ ] **POP-02**: Running `fund-backtest data download` populates price_bars with 5 years of real OHLCV data for all universe tickers
+- [ ] **POP-03**: Running `fund-backtest data coverage` confirms ≥95% ticker coverage after download
+- [ ] **POP-04**: Ticker overlap between `ai_washer` companies and `fund_backtest` universe is verified and sufficient for backtesting
+
+### Detector Execution
+
+- [ ] **DET-01**: Running `ai-washer universe scan` populates the companies table with real mid-cap entities from SEC EDGAR
+- [ ] **DET-02**: Running the AI Washing Detector pipeline produces real `daily_scores` rows in PostgreSQL from SEC filing analysis
+- [ ] **DET-03**: The pipeline completes without manual intervention and logs progress via structlog
+
+### Bug Fixes & Wiring
+
+- [ ] **FIX-01**: Alembic `env.py` in both packages sets a distinct `version_table` to prevent migration collisions
+- [ ] **FIX-02**: `backtest run` intersects signal and price date indices before calling the simulator (no silent 0% returns)
+- [ ] **FIX-03**: `backtest export` uses real backtest results instead of `make_demo_result()` demo stubs
+- [ ] **FIX-04**: Dashboard renders real backtest data instead of hardcoded demo data when results are available
+- [ ] **FIX-05**: Benchmark alpha/beta values are correctly computed and included in CLI exports
+
+### Live Backtest
+
+- [ ] **LIVE-01**: Running `fund-backtest backtest run --signal ai-washing` produces a PortfolioResult and MetricsBundle from real data
+- [ ] **LIVE-02**: The Streamlit dashboard displays actual equity curves, drawdown, monthly returns, and sector exposure from the real backtest
+- [ ] **LIVE-03**: PDF tearsheet and CSV/JSON exports contain real backtest metrics with correct cost assumption labels
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
@@ -125,11 +163,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INT-02 | Phase 8 | Complete |
 | INT-03 | Phase 8 | Complete |
 
-**Coverage:**
+**v1 Coverage:**
 - v1 requirements: 27 total
 - Mapped to phases: 27
 - Unmapped: 0
 
+**v1.1 Coverage:**
+- v1.1 requirements: 18 total
+- Mapped to phases: 0 (pending roadmap creation)
+- Unmapped: 18
+
 ---
 *Requirements defined: 2026-03-28*
-*Last updated: 2026-03-28 after roadmap creation — all 27 requirements mapped*
+*Last updated: 2026-03-30 — v1.1 requirements added (18 new)*
