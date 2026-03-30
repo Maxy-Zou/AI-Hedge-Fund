@@ -271,6 +271,92 @@ def coverage() -> None:
         raise typer.Exit(code=1) from exc
 
 
+def _run_pipeline(
+    session,
+    _log,
+) -> tuple["PortfolioResult", "MetricsBundle"]:
+    """Run the 5-stage AI Washing backtest pipeline.
+
+    Applies FIX-02 (date intersection before adapt) and FIX-05 (SPY benchmark fetch).
+    Called by both backtest run and backtest export --signal.
+
+    Args:
+        session: Open SQLAlchemy session.
+        _log: Bound structlog logger.
+
+    Returns:
+        Tuple of (PortfolioResult, MetricsBundle).
+
+    Raises:
+        SignalLoadError: If the daily_scores table is empty or unavailable.
+        ValueError: If signal and price dates share no overlap.
+    """
+    # Stage 1: Load signal
+    loader = AiWashingLoader(session)
+    signal_frame = loader.load()
+    _log.info("signal_loaded", n_dates=len(signal_frame), n_tickers=len(signal_frame.columns))
+
+    # Stage 2: Load price data for signal tickers and date range
+    repo = PriceBarRepository(session)
+    tickers = list(signal_frame.columns)
+    start = signal_frame.index.min().date()
+    end = signal_frame.index.max().date()
+    bars = repo.get_bars(tickers=tickers, start_date=start, end_date=end)
+    records = [
+        {"date": b.bar_date, "ticker": b.ticker, "close": b.close_cents / 100}
+        for b in bars
+    ]
+    price_df = pd.DataFrame(records)
+    price_frame = price_df.pivot_table(index="date", columns="ticker", values="close")
+    price_frame.index = pd.DatetimeIndex(pd.to_datetime(price_frame.index))
+    price_frame.columns.name = None
+
+    # FIX-02: Intersect signal and price date indices before adapt() to prevent
+    # all-zero returns from date mismatches. shift(1) inside SignalAdapter.adapt()
+    # is applied AFTER this intersection — do NOT pre-shift here (Phase 3 decision).
+    common_dates = signal_frame.index.intersection(price_frame.index)
+    if len(common_dates) == 0:
+        raise ValueError("Signal and price data share no overlapping dates.")
+    if len(common_dates) < len(signal_frame.index):
+        _log.warning(
+            "signal_price_date_mismatch",
+            signal_dates=len(signal_frame.index),
+            price_dates=len(price_frame.index),
+            common_dates=len(common_dates),
+        )
+    signal_frame = signal_frame.loc[common_dates]
+
+    # Stage 3: Adapt signal to weights
+    weight_frame = SignalAdapter().adapt(signal_frame)
+
+    # Stage 4: Simulate portfolio
+    portfolio_result = PortfolioSimulator().simulate(weight_frame, price_frame)
+    _log.info("simulation_complete", n_trading_days=len(portfolio_result.net_returns))
+
+    # FIX-05: Fetch SPY benchmark for alpha/beta computation.
+    # Mirrors dashboard/app.py:_fetch_benchmark_returns() pattern.
+    # Graceful degradation: benchmark=None → alpha=0.0, beta=0.0 (no crash).
+    benchmark_returns: pd.Series | None = None
+    try:
+        spy_df = yf.download(
+            "SPY",
+            start=str(portfolio_result.net_returns.index[0].date()),
+            end=str(portfolio_result.net_returns.index[-1].date()),
+            progress=False,
+            auto_adjust=True,
+        )
+        if not spy_df.empty:
+            benchmark_returns = spy_df["Close"].squeeze().pct_change().dropna()
+    except Exception:
+        _log.warning("benchmark_fetch_failed", ticker="SPY")
+
+    # Stage 5: Compute risk metrics
+    bundle = MetricsEngine().compute(portfolio_result, benchmark=benchmark_returns)
+    _log.info("metrics_complete", sharpe=bundle.sharpe, cagr=bundle.cagr)
+
+    return portfolio_result, bundle
+
+
 @backtest_app.command(name="run")
 def run(
     signal: str = typer.Option(..., "--signal", help="Signal source (e.g. 'ai-washing')"),
@@ -295,69 +381,11 @@ def run(
         engine = create_engine_from_settings(settings)
         session_factory = get_session_factory(engine)
         with session_factory() as session:
-            # Stage 1: Load signal
-            loader = AiWashingLoader(session)
-            signal_frame = loader.load()
-            _log.info("signal_loaded", n_dates=len(signal_frame), n_tickers=len(signal_frame.columns))
-
-            # Stage 2: Load price data for signal tickers and date range
-            repo = PriceBarRepository(session)
-            tickers = list(signal_frame.columns)
-            start = signal_frame.index.min().date()
-            end = signal_frame.index.max().date()
-            bars = repo.get_bars(tickers=tickers, start_date=start, end_date=end)
-            records = [
-                {"date": b.bar_date, "ticker": b.ticker, "close": b.close_cents / 100}
-                for b in bars
-            ]
-            price_df = pd.DataFrame(records)
-            price_frame = price_df.pivot_table(index="date", columns="ticker", values="close")
-            price_frame.index = pd.DatetimeIndex(pd.to_datetime(price_frame.index))
-            price_frame.columns.name = None
-
-            # FIX-02: Intersect signal and price date indices before adapt() to prevent
-            # all-zero returns from date mismatches. shift(1) inside SignalAdapter.adapt()
-            # is applied AFTER this intersection — do NOT pre-shift here (Phase 3 decision).
-            common_dates = signal_frame.index.intersection(price_frame.index)
-            if len(common_dates) == 0:
-                console.print("[red]Error: Signal and price data share no overlapping dates.[/red]")
-                raise typer.Exit(code=1)
-            if len(common_dates) < len(signal_frame.index):
-                _log.warning(
-                    "signal_price_date_mismatch",
-                    signal_dates=len(signal_frame.index),
-                    price_dates=len(price_frame.index),
-                    common_dates=len(common_dates),
-                )
-            signal_frame = signal_frame.loc[common_dates]
-
-            # Stage 3: Adapt signal to weights
-            weight_frame = SignalAdapter().adapt(signal_frame)
-
-            # Stage 4: Simulate portfolio
-            portfolio_result = PortfolioSimulator().simulate(weight_frame, price_frame)
-            _log.info("simulation_complete", n_trading_days=len(portfolio_result.net_returns))
-
-            # FIX-05: Fetch SPY benchmark for alpha/beta computation.
-            # Mirrors dashboard/app.py:_fetch_benchmark_returns() pattern.
-            # Graceful degradation: benchmark=None → alpha=0.0, beta=0.0 (no crash).
-            benchmark_returns: pd.Series | None = None
             try:
-                spy_df = yf.download(
-                    "SPY",
-                    start=str(portfolio_result.net_returns.index[0].date()),
-                    end=str(portfolio_result.net_returns.index[-1].date()),
-                    progress=False,
-                    auto_adjust=True,
-                )
-                if not spy_df.empty:
-                    benchmark_returns = spy_df["Close"].squeeze().pct_change().dropna()
-            except Exception:
-                _log.warning("benchmark_fetch_failed", ticker="SPY")
-
-            # Stage 5: Compute risk metrics
-            bundle = MetricsEngine().compute(portfolio_result, benchmark=benchmark_returns)
-            _log.info("metrics_complete", sharpe=bundle.sharpe, cagr=bundle.cagr)
+                portfolio_result, bundle = _run_pipeline(session, _log)
+            except ValueError as exc:
+                console.print(f"[red]Error: {exc}[/red]")
+                raise typer.Exit(code=1) from exc
 
         # Stage 6 (optional): Export
         if export_all:
@@ -388,14 +416,41 @@ def export(
     json_export: bool = typer.Option(False, "--json", help="Export metrics JSON"),
     all_exports: bool = typer.Option(False, "--all", help="Run all exports"),
     output_dir: Path = typer.Option(Path("."), "--output-dir", help="Output directory"),
+    signal: str | None = typer.Option(
+        None,
+        "--signal",
+        help="Signal source (e.g. 'ai-washing'). Runs real backtest pipeline when provided. Omit for demo data.",
+    ),
 ) -> None:
-    """Export backtest results using demo data (Phase 7). Live data wired in Phase 8."""
+    """Export backtest results. Use --signal for live data; omit for demo data."""
     _log = structlog.get_logger(__name__)
     output_dir.mkdir(parents=True, exist_ok=True)
-
-    result = make_demo_result()
-    bundle = make_demo_bundle(result)
     cost_config = load_cost_config()
+
+    if signal:
+        if signal != "ai-washing":
+            console.print(f"[red]Unknown signal source: '{signal}'. Supported: 'ai-washing'[/red]")
+            raise typer.Exit(code=1)
+        settings = load_app_settings()
+        configure_logging(settings.log_level)
+        engine = create_engine_from_settings(settings)
+        session_factory = get_session_factory(engine)
+        try:
+            with session_factory() as session:
+                result, bundle = _run_pipeline(session, _log)
+        except SignalLoadError as exc:
+            console.print(f"[red]Signal unavailable: {exc}[/red]")
+            raise typer.Exit(code=1) from exc
+        except Exception as exc:
+            console.print(f"[red]Pipeline error: {exc}[/red]")
+            raise typer.Exit(code=1) from exc
+    else:
+        console.print(
+            "[yellow]Warning: no --signal provided, exporting demo data. "
+            "Use --signal ai-washing for real results.[/yellow]"
+        )
+        result = make_demo_result()
+        bundle = make_demo_bundle(result)
 
     do_tearsheet = tearsheet or all_exports
     do_csv = csv or all_exports
