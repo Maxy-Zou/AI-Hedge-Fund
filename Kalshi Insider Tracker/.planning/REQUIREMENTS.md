@@ -1,0 +1,116 @@
+# Requirements: Kalshi Insider Tracker
+
+**Defined:** 2026-04-02
+**Core Value:** Detect and copy insider-like trades on Kalshi politics/policy markets before the event resolves
+
+## v1 Requirements
+
+Requirements for initial release. Each maps to roadmap phases.
+
+### Data Infrastructure
+
+- [ ] **DATA-01**: System authenticates with Kalshi API using API key/RSA key pair
+- [ ] **DATA-02**: System polls Kalshi API every 5-10 seconds for market data
+- [ ] **DATA-03**: System filters to politics/policy markets only, ignoring other categories
+- [ ] **DATA-04**: System persists market snapshots (price, volume, order book) to database on each poll
+- [ ] **DATA-05**: System enforces Kalshi API rate limits (conservative default, tunable from observations)
+- [ ] **DATA-06**: System collects baseline data during warm-up period before any signals fire
+
+### Signal Detection
+
+- [ ] **SIG-01**: System detects abnormal volume spikes relative to per-market rolling baseline
+- [ ] **SIG-02**: System detects sharp price movements before event resolution
+- [ ] **SIG-03**: System detects suspicious timing clusters (trades bunched before resolution)
+- [ ] **SIG-04**: System detects accounts/patterns with unusual win streaks (subject to API feasibility)
+- [ ] **SIG-05**: Each signal produces a confidence score used for threshold-based triggering
+- [ ] **SIG-06**: System suppresses signals during normal resolution-day activity (false positive filter)
+
+### Trade Execution
+
+- [ ] **EXEC-01**: System operates in paper trading mode (simulated trades, no real capital)
+- [ ] **EXEC-02**: System auto-executes real copy trades via Kalshi API when signals exceed threshold
+- [ ] **EXEC-03**: System enforces $50 per-trade limit as a code-level constant (not config)
+- [ ] **EXEC-04**: System enforces $500 total exposure limit as a code-level constant (not config)
+- [ ] **EXEC-05**: System deduplicates signals to prevent duplicate orders from consecutive polls
+- [ ] **EXEC-06**: System tracks in-flight orders to prevent race conditions between detection and execution
+
+### Monitoring Dashboard
+
+- [ ] **DASH-01**: Dashboard shows live view of all monitored politics/policy markets
+- [ ] **DASH-02**: Dashboard shows real-time feed of detected signals with confidence scores
+- [ ] **DASH-03**: Dashboard shows current open positions and their status
+- [ ] **DASH-04**: Dashboard shows running P&L across all trades (realized + unrealized)
+
+### Persistence & Logging
+
+- [ ] **LOG-01**: System logs every detected signal (market, type, confidence, timestamp) to database
+- [ ] **LOG-02**: System logs every trade placed (market, direction, size, price, outcome) to database
+- [ ] **LOG-03**: All signal and trade data is append-only (never updated or deleted)
+
+## v2 Requirements
+
+Deferred to future release. Tracked but not in current roadmap.
+
+### Expansion
+
+- **EXP-01**: Monitor additional market categories (economics, weather, sports)
+- **EXP-02**: Push notifications (Slack, SMS, email) when signals fire
+- **EXP-03**: Multi-account support for diversified execution
+- **EXP-04**: Adaptive threshold tuning based on historical signal performance
+
+### Advanced Signals
+
+- **ADV-01**: Machine learning model for signal scoring (replace/augment z-score thresholds)
+- **ADV-02**: Cross-market correlation detection (coordinated activity across related markets)
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| WebSocket streaming | Polling every 5-10s is sufficient for politics markets; WebSocket adds complexity for no gain |
+| Per-account web scraping | Likely violates Kalshi ToS; fragile; prefer public API data only |
+| Automatic threshold tuning | Overfitting risk on unvalidated signals; manual tuning in v1 |
+| Backtesting | Shared backtest module in parent project handles this |
+| Non-politics markets | Focusing where insider info is most actionable for v1 |
+| Mobile app | Dashboard-first approach; mobile is premature |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| DATA-01 | Pending | Pending |
+| DATA-02 | Pending | Pending |
+| DATA-03 | Pending | Pending |
+| DATA-04 | Pending | Pending |
+| DATA-05 | Pending | Pending |
+| DATA-06 | Pending | Pending |
+| SIG-01 | Pending | Pending |
+| SIG-02 | Pending | Pending |
+| SIG-03 | Pending | Pending |
+| SIG-04 | Pending | Pending |
+| SIG-05 | Pending | Pending |
+| SIG-06 | Pending | Pending |
+| EXEC-01 | Pending | Pending |
+| EXEC-02 | Pending | Pending |
+| EXEC-03 | Pending | Pending |
+| EXEC-04 | Pending | Pending |
+| EXEC-05 | Pending | Pending |
+| EXEC-06 | Pending | Pending |
+| DASH-01 | Pending | Pending |
+| DASH-02 | Pending | Pending |
+| DASH-03 | Pending | Pending |
+| DASH-04 | Pending | Pending |
+| LOG-01 | Pending | Pending |
+| LOG-02 | Pending | Pending |
+| LOG-03 | Pending | Pending |
+
+**Coverage:**
+- v1 requirements: 25 total
+- Mapped to phases: 0
+- Unmapped: 25
+
+---
+*Requirements defined: 2026-04-02*
+*Last updated: 2026-04-02 after initial definition*
