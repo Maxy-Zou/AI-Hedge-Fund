@@ -7,7 +7,7 @@ It is the contract between the KalshiClient (producer) and all downstream consum
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 @dataclass(frozen=True)
@@ -49,7 +49,7 @@ class MarketSnapshot:
         Returns:
             Immutable MarketSnapshot with all prices normalized to int.
         """
-        ts = captured_at or datetime.now(timezone.utc)
+        ts = captured_at or datetime.now(UTC)
         return cls(
             market_id=market.ticker,  # type: ignore[attr-defined]
             ticker=market.ticker,  # type: ignore[attr-defined]

@@ -9,7 +9,7 @@ Tests cover:
 from __future__ import annotations
 
 import dataclasses
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -32,7 +32,7 @@ def _make_snapshot(**overrides) -> object:
         "volume": 1000,
         "volume_24h": 200,
         "status": "active",
-        "captured_at": datetime(2026, 4, 2, 12, 0, 0, tzinfo=timezone.utc),
+        "captured_at": datetime(2026, 4, 2, 12, 0, 0, tzinfo=UTC),
     }
     defaults.update(overrides)
     return MarketSnapshot(**defaults)
@@ -54,7 +54,7 @@ def test_market_snapshot_normalizes_float_prices_to_int() -> None:
 
 def test_market_snapshot_equality() -> None:
     """Two MarketSnapshot instances with identical fields are equal."""
-    ts = datetime(2026, 4, 2, 12, 0, 0, tzinfo=timezone.utc)
+    ts = datetime(2026, 4, 2, 12, 0, 0, tzinfo=UTC)
     a = _make_snapshot(captured_at=ts)
     b = _make_snapshot(captured_at=ts)
     assert a == b
@@ -84,7 +84,7 @@ def test_market_snapshot_from_sdk_market() -> None:
     mock_market.volume_24h = 200
     mock_market.status = "active"
 
-    ts = datetime(2026, 4, 2, 12, 0, 0, tzinfo=timezone.utc)
+    ts = datetime(2026, 4, 2, 12, 0, 0, tzinfo=UTC)
     snapshot = MarketSnapshot.from_sdk_market(mock_market, captured_at=ts)
 
     assert isinstance(snapshot, MarketSnapshot)

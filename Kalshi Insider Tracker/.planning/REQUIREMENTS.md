@@ -9,9 +9,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Data Infrastructure
 
-- [ ] **DATA-01**: System authenticates with Kalshi API using API key/RSA key pair
+- [x] **DATA-01**: System authenticates with Kalshi API using API key/RSA key pair
 - [ ] **DATA-02**: System polls Kalshi API every 5-10 seconds for market data
-- [ ] **DATA-03**: System filters to politics/policy markets only, ignoring other categories
+- [x] **DATA-03**: System filters to politics/policy markets only, ignoring other categories
 - [ ] **DATA-04**: System persists market snapshots (price, volume, order book) to database on each poll
 - [x] **DATA-05**: System enforces Kalshi API rate limits (conservative default, tunable from observations)
 - [ ] **DATA-06**: System collects baseline data during warm-up period before any signals fire
@@ -80,9 +80,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | Phase 1 | Pending |
+| DATA-01 | Phase 1 | Complete |
 | DATA-02 | Phase 2 | Pending |
-| DATA-03 | Phase 1 | Pending |
+| DATA-03 | Phase 1 | Complete |
 | DATA-04 | Phase 2 | Pending |
 | DATA-05 | Phase 1 | Complete |
 | DATA-06 | Phase 2 | Pending |

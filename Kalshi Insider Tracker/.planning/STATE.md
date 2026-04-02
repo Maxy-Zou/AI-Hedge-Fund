@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-foundation-01-PLAN.md — scaffold, config, logging, CLI, TDD stubs
-last_updated: "2026-04-02T22:55:07.452Z"
+stopped_at: Completed 01-foundation-03-PLAN.md — KalshiClient with RSA auth, rate limiter, politics filtering + MarketSnapshot domain contract
+last_updated: "2026-04-02T23:03:12.385Z"
 last_activity: 2026-04-02
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-02)
 ## Current Position
 
 Phase: 01 (Foundation) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-04-02
 
@@ -53,6 +53,7 @@ Progress: [░░░░░░░░░░] 0%
 
 *Updated after each plan completion*
 | Phase 01-foundation P01 | 3 | 2 tasks | 16 files |
+| Phase 01-foundation P03 | 4 | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,9 @@ Recent decisions affecting current work:
 - [Phase 01-foundation]: KalshiSettings.api_base_url defaults to demo API — safety constraint preventing accidental live trades
 - [Phase 01-foundation]: rate_limit_rpm=60 declared in KalshiSettings with validator rejecting 0 (DATA-05 constant)
 - [Phase 01-foundation]: Dual Pydantic settings classes: AppSettings (KALSHI_TRACKER_ prefix) + KalshiSettings (KALSHI_ prefix) for separate infra vs API credential configs
+- [Phase 01-foundation]: D-CLIENT-01: Token bucket (not sleep/tenacity) for rate limiting — consume() raises RateLimitError immediately rather than blocking the polling loop
+- [Phase 01-foundation]: D-CLIENT-02: from_sdk_market() normalizes Union[StrictFloat, StrictInt] SDK prices to int via round() — prevents float drift in stored/compared values
+- [Phase 01-foundation]: D-CLIENT-03: Series-by-series fetching strategy — one get_markets() call per series_ticker from allowlist; no category filter exists in Kalshi API
 
 ### Pending Todos
 
@@ -81,6 +85,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-02T22:55:07.449Z
-Stopped at: Completed 01-foundation-01-PLAN.md — scaffold, config, logging, CLI, TDD stubs
+Last session: 2026-04-02T23:03:12.382Z
+Stopped at: Completed 01-foundation-03-PLAN.md — KalshiClient with RSA auth, rate limiter, politics filtering + MarketSnapshot domain contract
 Resume file: None
