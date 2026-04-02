@@ -1,0 +1,46 @@
+weights:
+  sec_filing: 0.20
+  patent_gap: 0.15
+  earnings_call: 0.20
+  job_posting: 0.25
+  github_activity: 0.10
+  compute_spending: 0.10
+
+high_risk_threshold: 60
+low_risk_threshold: 30
+strong_short_threshold: 80
+
+sec_filing:
+  section_weights:
+    mda: 0.50
+    risk_factors: 0.20
+    business: 0.30
+  window_years: 3
+  sigmoid_midpoint: 1.0
+  sigmoid_steepness: 2.0
+
+compute_spending:
+  capex_weight: 0.70
+  cloud_mention_weight: 0.30
+  window_years: 3
+  sigmoid_midpoint: 1.0
+  sigmoid_steepness: 2.0
+
+patent_gap:
+  window_years: 3
+  sigmoid_midpoint: 1.0
+  sigmoid_steepness: 2.0
+
+earnings_vagueness:
+  buzzword_weight: 0.70
+  sentiment_weight: 0.30
+  sigmoid_midpoint: 1.0
+  sigmoid_steepness: 2.0
+
+job_mismatch:
+  ghost_days_threshold: 90
+  ghost_penalty_weight: 0.20
+  engineering_weight: 0.40
+  hiring_intensity_weight: 0.40
+  sigmoid_midpoint: 1.0
+  sigmoid_steepness: 2.0

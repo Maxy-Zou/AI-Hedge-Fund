@@ -130,6 +130,13 @@ None — this plan establishes type contracts and TDD scaffolds only. No data-wi
 - `MetricsConfig` is wired into `config.py` — MetricsEngine can consume it via `load_metrics_config()`
 - No blockers for Plan 02 — all type imports, fixtures, and test structure are ready
 
+## Self-Check: PASSED
+
+All files verified present and both commits confirmed in git history:
+- `faa8d09` (feat): quantstats-lumi + MetricsBundle + MetricsConfig
+- `218f16a` (test): RED/GREEN test scaffolds
+- `e23cb1d` (docs): SUMMARY.md, STATE.md, ROADMAP.md, REQUIREMENTS.md
+
 ---
 *Phase: 05-risk-metrics-engine*
 *Completed: 2026-03-29*
