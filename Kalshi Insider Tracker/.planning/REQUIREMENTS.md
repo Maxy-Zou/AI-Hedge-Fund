@@ -80,37 +80,37 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | Pending | Pending |
-| DATA-02 | Pending | Pending |
-| DATA-03 | Pending | Pending |
-| DATA-04 | Pending | Pending |
-| DATA-05 | Pending | Pending |
-| DATA-06 | Pending | Pending |
-| SIG-01 | Pending | Pending |
-| SIG-02 | Pending | Pending |
-| SIG-03 | Pending | Pending |
-| SIG-04 | Pending | Pending |
-| SIG-05 | Pending | Pending |
-| SIG-06 | Pending | Pending |
-| EXEC-01 | Pending | Pending |
-| EXEC-02 | Pending | Pending |
-| EXEC-03 | Pending | Pending |
-| EXEC-04 | Pending | Pending |
-| EXEC-05 | Pending | Pending |
-| EXEC-06 | Pending | Pending |
-| DASH-01 | Pending | Pending |
-| DASH-02 | Pending | Pending |
-| DASH-03 | Pending | Pending |
-| DASH-04 | Pending | Pending |
-| LOG-01 | Pending | Pending |
-| LOG-02 | Pending | Pending |
-| LOG-03 | Pending | Pending |
+| DATA-01 | Phase 1 | Pending |
+| DATA-02 | Phase 2 | Pending |
+| DATA-03 | Phase 1 | Pending |
+| DATA-04 | Phase 2 | Pending |
+| DATA-05 | Phase 1 | Pending |
+| DATA-06 | Phase 2 | Pending |
+| SIG-01 | Phase 3 | Pending |
+| SIG-02 | Phase 3 | Pending |
+| SIG-03 | Phase 6 | Pending |
+| SIG-04 | Phase 6 | Pending |
+| SIG-05 | Phase 3 | Pending |
+| SIG-06 | Phase 3 | Pending |
+| EXEC-01 | Phase 4 | Pending |
+| EXEC-02 | Phase 4 | Pending |
+| EXEC-03 | Phase 4 | Pending |
+| EXEC-04 | Phase 4 | Pending |
+| EXEC-05 | Phase 4 | Pending |
+| EXEC-06 | Phase 4 | Pending |
+| DASH-01 | Phase 5 | Pending |
+| DASH-02 | Phase 5 | Pending |
+| DASH-03 | Phase 5 | Pending |
+| DASH-04 | Phase 5 | Pending |
+| LOG-01 | Phase 4 | Pending |
+| LOG-02 | Phase 4 | Pending |
+| LOG-03 | Phase 1 | Pending |
 
 **Coverage:**
 - v1 requirements: 25 total
-- Mapped to phases: 0
-- Unmapped: 25
+- Mapped to phases: 25
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-02*
-*Last updated: 2026-04-02 after initial definition*
+*Last updated: 2026-04-02 — traceability filled after roadmap creation*
