@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from kalshi_tracker.db.models import Market, MarketSnapshot, Signal, Trade
 
 

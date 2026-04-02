@@ -36,7 +36,8 @@ class Market(Base):
     ticker: Mapped[str] = mapped_column(String(50), primary_key=True)
     series_ticker: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
-    status: Mapped[str] = mapped_column(String(20), nullable=False)  # 'active' | 'closed' | 'settled'
+    # 'active' | 'closed' | 'settled'
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
     close_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     first_seen: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
@@ -86,7 +87,8 @@ class Signal(AppendOnlyMixin, Base):
     )
 
     ticker: Mapped[str] = mapped_column(String(50), nullable=False)
-    signal_type: Mapped[str] = mapped_column(String(50), nullable=False)  # 'volume_spike' | 'price_move' | etc.
+    # 'volume_spike' | 'price_move' | etc.
+    signal_type: Mapped[str] = mapped_column(String(50), nullable=False)
     confidence: Mapped[float] = mapped_column(nullable=False)  # 0.0 – 1.0
     details: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default="{}")
     detected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -105,11 +107,14 @@ class Trade(AppendOnlyMixin, Base):
     )
 
     ticker: Mapped[str] = mapped_column(String(50), nullable=False)
-    signal_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)  # FK to signals.id (soft reference)
+    # FK to signals.id (soft reference — avoids FK constraint on high-append table)
+    signal_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True)
     side: Mapped[str] = mapped_column(String(10), nullable=False)   # 'yes' | 'no'
     contracts: Mapped[int] = mapped_column(Integer, nullable=False)
     price_cents: Mapped[int] = mapped_column(SmallInteger, nullable=False)  # entry price in cents
     mode: Mapped[str] = mapped_column(String(10), nullable=False)   # 'paper' | 'live'
-    status: Mapped[str] = mapped_column(String(20), nullable=False)  # 'pending' | 'filled' | 'rejected'
+    # 'pending' | 'filled' | 'rejected'
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
     placed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    kalshi_order_id: Mapped[str | None] = mapped_column(String(100), nullable=True)  # None for paper trades
+    # None for paper trades
+    kalshi_order_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
