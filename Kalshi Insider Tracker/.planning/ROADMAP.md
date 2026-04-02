@@ -30,7 +30,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Database schema is fully migrated (all tables exist with correct columns and constraints)
   3. System can fetch politics/policy market listings and deserialize them into typed domain objects
   4. Append-only constraint is enforced at the ORM level — no update or delete operations compile against signal/trade tables
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Project scaffold: pyproject.toml, config, logging, CLI skeleton, test stubs
+- [ ] 01-02-PLAN.md — DB layer: AppendOnlyMixin, ORM models (Market, MarketSnapshot, Signal, Trade), Alembic migration
+- [ ] 01-03-PLAN.md — Kalshi API client: RSA auth, rate limiter, politics filtering, MarketSnapshot domain type
 
 ### Phase 2: Data Pipeline
 **Goal**: The system continuously collects live market snapshots and accumulates baseline data before any signals can fire
@@ -96,7 +101,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/TBD | Not started | - |
+| 1. Foundation | 0/3 | Planned | - |
 | 2. Data Pipeline | 0/TBD | Not started | - |
 | 3. Core Signal Detection | 0/TBD | Not started | - |
 | 4. Trade Execution | 0/TBD | Not started | - |
