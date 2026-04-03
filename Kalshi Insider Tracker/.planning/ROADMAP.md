@@ -49,7 +49,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Setup: add apscheduler dependency, extend AppSettings config fields, create daemon package, write RED test scaffolding
+- [x] 02-01-PLAN.md — Setup: add apscheduler dependency, extend AppSettings config fields, create daemon package, write RED test scaffolding
 - [ ] 02-02-PLAN.md — Implementation: WarmupTracker, polling job + _to_orm translator, PollingDaemon scheduler, wire CLI start command
 
 ### Phase 3: Core Signal Detection
@@ -106,7 +106,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 0/3 | Planned | - |
-| 2. Data Pipeline | 0/2 | Not started | - |
+| 2. Data Pipeline | 1/2 | In Progress|  |
 | 3. Core Signal Detection | 0/TBD | Not started | - |
 | 4. Trade Execution | 0/TBD | Not started | - |
 | 5. Monitoring Dashboard | 0/TBD | Not started | - |
