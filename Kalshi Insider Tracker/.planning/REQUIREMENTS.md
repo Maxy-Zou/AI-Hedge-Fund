@@ -43,7 +43,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Persistence & Logging
 
-- [ ] **LOG-01**: System logs every detected signal (market, type, confidence, timestamp) to database
+- [x] **LOG-01**: System logs every detected signal (market, type, confidence, timestamp) to database
 - [x] **LOG-02**: System logs every trade placed (market, direction, size, price, outcome) to database
 - [x] **LOG-03**: All signal and trade data is append-only (never updated or deleted)
 
@@ -102,7 +102,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DASH-02 | Phase 5 | Pending |
 | DASH-03 | Phase 5 | Pending |
 | DASH-04 | Phase 5 | Pending |
-| LOG-01 | Phase 4 | Pending |
+| LOG-01 | Phase 4 | Complete |
 | LOG-02 | Phase 4 | Complete |
 | LOG-03 | Phase 1 | Complete |
 
