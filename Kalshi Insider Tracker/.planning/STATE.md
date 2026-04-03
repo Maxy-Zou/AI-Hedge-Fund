@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 02-data-pipeline-02-PLAN.md — polling daemon implementation, all 10 RED tests GREEN
-last_updated: "2026-04-03T04:34:06.330Z"
+status: executing
+stopped_at: Completed 03-01-PLAN.md — RED test scaffolding for signal detection, 12 tests fail on import
+last_updated: "2026-04-03T15:42:46.810Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 8
+  completed_plans: 6
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-02)
 
 **Core value:** Detect and copy insider-like trades on Kalshi politics/policy markets before the event resolves
-**Current focus:** Phase 02 — Data Pipeline
+**Current focus:** Phase 03 — Core Signal Detection
 
 ## Current Position
 
-Phase: 3
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 03 (Core Signal Detection) — EXECUTING
+Plan: 2 of 3
+Status: Ready to execute
 Last activity: 2026-04-03
 
 Progress: [░░░░░░░░░░] 0%
@@ -57,6 +57,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-foundation P02 | 235 | 2 tasks | 9 files |
 | Phase 02-data-pipeline P01 | 8 | 2 tasks | 7 files |
 | Phase 02-data-pipeline P02 | 8 | 2 tasks | 4 files |
+| Phase 03-core-signal-detection P01 | 180 | 2 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,7 @@ Recent decisions affecting current work:
 - [Phase 02-data-pipeline]: poll_interval_seconds validator enforces 1-60 range (not just >0): upper bound prevents accidental high-frequency polling
 - [Phase 02-data-pipeline]: make_poll_tick pattern: factory function returning callable for APScheduler job injection
 - [Phase 02-data-pipeline]: DomainSnapshot/OrmSnapshot alias: explicit import aliases prevent MarketSnapshot collision
+- [Phase 03-core-signal-detection]: SignalSettings uses KALSHI_SIGNAL_ prefix with 7 configurable thresholds following AppSettings/KalshiSettings BaseSettings pattern
 
 ### Pending Todos
 
@@ -93,6 +95,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T04:30:34.863Z
-Stopped at: Completed 02-data-pipeline-02-PLAN.md — polling daemon implementation, all 10 RED tests GREEN
+Last session: 2026-04-03T15:42:46.808Z
+Stopped at: Completed 03-01-PLAN.md — RED test scaffolding for signal detection, 12 tests fail on import
 Resume file: None

@@ -64,7 +64,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Setup: install numpy + factory-boy, add SignalSettings to config.py, write 12 RED tests (6 detector + 6 engine)
+- [x] 03-01-PLAN.md — Setup: install numpy + factory-boy, add SignalSettings to config.py, write 12 RED tests (6 detector + 6 engine)
 - [ ] 03-02-PLAN.md — Detectors: signals/ package, DetectionResult type, VolumeSpikeDetector, PriceMoveDetector (GREEN for detector tests)
 - [ ] 03-03-PLAN.md — Engine + wiring: SignalEngine orchestrator, resolution suppression, cooldown dedup, wire into make_poll_tick() (GREEN for all 12 tests)
 
@@ -112,7 +112,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 |-------|----------------|--------|-----------|
 | 1. Foundation | 0/3 | Planned | - |
 | 2. Data Pipeline | 1/2 | In Progress|  |
-| 3. Core Signal Detection | 0/3 | Not started | - |
+| 3. Core Signal Detection | 1/3 | In Progress|  |
 | 4. Trade Execution | 0/TBD | Not started | - |
 | 5. Monitoring Dashboard | 0/TBD | Not started | - |
 | 6. Advanced Signals | 0/TBD | Not started | - |
