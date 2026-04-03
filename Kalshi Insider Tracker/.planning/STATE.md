@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-01-PLAN.md — RED test scaffolding for signal detection, 12 tests fail on import
-last_updated: "2026-04-03T15:42:46.810Z"
+stopped_at: Completed 03-02-PLAN.md — 6 detector tests GREEN, VolumeSpikeDetector and PriceMoveDetector implemented
+last_updated: "2026-04-03T15:47:56.264Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 8
-  completed_plans: 6
+  completed_plans: 7
   percent: 0
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-02)
 ## Current Position
 
 Phase: 03 (Core Signal Detection) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-04-03
 
@@ -58,6 +58,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02-data-pipeline P01 | 8 | 2 tasks | 7 files |
 | Phase 02-data-pipeline P02 | 8 | 2 tasks | 4 files |
 | Phase 03-core-signal-detection P01 | 180 | 2 tasks | 8 files |
+| Phase 03-core-signal-detection P02 | 205 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -81,6 +82,8 @@ Recent decisions affecting current work:
 - [Phase 02-data-pipeline]: make_poll_tick pattern: factory function returning callable for APScheduler job injection
 - [Phase 02-data-pipeline]: DomainSnapshot/OrmSnapshot alias: explicit import aliases prevent MarketSnapshot collision
 - [Phase 03-core-signal-detection]: SignalSettings uses KALSHI_SIGNAL_ prefix with 7 configurable thresholds following AppSettings/KalshiSettings BaseSettings pattern
+- [Phase 03-core-signal-detection]: Flat-baseline std=0 with spike fires at confidence=1.0 rather than returning None — maximum anomaly when baseline is uniformly flat but current differs
+- [Phase 03-core-signal-detection]: window guard requires window+1 total snapshots for VolumeSpikeDetector — ensures baseline has exactly window elements
 
 ### Pending Todos
 
@@ -95,6 +98,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T15:42:46.808Z
-Stopped at: Completed 03-01-PLAN.md — RED test scaffolding for signal detection, 12 tests fail on import
+Last session: 2026-04-03T15:47:56.260Z
+Stopped at: Completed 03-02-PLAN.md — 6 detector tests GREEN, VolumeSpikeDetector and PriceMoveDetector implemented
 Resume file: None
