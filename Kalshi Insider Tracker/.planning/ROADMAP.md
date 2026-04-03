@@ -113,7 +113,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — RED tests: 7 failing tests for TimingClusterDetector (5), WinStreakDetector stub (1), engine registration (2)
+- [x] 06-01-PLAN.md — RED tests: 7 failing tests for TimingClusterDetector (5), WinStreakDetector stub (1), engine registration (2)
 - [ ] 06-02-PLAN.md — Implementation: TimingClusterDetector + WinStreakDetector stub, SignalSettings fields, engine wiring + fetch limit fix
 
 ## Progress
@@ -128,4 +128,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Core Signal Detection | 3/3 | Complete   | 2026-04-03 |
 | 4. Trade Execution | 3/3 | Complete   | 2026-04-03 |
 | 5. Monitoring Dashboard | 2/2 | Complete   | 2026-04-03 |
-| 6. Advanced Signals | 0/2 | Not started | - |
+| 6. Advanced Signals | 1/2 | In Progress|  |

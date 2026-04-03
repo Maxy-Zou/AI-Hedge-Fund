@@ -20,8 +20,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **SIG-01**: System detects abnormal volume spikes relative to per-market rolling baseline
 - [x] **SIG-02**: System detects sharp price movements before event resolution
-- [ ] **SIG-03**: System detects suspicious timing clusters (trades bunched before resolution)
-- [ ] **SIG-04**: System detects accounts/patterns with unusual win streaks (subject to API feasibility)
+- [x] **SIG-03**: System detects suspicious timing clusters (trades bunched before resolution)
+- [x] **SIG-04**: System detects accounts/patterns with unusual win streaks (subject to API feasibility)
 - [x] **SIG-05**: Each signal produces a confidence score used for threshold-based triggering
 - [x] **SIG-06**: System suppresses signals during normal resolution-day activity (false positive filter)
 
@@ -88,8 +88,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-06 | Phase 2 | Complete |
 | SIG-01 | Phase 3 | Complete |
 | SIG-02 | Phase 3 | Complete |
-| SIG-03 | Phase 6 | Pending |
-| SIG-04 | Phase 6 | Pending |
+| SIG-03 | Phase 6 | Complete |
+| SIG-04 | Phase 6 | Complete |
 | SIG-05 | Phase 3 | Complete |
 | SIG-06 | Phase 3 | Complete |
 | EXEC-01 | Phase 4 | Complete |

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 05-02-PLAN.md — 4-panel Streamlit dashboard and kalshi-tracker dashboard CLI command
-last_updated: "2026-04-03T16:37:59.866Z"
+status: executing
+stopped_at: Completed 06-01-PLAN.md — RED tests for TimingClusterDetector and WinStreakDetector
+last_updated: "2026-04-03T17:21:04.722Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 6
   completed_phases: 5
-  total_plans: 13
-  completed_plans: 13
+  total_plans: 15
+  completed_plans: 14
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-02)
 
 **Core value:** Detect and copy insider-like trades on Kalshi politics/policy markets before the event resolves
-**Current focus:** Phase 05 — Monitoring Dashboard
+**Current focus:** Phase 06 — Advanced Signals
 
 ## Current Position
 
-Phase: 6
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 06 (Advanced Signals) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-04-03
 
 Progress: [░░░░░░░░░░] 0%
@@ -65,6 +65,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04 P03 | 5 | 2 tasks | 4 files |
 | Phase 05 P01 | 148 | 2 tasks | 4 files |
 | Phase 05-monitoring-dashboard P02 | 2 | 3 tasks | 2 files |
+| Phase 06 P01 | 87 | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,7 @@ Recent decisions affecting current work:
 - [Phase 05]: realized_pnl_cents always 0 in v1 — Kalshi settled prices not stored in DB; documented as TODO
 - [Phase 05-monitoring-dashboard]: Streamlit launched via subprocess from CLI to avoid Typer/Streamlit initialization conflict
 - [Phase 05-monitoring-dashboard]: st.cache_resource for session_factory singleton prevents DB connection churn on each rerun
+- [Phase 06]: Module-level import of TimingClusterDetector/WinStreakDetector blocks test_detectors.py — correct RED behavior
 
 ### Pending Todos
 
@@ -114,6 +116,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T16:33:53.405Z
-Stopped at: Completed 05-02-PLAN.md — 4-panel Streamlit dashboard and kalshi-tracker dashboard CLI command
+Last session: 2026-04-03T17:21:04.718Z
+Stopped at: Completed 06-01-PLAN.md — RED tests for TimingClusterDetector and WinStreakDetector
 Resume file: None
