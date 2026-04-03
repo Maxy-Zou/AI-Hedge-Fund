@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
 import pytest
 
 
@@ -16,3 +18,19 @@ def kalshi_env(monkeypatch: pytest.MonkeyPatch) -> None:
 def app_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """Set minimal env vars needed for AppSettings to load."""
     monkeypatch.setenv("KALSHI_TRACKER_DATABASE_URL", "postgresql://test:test@localhost/test")
+
+
+# --- Daemon test fixtures ---
+
+@pytest.fixture
+def mock_kalshi_client() -> MagicMock:
+    """Mock KalshiClient that returns empty market list by default."""
+    client = MagicMock()
+    client.get_politics_markets.return_value = []
+    return client
+
+
+@pytest.fixture
+def mock_session() -> MagicMock:
+    """Mock SQLAlchemy session."""
+    return MagicMock()
