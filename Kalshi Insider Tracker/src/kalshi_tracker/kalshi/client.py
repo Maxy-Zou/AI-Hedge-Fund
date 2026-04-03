@@ -14,7 +14,7 @@ from threading import Lock
 
 import structlog
 from kalshi_python import ApiClient, Configuration
-from kalshi_python.api import MarketsApi
+from kalshi_python.api import MarketsApi, PortfolioApi
 
 from kalshi_tracker.config import KalshiSettings
 from kalshi_tracker.kalshi.types import MarketSnapshot
@@ -102,11 +102,24 @@ class KalshiClient:
             private_key_path=str(settings.private_key_path),
         )
         self._markets_api = MarketsApi(self._api_client)
+        self._portfolio_api = PortfolioApi(self._api_client)
         self._log = logger.bind(
             api_base_url=settings.api_base_url,
             rate_limit_rpm=settings.rate_limit_rpm,
         )
         self._log.info("kalshi_client_initialized")
+
+    @property
+    def portfolio_api(self) -> PortfolioApi:
+        """Expose the authenticated PortfolioApi instance for live order placement.
+
+        Reuses the same ApiClient (and RSA auth) already configured for this client.
+        Used by the CLI to construct TradeExecutor in live mode without duplicating auth setup.
+
+        Returns:
+            PortfolioApi instance sharing this client's authentication configuration.
+        """
+        return self._portfolio_api
 
     def get_politics_markets(self) -> list[MarketSnapshot]:
         """Fetch all open politics/policy markets and return as typed snapshots.
