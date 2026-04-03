@@ -36,10 +36,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Monitoring Dashboard
 
-- [ ] **DASH-01**: Dashboard shows live view of all monitored politics/policy markets
-- [ ] **DASH-02**: Dashboard shows real-time feed of detected signals with confidence scores
-- [ ] **DASH-03**: Dashboard shows current open positions and their status
-- [ ] **DASH-04**: Dashboard shows running P&L across all trades (realized + unrealized)
+- [x] **DASH-01**: Dashboard shows live view of all monitored politics/policy markets
+- [x] **DASH-02**: Dashboard shows real-time feed of detected signals with confidence scores
+- [x] **DASH-03**: Dashboard shows current open positions and their status
+- [x] **DASH-04**: Dashboard shows running P&L across all trades (realized + unrealized)
 
 ### Persistence & Logging
 
@@ -98,10 +98,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXEC-04 | Phase 4 | Complete |
 | EXEC-05 | Phase 4 | Complete |
 | EXEC-06 | Phase 4 | Complete |
-| DASH-01 | Phase 5 | Pending |
-| DASH-02 | Phase 5 | Pending |
-| DASH-03 | Phase 5 | Pending |
-| DASH-04 | Phase 5 | Pending |
+| DASH-01 | Phase 5 | Complete |
+| DASH-02 | Phase 5 | Complete |
+| DASH-03 | Phase 5 | Complete |
+| DASH-04 | Phase 5 | Complete |
 | LOG-01 | Phase 4 | Complete |
 | LOG-02 | Phase 4 | Complete |
 | LOG-03 | Phase 1 | Complete |

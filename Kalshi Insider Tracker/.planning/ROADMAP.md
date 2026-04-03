@@ -99,7 +99,7 @@ Plans:
 **UI hint**: yes
 
 Plans:
-- [ ] 05-01-PLAN.md — Add streamlit+pandas deps, implement read-only query layer (4 functions)
+- [x] 05-01-PLAN.md — Add streamlit+pandas deps, implement read-only query layer (4 functions)
 - [ ] 05-02-PLAN.md — Build 4-panel Streamlit app, wire CLI dashboard command, verify in browser
 
 ### Phase 6: Advanced Signals
@@ -123,5 +123,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 2. Data Pipeline | 1/2 | In Progress|  |
 | 3. Core Signal Detection | 3/3 | Complete   | 2026-04-03 |
 | 4. Trade Execution | 3/3 | Complete   | 2026-04-03 |
-| 5. Monitoring Dashboard | 0/TBD | Not started | - |
+| 5. Monitoring Dashboard | 1/2 | In Progress|  |
 | 6. Advanced Signals | 0/TBD | Not started | - |

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 04-03-PLAN.md — TradeExecutor wired into poller and CLI, 54/54 tests GREEN
-last_updated: "2026-04-03T16:20:57.357Z"
+status: executing
+stopped_at: Completed 05-01-PLAN.md — dashboard query layer with 4 functions and 14 tests GREEN
+last_updated: "2026-04-03T16:30:34.408Z"
 last_activity: 2026-04-03
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 11
-  completed_plans: 11
+  total_plans: 13
+  completed_plans: 12
   percent: 0
 ---
 
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-02)
 
 **Core value:** Detect and copy insider-like trades on Kalshi politics/policy markets before the event resolves
-**Current focus:** Phase 04 — Trade Execution
+**Current focus:** Phase 05 — Monitoring Dashboard
 
 ## Current Position
 
-Phase: 5
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 05 (Monitoring Dashboard) — EXECUTING
+Plan: 2 of 2
+Status: Ready to execute
 Last activity: 2026-04-03
 
 Progress: [░░░░░░░░░░] 0%
@@ -63,6 +63,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04-trade-execution P01 | 139 | 2 tasks | 6 files |
 | Phase 04 P02 | 10 | 2 tasks | 2 files |
 | Phase 04 P03 | 5 | 2 tasks | 4 files |
+| Phase 05 P01 | 148 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -94,6 +95,8 @@ Recent decisions affecting current work:
 - [Phase 04]: RiskGuard check order: per-trade → exposure → duplicate → in-flight (Python-side filtering for mock compatibility)
 - [Phase 04]: KalshiClient.portfolio_api property exposes authenticated PortfolioApi sharing RSA ApiClient — avoids duplicate auth in CLI
 - [Phase 04]: ExecutionSettings with KALSHI_EXEC_ prefix and confidence_threshold field — consistent with AppSettings/KalshiSettings BaseSettings pattern
+- [Phase 05]: streamlit and pandas added as core dependencies (not optional) — dashboard is first-class feature for v1
+- [Phase 05]: realized_pnl_cents always 0 in v1 — Kalshi settled prices not stored in DB; documented as TODO
 
 ### Pending Todos
 
@@ -108,6 +111,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-03T16:17:54.308Z
-Stopped at: Completed 04-03-PLAN.md — TradeExecutor wired into poller and CLI, 54/54 tests GREEN
+Last session: 2026-04-03T16:30:34.405Z
+Stopped at: Completed 05-01-PLAN.md — dashboard query layer with 4 functions and 14 tests GREEN
 Resume file: None
