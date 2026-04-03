@@ -129,3 +129,13 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 4. Trade Execution | 3/3 | Complete   | 2026-04-03 |
 | 5. Monitoring Dashboard | 2/2 | Complete   | 2026-04-03 |
 | 6. Advanced Signals | 2/2 | Complete   | 2026-04-03 |
+
+### Phase 06.1: Integration Wiring — Wire SignalEngine into CLI, populate markets table, fix cooldown time window, add dashboard logging (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Requirements**: TBD
+**Depends on:** Phase 6
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 06.1 to break down)

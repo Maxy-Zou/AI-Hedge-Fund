@@ -70,6 +70,10 @@ Progress: [░░░░░░░░░░] 0%
 
 ## Accumulated Context
 
+### Roadmap Evolution
+
+- Phase 06.1 inserted after Phase 06: Integration Wiring — Wire SignalEngine into CLI, populate markets table, fix cooldown time window, add dashboard logging (URGENT)
+
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
