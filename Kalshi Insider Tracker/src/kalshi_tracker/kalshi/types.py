@@ -18,12 +18,14 @@ class MarketSnapshot:
     for price fields — always normalize to int via round() before constructing.
 
     All timestamps are UTC-aware (timezone-aware datetime objects).
+
+    Note: market_id and title have defaults so that test fixtures can construct
+    MarketSnapshot with only the core price/volume fields required by the polling contract.
+    market_id defaults to ticker (they are the same in Kalshi's API).
     """
 
-    market_id: str          # same as ticker (Kalshi uses ticker as stable market ID)
     ticker: str
     series_ticker: str
-    title: str
     yes_bid: int            # cents (0-99)
     yes_ask: int            # cents (0-99)
     no_bid: int             # cents (0-99)
@@ -33,6 +35,8 @@ class MarketSnapshot:
     volume_24h: int         # 24-hour volume
     status: str             # 'active' | 'closed' | 'settled'
     captured_at: datetime   # UTC timestamp when this snapshot was taken
+    market_id: str = ""     # same as ticker (Kalshi uses ticker as stable market ID); defaults for test compat
+    title: str = ""         # market display title; optional in polling context
 
     @classmethod
     def from_sdk_market(
