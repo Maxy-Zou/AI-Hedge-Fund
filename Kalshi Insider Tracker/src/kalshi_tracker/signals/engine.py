@@ -15,15 +15,20 @@ Usage:
 
 from __future__ import annotations
 
-import structlog
 from datetime import UTC, datetime, timedelta
+
+import structlog
 from sqlalchemy.orm import Session, sessionmaker
 
 from kalshi_tracker.config import SignalSettings
 from kalshi_tracker.daemon.warmup import WarmupTracker
 from kalshi_tracker.db.models import MarketSnapshot as OrmSnapshot
 from kalshi_tracker.db.models import Signal
-from kalshi_tracker.signals.detectors import PriceMoveDetector, VolumeSpikeDetector
+from kalshi_tracker.signals.detectors import (
+    PriceMoveDetector,
+    TimingClusterDetector,
+    VolumeSpikeDetector,
+)
 from kalshi_tracker.signals.types import DetectionResult
 
 logger = structlog.get_logger(__name__)
@@ -83,6 +88,12 @@ class SignalEngine:
             PriceMoveDetector(
                 move_pct_threshold=settings.price_move_threshold,
                 window=settings.price_window,
+            ),
+            TimingClusterDetector(
+                cluster_minutes=settings.cluster_minutes,
+                lookback_minutes=settings.cluster_lookback_minutes,
+                cluster_threshold=settings.cluster_threshold,
+                min_total_volume=settings.cluster_min_volume,
             ),
         ]
         self._log = logger.bind(engine="signal_engine")
@@ -169,9 +180,10 @@ class SignalEngine:
     def _fetch_snapshots(self, ticker: str, session: Session) -> list:
         """Fetch recent snapshots for ticker in chronological order (oldest first).
 
-        Fetches max(volume_window, price_window) + 1 snapshots to satisfy both
-        detectors with one query. DB returns newest-first (ORDER BY DESC); this
-        method reverses the list so detectors receive chronological order.
+        Fetches max(volume_window, price_window, timing_cluster_lookback) + 1
+        snapshots to satisfy all detectors with one query. DB returns newest-first
+        (ORDER BY DESC); this method reverses the list so detectors receive
+        chronological order.
 
         Args:
             ticker: Market ticker string.
@@ -180,7 +192,13 @@ class SignalEngine:
         Returns:
             List of OrmSnapshot rows, oldest first.
         """
-        limit = max(self._settings.volume_window, self._settings.price_window) + 1
+        # Include timing cluster lookback window (assumes 10s polling cadence)
+        lookback_snapshots = (self._settings.cluster_lookback_minutes * 60) // 10 + 1
+        limit = max(
+            self._settings.volume_window,
+            self._settings.price_window,
+            lookback_snapshots,
+        ) + 1
         rows = (
             session.query(OrmSnapshot)
             .filter(OrmSnapshot.ticker == ticker)
@@ -208,7 +226,6 @@ class SignalEngine:
             True if a Signal row with matching (ticker, signal_type) and
             detected_at > (now - cooldown_seconds) exists in DB.
         """
-        cutoff = datetime.now(UTC) - timedelta(seconds=self._settings.signal_cooldown_seconds)
         recent = (
             session.query(Signal)
             .filter(
