@@ -16,7 +16,12 @@ import typer
 from rich import print as rprint
 from rich.console import Console
 
-from kalshi_tracker.config import load_app_settings, load_execution_settings, load_kalshi_settings
+from kalshi_tracker.config import (
+    load_app_settings,
+    load_execution_settings,
+    load_kalshi_settings,
+    load_signal_settings,
+)
 from kalshi_tracker.daemon.poller import PollingDaemon, make_poll_tick
 from kalshi_tracker.daemon.warmup import WarmupTracker
 from kalshi_tracker.db.session import create_engine_from_settings, get_session_factory
@@ -24,6 +29,7 @@ from kalshi_tracker.execution.executor import TradeExecutor
 from kalshi_tracker.execution.risk_guard import RiskGuard
 from kalshi_tracker.kalshi.client import KalshiClient
 from kalshi_tracker.logging import configure_logging
+from kalshi_tracker.signals.engine import SignalEngine
 
 app = typer.Typer(name="kalshi-tracker", help="Kalshi Insider Tracker CLI")
 logger = structlog.get_logger(__name__)
@@ -74,11 +80,18 @@ def start(
         confidence_threshold=exec_settings.confidence_threshold,
     )
 
+    signal_settings = load_signal_settings()
+    signal_engine = SignalEngine(
+        session_factory=session_factory,
+        warmup=warmup,
+        settings=signal_settings,
+    )
+
     poll_tick = make_poll_tick(
         client=client,
         session_factory=session_factory,
         warmup=warmup,
-        signal_engine=None,
+        signal_engine=signal_engine,
         trade_executor=trade_executor,
     )
     daemon = PollingDaemon(poll_tick, app_settings.poll_interval_seconds)

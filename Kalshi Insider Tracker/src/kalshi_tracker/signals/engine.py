@@ -226,11 +226,15 @@ class SignalEngine:
             True if a Signal row with matching (ticker, signal_type) and
             detected_at > (now - cooldown_seconds) exists in DB.
         """
+        cooldown_cutoff = datetime.now(UTC) - timedelta(
+            seconds=self._settings.signal_cooldown_seconds,
+        )
         recent = (
             session.query(Signal)
             .filter(
                 Signal.ticker == ticker,
                 Signal.signal_type == signal_type,
+                Signal.detected_at > cooldown_cutoff,
             )
             .order_by(Signal.detected_at.desc())
             .limit(1)

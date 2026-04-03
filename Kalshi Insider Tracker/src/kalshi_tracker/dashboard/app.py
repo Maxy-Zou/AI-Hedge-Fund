@@ -26,7 +26,9 @@ from kalshi_tracker.dashboard.queries import (
     get_recent_signals,
 )
 from kalshi_tracker.db.session import create_engine_from_settings, get_session_factory
+from kalshi_tracker.logging import configure_logging
 
+configure_logging("INFO")
 logger = structlog.get_logger(__name__)
 
 # Must be the first Streamlit call in the module — called once at import time

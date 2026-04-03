@@ -27,6 +27,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy.orm import Session, sessionmaker
 
 from kalshi_tracker.daemon.warmup import WarmupTracker
+from kalshi_tracker.db.models import Market
 from kalshi_tracker.db.models import MarketSnapshot as OrmSnapshot
 from kalshi_tracker.kalshi.client import KalshiClient, RateLimitError
 from kalshi_tracker.kalshi.types import MarketSnapshot as DomainSnapshot
@@ -89,7 +90,7 @@ def make_poll_tick(
     session_factory: sessionmaker[Session],
     warmup: WarmupTracker,
     signal_engine: SignalEngine | None = None,
-    trade_executor: "TradeExecutor | None" = None,
+    trade_executor: TradeExecutor | None = None,
 ) -> Callable[[], None]:
     """Factory returning the polling job function with injected dependencies.
 
@@ -131,6 +132,22 @@ def make_poll_tick(
         try:
             with session_factory() as session:
                 session.add_all(orm_rows)
+                # Upsert Market entity rows — register new markets as they appear
+                for snap in snapshots:
+                    existing = session.query(Market).filter(Market.ticker == snap.ticker).first()
+                    if existing is None:
+                        market = Market(
+                            ticker=snap.ticker,
+                            series_ticker=snap.series_ticker,
+                            title=snap.title or snap.ticker,
+                            status=snap.status,
+                            close_time=getattr(snap, "close_time", None),
+                        )
+                        session.add(market)
+                    else:
+                        existing.status = snap.status
+                        if hasattr(snap, "close_time") and snap.close_time is not None:
+                            existing.close_time = snap.close_time
                 session.commit()  # explicit commit — context manager exit alone does NOT commit
         except Exception:
             logger.warning("poll_tick_db_error", exc_info=True)
