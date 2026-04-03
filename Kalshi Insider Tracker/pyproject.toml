@@ -17,6 +17,8 @@ dependencies = [
     "cryptography>=46.0.6",
     "apscheduler>=3.11.0",
     "numpy>=1.26",
+    "streamlit>=1.45.0",
+    "pandas>=2.2",
 ]
 
 [project.scripts]
