@@ -82,7 +82,7 @@ Plans:
 **UI hint**: no
 
 Plans:
-- [ ] 04-01-PLAN.md — RED tests: 9 failing tests for RiskGuard + TradeExecutor, type contracts in types.py
+- [x] 04-01-PLAN.md — RED tests: 9 failing tests for RiskGuard + TradeExecutor, type contracts in types.py
 - [ ] 04-02-PLAN.md — Implementation: RiskGuard (hard limits as constants), TradeExecutor (paper/live dispatch) — all 9 tests GREEN
 - [ ] 04-03-PLAN.md — Wiring: ExecutionSettings to config.py, TradeExecutor into make_poll_tick, --live flag to CLI
 
@@ -118,6 +118,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Foundation | 0/3 | Planned | - |
 | 2. Data Pipeline | 1/2 | In Progress|  |
 | 3. Core Signal Detection | 3/3 | Complete   | 2026-04-03 |
-| 4. Trade Execution | 0/3 | Not started | - |
+| 4. Trade Execution | 1/3 | In Progress|  |
 | 5. Monitoring Dashboard | 0/TBD | Not started | - |
 | 6. Advanced Signals | 0/TBD | Not started | - |

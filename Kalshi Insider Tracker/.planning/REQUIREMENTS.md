@@ -27,12 +27,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Trade Execution
 
-- [ ] **EXEC-01**: System operates in paper trading mode (simulated trades, no real capital)
-- [ ] **EXEC-02**: System auto-executes real copy trades via Kalshi API when signals exceed threshold
-- [ ] **EXEC-03**: System enforces $50 per-trade limit as a code-level constant (not config)
-- [ ] **EXEC-04**: System enforces $500 total exposure limit as a code-level constant (not config)
-- [ ] **EXEC-05**: System deduplicates signals to prevent duplicate orders from consecutive polls
-- [ ] **EXEC-06**: System tracks in-flight orders to prevent race conditions between detection and execution
+- [x] **EXEC-01**: System operates in paper trading mode (simulated trades, no real capital)
+- [x] **EXEC-02**: System auto-executes real copy trades via Kalshi API when signals exceed threshold
+- [x] **EXEC-03**: System enforces $50 per-trade limit as a code-level constant (not config)
+- [x] **EXEC-04**: System enforces $500 total exposure limit as a code-level constant (not config)
+- [x] **EXEC-05**: System deduplicates signals to prevent duplicate orders from consecutive polls
+- [x] **EXEC-06**: System tracks in-flight orders to prevent race conditions between detection and execution
 
 ### Monitoring Dashboard
 
@@ -44,7 +44,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Persistence & Logging
 
 - [ ] **LOG-01**: System logs every detected signal (market, type, confidence, timestamp) to database
-- [ ] **LOG-02**: System logs every trade placed (market, direction, size, price, outcome) to database
+- [x] **LOG-02**: System logs every trade placed (market, direction, size, price, outcome) to database
 - [x] **LOG-03**: All signal and trade data is append-only (never updated or deleted)
 
 ## v2 Requirements
@@ -92,18 +92,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SIG-04 | Phase 6 | Pending |
 | SIG-05 | Phase 3 | Complete |
 | SIG-06 | Phase 3 | Complete |
-| EXEC-01 | Phase 4 | Pending |
-| EXEC-02 | Phase 4 | Pending |
-| EXEC-03 | Phase 4 | Pending |
-| EXEC-04 | Phase 4 | Pending |
-| EXEC-05 | Phase 4 | Pending |
-| EXEC-06 | Phase 4 | Pending |
+| EXEC-01 | Phase 4 | Complete |
+| EXEC-02 | Phase 4 | Complete |
+| EXEC-03 | Phase 4 | Complete |
+| EXEC-04 | Phase 4 | Complete |
+| EXEC-05 | Phase 4 | Complete |
+| EXEC-06 | Phase 4 | Complete |
 | DASH-01 | Phase 5 | Pending |
 | DASH-02 | Phase 5 | Pending |
 | DASH-03 | Phase 5 | Pending |
 | DASH-04 | Phase 5 | Pending |
 | LOG-01 | Phase 4 | Pending |
-| LOG-02 | Phase 4 | Pending |
+| LOG-02 | Phase 4 | Complete |
 | LOG-03 | Phase 1 | Complete |
 
 **Coverage:**
