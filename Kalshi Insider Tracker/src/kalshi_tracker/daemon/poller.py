@@ -18,6 +18,8 @@ from __future__ import annotations
 import signal
 import time
 from collections.abc import Callable
+from datetime import datetime
+from typing import TYPE_CHECKING
 
 import structlog
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -29,7 +31,28 @@ from kalshi_tracker.db.models import MarketSnapshot as OrmSnapshot
 from kalshi_tracker.kalshi.client import KalshiClient, RateLimitError
 from kalshi_tracker.kalshi.types import MarketSnapshot as DomainSnapshot
 
+if TYPE_CHECKING:
+    from kalshi_tracker.signals.engine import SignalEngine
+
 logger = structlog.get_logger(__name__)
+
+
+def _get_close_times(tickers: list[str], session: Session) -> dict[str, datetime | None]:
+    """Fetch close_time for each ticker in one SELECT IN query.
+
+    Args:
+        tickers: List of market tickers to look up.
+        session: Active SQLAlchemy session.
+
+    Returns:
+        Dict mapping ticker -> close_time (None if market not found or has no close_time).
+    """
+    from kalshi_tracker.db.models import Market
+
+    if not tickers:
+        return {}
+    rows = session.query(Market).filter(Market.ticker.in_(tickers)).all()
+    return {row.ticker: row.close_time for row in rows}
 
 
 def _to_orm(domain: DomainSnapshot) -> OrmSnapshot:
@@ -64,6 +87,7 @@ def make_poll_tick(
     client: KalshiClient,
     session_factory: sessionmaker[Session],
     warmup: WarmupTracker,
+    signal_engine: SignalEngine | None = None,
 ) -> Callable[[], None]:
     """Factory returning the polling job function with injected dependencies.
 
@@ -74,6 +98,8 @@ def make_poll_tick(
         client: KalshiClient for fetching market data.
         session_factory: SQLAlchemy sessionmaker for DB writes.
         warmup: WarmupTracker to update after each successful tick.
+        signal_engine: Optional SignalEngine for signal detection after each tick.
+            Pass None (default) to disable signal detection — preserves backwards compat.
 
     Returns:
         poll_tick: Zero-argument callable suitable for APScheduler job.
@@ -108,6 +134,21 @@ def make_poll_tick(
 
         for snap in snapshots:
             warmup.record(snap.ticker)
+
+        if signal_engine is not None:
+            # Fetch close_times for all tickers in one query to avoid N+1 queries
+            with session_factory() as session:
+                close_time_map = _get_close_times(
+                    [s.ticker for s in snapshots], session
+                )
+            for snap in snapshots:
+                try:
+                    signal_engine.run(
+                        snap.ticker,
+                        close_time=close_time_map.get(snap.ticker),
+                    )
+                except Exception:
+                    logger.warning("poll_tick_signal_error", ticker=snap.ticker, exc_info=True)
 
         elapsed_ms = int((time.monotonic() - tick_start) * 1000)
         logger.info(
