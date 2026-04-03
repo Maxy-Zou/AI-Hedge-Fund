@@ -236,3 +236,71 @@ def test_engine_cooldown_skips_duplicate(mock_session: MagicMock) -> None:
 
     assert result == []
     mock_session.add.assert_not_called()
+
+
+# ---------------------------------------------------------------------------
+# Phase 6 engine tests — RED: TimingClusterDetector and cluster_lookback_minutes
+# not yet implemented (Plan 06-02 adds them)
+# ---------------------------------------------------------------------------
+
+
+def test_timing_cluster_registered_in_default_detectors(mock_session: MagicMock) -> None:
+    """TimingClusterDetector is present in SignalEngine default detector list.
+
+    When SignalEngine is instantiated without explicit detectors, the default
+    _detectors list must include a TimingClusterDetector instance.
+    This test will fail (ImportError) until Plan 06-02 implements the class
+    and registers it in SignalEngine.__init__.
+    """
+    from kalshi_tracker.signals.detectors import TimingClusterDetector
+
+    warmup = _make_warmed_tracker()
+    session_factory = _make_session_factory(mock_session)
+    settings = _make_settings()
+
+    engine = SignalEngine(
+        session_factory=session_factory,
+        warmup=warmup,
+        settings=settings,
+        # No explicit detectors → uses default list
+    )
+
+    assert any(isinstance(d, TimingClusterDetector) for d in engine._detectors), (
+        "SignalEngine default _detectors must include TimingClusterDetector"
+    )
+
+
+def test_fetch_snapshots_limit_covers_cluster_lookback(mock_session: MagicMock) -> None:
+    """_fetch_snapshots limit >= 721 when cluster_lookback_minutes=120.
+
+    At 10-second polling cadence, 120 minutes × 6 snapshots/min = 720 snapshots.
+    The limit must be > 720 (i.e., >= 721) to ensure enough rows are fetched
+    for the TimingClusterDetector window.
+
+    This test will fail (AttributeError) until Plan 06-02 adds
+    cluster_lookback_minutes to SignalSettings and updates _fetch_snapshots.
+    """
+    warmup = _make_warmed_tracker()
+    session_factory = _make_session_factory(mock_session)
+    # cluster_lookback_minutes=120 requires fetching >= 721 snapshots
+    settings = _make_settings(cluster_lookback_minutes=120)
+
+    engine = SignalEngine(
+        session_factory=session_factory,
+        warmup=warmup,
+        settings=settings,
+    )
+
+    # Run to trigger _fetch_snapshots — suppress any downstream errors
+    try:
+        engine.run(_TICKER)
+    except Exception:
+        pass
+
+    # Inspect the limit argument passed to the query chain
+    limit_mock = mock_session.query.return_value.filter.return_value.order_by.return_value.limit
+    assert limit_mock.called, "_fetch_snapshots must call .limit() on the query"
+    actual_limit = limit_mock.call_args[0][0]
+    assert actual_limit >= 721, (
+        f"_fetch_snapshots limit must be >= 721 for cluster_lookback_minutes=120, got {actual_limit}"
+    )

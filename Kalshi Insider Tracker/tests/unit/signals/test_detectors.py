@@ -1,4 +1,5 @@
-"""RED tests for VolumeSpikeDetector and PriceMoveDetector (SIG-01, SIG-02).
+"""RED tests for VolumeSpikeDetector, PriceMoveDetector (SIG-01, SIG-02),
+TimingClusterDetector (SIG-03), and WinStreakDetector stub (SIG-04).
 
 These tests FAIL on import — kalshi_tracker.signals.detectors does not exist yet.
 That is the correct RED state: tests define the interface before implementation.
@@ -6,14 +7,22 @@ That is the correct RED state: tests define the interface before implementation.
 Test coverage:
   - VolumeSpikeDetector: above threshold, below threshold, zero std guard, confidence clamped
   - PriceMoveDetector: above threshold, zero range guard
+  - TimingClusterDetector: fires on burst, None on insufficient snapshots, None on dead market,
+      None on uniform volume, confidence clamped to 1.0
+  - WinStreakDetector: always returns None (SIG-04 infeasibility stub)
 """
 
 from __future__ import annotations
+
+from datetime import UTC, datetime
 
 import pytest
 
 # RED: these imports will raise ModuleNotFoundError until Plan 02 is executed.
 from kalshi_tracker.signals.detectors import PriceMoveDetector, VolumeSpikeDetector
+
+# RED: TimingClusterDetector and WinStreakDetector do not exist yet (Plan 06-02 implements them).
+from kalshi_tracker.signals.detectors import TimingClusterDetector, WinStreakDetector
 from kalshi_tracker.signals.types import DetectionResult
 
 from .conftest import snapshot_factory
@@ -128,3 +137,174 @@ def test_confidence_clamped() -> None:
 
     assert result is not None
     assert result.confidence == 1.0
+
+
+# ---------------------------------------------------------------------------
+# TimingClusterDetector tests (SIG-03) — RED: class not yet implemented
+# ---------------------------------------------------------------------------
+
+
+def _make_cluster_snapshots(
+    lookback_count: int = 720,
+    burst_count: int = 180,
+    baseline_vol: int = 10,
+    burst_vol: int = 100,
+    base_time: datetime | None = None,
+) -> list:
+    """Build snapshots for TimingClusterDetector testing.
+
+    Args:
+        lookback_count: Total number of snapshots to generate.
+        burst_count: Number of recent snapshots to assign burst_vol (at the end).
+        baseline_vol: Volume assigned to all baseline (non-burst) snapshots.
+        burst_vol: Volume assigned to the most recent burst_count snapshots.
+        base_time: Base datetime for snapshot timestamps. Defaults to 2025-01-01T12:00:00 UTC.
+
+    Returns:
+        List of MagicMock snapshots with .ticker, .volume_24h, .last_price, .captured_at.
+        Oldest first, 10-second spacing (consistent with conftest snapshot_factory).
+    """
+    volumes = [baseline_vol] * (lookback_count - burst_count) + [burst_vol] * burst_count
+    prices = [50] * lookback_count
+    return snapshot_factory("CLUSTER-TEST-1", volumes, prices, base_time)
+
+
+def test_timing_cluster_fires_on_burst() -> None:
+    """TimingClusterDetector returns DetectionResult when recent volume concentration exceeds threshold.
+
+    Setup: 720 total snapshots — 540 baseline (vol=10) + 180 recent burst (vol=100).
+    Volume concentration in the burst window ≈ 180*100 / (540*10 + 180*100) = 18000/23400 ≈ 0.77.
+    With cluster_threshold=0.6, concentration > threshold → should fire.
+    """
+    snapshots = _make_cluster_snapshots(
+        lookback_count=720,
+        burst_count=180,
+        baseline_vol=10,
+        burst_vol=100,
+    )
+    detector = TimingClusterDetector(
+        cluster_minutes=30,
+        lookback_minutes=120,
+        cluster_threshold=0.6,
+        min_total_volume=10,
+    )
+
+    result = detector.detect(snapshots)
+
+    assert result is not None
+    assert isinstance(result, DetectionResult)
+    assert result.signal_type == "timing_cluster"
+    assert result.confidence > 0.0
+
+
+def test_timing_cluster_none_on_insufficient_snapshots() -> None:
+    """TimingClusterDetector returns None when too few snapshots are provided.
+
+    Only 5 snapshots passed — far below any reasonable min_snapshots guard.
+    Detector must return None rather than crash or produce spurious results.
+    """
+    snapshots = _make_cluster_snapshots(lookback_count=5, burst_count=2)
+    detector = TimingClusterDetector(
+        cluster_minutes=30,
+        lookback_minutes=120,
+        cluster_threshold=0.6,
+        min_total_volume=10,
+    )
+
+    result = detector.detect(snapshots)
+
+    assert result is None
+
+
+def test_timing_cluster_none_on_dead_market() -> None:
+    """TimingClusterDetector returns None when total volume is zero.
+
+    All 720 snapshots have volume_24h=0 → total_volume=0 → division by zero must be guarded.
+    Detector must return None (dead market, no meaningful signal).
+    """
+    snapshots = _make_cluster_snapshots(
+        lookback_count=720,
+        burst_count=180,
+        baseline_vol=0,
+        burst_vol=0,
+    )
+    detector = TimingClusterDetector(
+        cluster_minutes=30,
+        lookback_minutes=120,
+        cluster_threshold=0.6,
+        min_total_volume=10,
+    )
+
+    result = detector.detect(snapshots)
+
+    assert result is None
+
+
+def test_timing_cluster_none_on_uniform_volume() -> None:
+    """TimingClusterDetector returns None when volume is uniformly distributed.
+
+    720 snapshots all with volume_24h=100 → concentration ≈ lookback_count/lookback_count ratio.
+    With cluster_minutes=30 and lookback_minutes=120, the burst window is 1/4 of the lookback.
+    Uniform distribution → burst concentration ≈ 0.25, below cluster_threshold=0.6.
+    Detector must return None (no anomaly).
+    """
+    snapshots = _make_cluster_snapshots(
+        lookback_count=720,
+        burst_count=180,
+        baseline_vol=100,
+        burst_vol=100,  # same as baseline — uniform volume
+    )
+    detector = TimingClusterDetector(
+        cluster_minutes=30,
+        lookback_minutes=120,
+        cluster_threshold=0.6,
+        min_total_volume=10,
+    )
+
+    result = detector.detect(snapshots)
+
+    assert result is None
+
+
+def test_timing_cluster_confidence_clamped_to_one() -> None:
+    """TimingClusterDetector confidence is exactly 1.0 when all volume is in the burst window.
+
+    All 720 snapshots with vol=0 except the last 10 which have vol=1000 (extreme concentration).
+    Burst concentration → 1.0; confidence must be clamped to 1.0, not exceed it.
+    """
+    # 710 dead baseline snapshots + 10 extreme burst snapshots
+    volumes = [0] * 710 + [1000] * 10
+    prices = [50] * 720
+    snapshots = snapshot_factory("CLUSTER-TEST-2", volumes, prices)
+    detector = TimingClusterDetector(
+        cluster_minutes=30,
+        lookback_minutes=120,
+        cluster_threshold=0.6,
+        min_total_volume=10,
+    )
+
+    result = detector.detect(snapshots)
+
+    assert result is not None
+    assert result.confidence == 1.0
+
+
+# ---------------------------------------------------------------------------
+# WinStreakDetector test (SIG-04) — RED: class not yet implemented
+# ---------------------------------------------------------------------------
+
+
+def test_win_streak_always_returns_none() -> None:
+    """WinStreakDetector.detect() always returns None — SIG-04 infeasibility stub.
+
+    SIG-04 infeasible — Trade model has no account identifier (SDK v2.0.0).
+    The Kalshi Python SDK v2.0.0 Trade model exposes: ticker, count, taker_side,
+    yes_price, no_price, trade_id, created_time. No account_id or user_id field
+    exists, making per-account win streak computation impossible without private
+    API access. WinStreakDetector is a permanent stub that always returns None.
+    """
+    detector = WinStreakDetector()
+
+    result = detector.detect([])
+
+    assert result is None
