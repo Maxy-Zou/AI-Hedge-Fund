@@ -2,13 +2,19 @@
 
 Commands:
     start: Start the Kalshi insider tracking daemon.
+    dashboard: Launch the live monitoring dashboard in a browser.
 """
 
 from __future__ import annotations
 
+import subprocess
+import sys
+from pathlib import Path
+
 import structlog
 import typer
 from rich import print as rprint
+from rich.console import Console
 
 from kalshi_tracker.config import load_app_settings, load_execution_settings, load_kalshi_settings
 from kalshi_tracker.daemon.poller import PollingDaemon, make_poll_tick
@@ -21,6 +27,7 @@ from kalshi_tracker.logging import configure_logging
 
 app = typer.Typer(name="kalshi-tracker", help="Kalshi Insider Tracker CLI")
 logger = structlog.get_logger(__name__)
+console = Console()
 
 
 @app.command()
@@ -84,3 +91,21 @@ def start(
         confidence_threshold=exec_settings.confidence_threshold,
     )
     daemon.start()
+
+
+@app.command()
+def dashboard(
+    port: int = typer.Option(8501, help="Port for the Streamlit server"),
+    host: str = typer.Option("localhost", help="Host for the Streamlit server"),
+) -> None:
+    """Launch the live monitoring dashboard in a browser."""
+    app_path = Path(__file__).parent / "dashboard" / "app.py"
+    cmd = [
+        sys.executable, "-m", "streamlit", "run",
+        str(app_path),
+        "--server.port", str(port),
+        "--server.address", host,
+    ]
+    console.print(f"[green]Starting dashboard on http://{host}:{port}[/green]")
+    console.print("[dim]Press Ctrl+C to stop[/dim]")
+    subprocess.run(cmd, check=False)
