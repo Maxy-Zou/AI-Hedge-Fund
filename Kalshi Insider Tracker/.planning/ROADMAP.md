@@ -78,8 +78,13 @@ Plans:
   3. When switched to live mode, system places real orders via Kalshi API for signals above the confidence threshold
   4. Duplicate signals from consecutive polls for the same market condition do not produce duplicate orders
   5. In-flight orders are tracked so a second detection event does not re-submit while the first order is pending
-**Plans**: TBD
+**Plans**: 3 plans
 **UI hint**: no
+
+Plans:
+- [ ] 04-01-PLAN.md — RED tests: 9 failing tests for RiskGuard + TradeExecutor, type contracts in types.py
+- [ ] 04-02-PLAN.md — Implementation: RiskGuard (hard limits as constants), TradeExecutor (paper/live dispatch) — all 9 tests GREEN
+- [ ] 04-03-PLAN.md — Wiring: ExecutionSettings to config.py, TradeExecutor into make_poll_tick, --live flag to CLI
 
 ### Phase 5: Monitoring Dashboard
 **Goal**: Users can observe all monitored markets, live signals, open positions, and running P&L from a single screen
@@ -113,6 +118,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Foundation | 0/3 | Planned | - |
 | 2. Data Pipeline | 1/2 | In Progress|  |
 | 3. Core Signal Detection | 3/3 | Complete   | 2026-04-03 |
-| 4. Trade Execution | 0/TBD | Not started | - |
+| 4. Trade Execution | 0/3 | Not started | - |
 | 5. Monitoring Dashboard | 0/TBD | Not started | - |
 | 6. Advanced Signals | 0/TBD | Not started | - |
