@@ -34,7 +34,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [x] 01-01-PLAN.md — Project scaffold: pyproject.toml, config, logging, CLI skeleton, test stubs
-- [ ] 01-02-PLAN.md — DB layer: AppendOnlyMixin, ORM models (Market, MarketSnapshot, Signal, Trade), Alembic migration
+- [x] 01-02-PLAN.md — DB layer: AppendOnlyMixin, ORM models (Market, MarketSnapshot, Signal, Trade), Alembic migration
 - [x] 01-03-PLAN.md — Kalshi API client: RSA auth, rate limiter, politics filtering, MarketSnapshot domain type
 
 ### Phase 2: Data Pipeline

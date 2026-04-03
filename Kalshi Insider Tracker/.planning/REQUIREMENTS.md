@@ -45,7 +45,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [ ] **LOG-01**: System logs every detected signal (market, type, confidence, timestamp) to database
 - [ ] **LOG-02**: System logs every trade placed (market, direction, size, price, outcome) to database
-- [ ] **LOG-03**: All signal and trade data is append-only (never updated or deleted)
+- [x] **LOG-03**: All signal and trade data is append-only (never updated or deleted)
 
 ## v2 Requirements
 
@@ -104,7 +104,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DASH-04 | Phase 5 | Pending |
 | LOG-01 | Phase 4 | Pending |
 | LOG-02 | Phase 4 | Pending |
-| LOG-03 | Phase 1 | Pending |
+| LOG-03 | Phase 1 | Complete |
 
 **Coverage:**
 - v1 requirements: 25 total
