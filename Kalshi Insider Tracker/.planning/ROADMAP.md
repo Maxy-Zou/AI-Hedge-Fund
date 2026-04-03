@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2: Data Pipeline** - Polling loop ingests and persists market snapshots
 - [x] **Phase 3: Core Signal Detection** - Volume spike and price movement anomaly detectors (completed 2026-04-03)
 - [x] **Phase 4: Trade Execution** - Risk Guard + paper trading mode + live execution (completed 2026-04-03)
-- [ ] **Phase 5: Monitoring Dashboard** - Streamlit UI showing markets, signals, positions, P&L
+- [x] **Phase 5: Monitoring Dashboard** - Streamlit UI showing markets, signals, positions, P&L (completed 2026-04-03)
 - [ ] **Phase 6: Advanced Signals** - Timing cluster detector and win streak detector
 
 ## Phase Details
@@ -100,7 +100,7 @@ Plans:
 
 Plans:
 - [x] 05-01-PLAN.md — Add streamlit+pandas deps, implement read-only query layer (4 functions)
-- [ ] 05-02-PLAN.md — Build 4-panel Streamlit app, wire CLI dashboard command, verify in browser
+- [x] 05-02-PLAN.md — Build 4-panel Streamlit app, wire CLI dashboard command, verify in browser
 
 ### Phase 6: Advanced Signals
 **Goal**: The system detects suspicious timing clusters and win streak patterns, expanding anomaly coverage beyond Phase 3
@@ -123,5 +123,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 2. Data Pipeline | 1/2 | In Progress|  |
 | 3. Core Signal Detection | 3/3 | Complete   | 2026-04-03 |
 | 4. Trade Execution | 3/3 | Complete   | 2026-04-03 |
-| 5. Monitoring Dashboard | 1/2 | In Progress|  |
+| 5. Monitoring Dashboard | 2/2 | Complete   | 2026-04-03 |
 | 6. Advanced Signals | 0/TBD | Not started | - |
