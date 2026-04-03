@@ -110,7 +110,11 @@ Plans:
   1. System detects trades bunched in narrow windows before resolution and scores them as timing cluster signals
   2. Win streak detector is either fully functional (per-account history exposed by Kalshi API) or formally documented as infeasible with API evidence
   3. Both new signal types integrate with the existing confidence scoring and deduplication pipeline
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — RED tests: 7 failing tests for TimingClusterDetector (5), WinStreakDetector stub (1), engine registration (2)
+- [ ] 06-02-PLAN.md — Implementation: TimingClusterDetector + WinStreakDetector stub, SignalSettings fields, engine wiring + fetch limit fix
 
 ## Progress
 
@@ -124,4 +128,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 3. Core Signal Detection | 3/3 | Complete   | 2026-04-03 |
 | 4. Trade Execution | 3/3 | Complete   | 2026-04-03 |
 | 5. Monitoring Dashboard | 2/2 | Complete   | 2026-04-03 |
-| 6. Advanced Signals | 0/TBD | Not started | - |
+| 6. Advanced Signals | 0/2 | Not started | - |
