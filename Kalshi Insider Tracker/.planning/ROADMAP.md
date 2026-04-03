@@ -12,8 +12,8 @@ Six phases deliver a complete automated copy-trading daemon. Phase 1 establishes
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - DB schema, Kalshi API client, typed domain objects
-- [ ] **Phase 2: Data Pipeline** - Polling loop ingests and persists market snapshots
+- [x] **Phase 1: Foundation** - DB schema, Kalshi API client, typed domain objects (completed 2026-04-03)
+- [x] **Phase 2: Data Pipeline** - Polling loop ingests and persists market snapshots (completed 2026-04-03)
 - [x] **Phase 3: Core Signal Detection** - Volume spike and price movement anomaly detectors (completed 2026-04-03)
 - [x] **Phase 4: Trade Execution** - Risk Guard + paper trading mode + live execution (completed 2026-04-03)
 - [x] **Phase 5: Monitoring Dashboard** - Streamlit UI showing markets, signals, positions, P&L (completed 2026-04-03)
