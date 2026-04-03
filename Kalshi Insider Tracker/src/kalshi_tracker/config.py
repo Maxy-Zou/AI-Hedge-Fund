@@ -110,6 +110,10 @@ class SignalSettings(BaseSettings):
     resolution_blackout_minutes: int = 30
     min_confidence: float = 0.0
     signal_cooldown_seconds: int = 300
+    cluster_minutes: int = 30           # KALSHI_SIGNAL_CLUSTER_MINUTES
+    cluster_lookback_minutes: int = 120  # KALSHI_SIGNAL_CLUSTER_LOOKBACK_MINUTES
+    cluster_threshold: float = 0.6      # KALSHI_SIGNAL_CLUSTER_THRESHOLD
+    cluster_min_volume: int = 10        # KALSHI_SIGNAL_CLUSTER_MIN_VOLUME
 
 
 class ExecutionSettings(BaseSettings):

@@ -1,6 +1,6 @@
 """Signal detectors for Kalshi market anomaly detection.
 
-Two stateless detectors are provided:
+Four stateless detectors are provided:
 
 VolumeSpikeDetector — z-score on volume_24h over a rolling window.
     Returns DetectionResult when the latest snapshot's volume deviates
@@ -12,12 +12,27 @@ PriceMoveDetector — percentage move relative to recent price range.
     min/max range by more than move_pct_threshold multiples of that range.
     Confidence is clamped to [0.0, 1.0].
 
-Both detectors are pure functions wrapped in classes — no DB I/O, no state
-mutation, no side effects. They accept any list of objects with .volume_24h
-and .last_price attributes (duck typing, works with ORM rows and test mocks).
+TimingClusterDetector — burst volume concentration over a sliding window.
+    Returns DetectionResult when the fraction of total trading volume that
+    occurred within the most recent cluster_minutes window exceeds
+    cluster_threshold. Confidence is scaled linearly above the threshold.
+    Returns None when data is insufficient, market is dead, or distribution
+    is uniform (SIG-03).
+
+WinStreakDetector — infeasibility stub (SIG-04).
+    Always returns None. The Kalshi public API does not expose per-account
+    trade history, making win streak computation impossible without private
+    API access. Documented as formally infeasible.
+
+All detectors are pure functions wrapped in classes — no DB I/O, no state
+mutation, no side effects. They accept any list of objects with .volume_24h,
+.last_price, and .captured_at attributes (duck typing, works with ORM rows
+and test mocks).
 """
 
 from __future__ import annotations
+
+from datetime import timedelta
 
 import numpy as np
 import structlog
@@ -197,3 +212,158 @@ class PriceMoveDetector:
                 "prev_price": prev,
             },
         )
+
+
+class TimingClusterDetector:
+    """Detect burst volume concentration within a recent time window (SIG-03).
+
+    Algorithm:
+        1. Filter snapshots to the lookback window (oldest kept for baseline).
+        2. Compute volume deltas (consecutive differences, clamped to 0 for
+           reversals) to approximate per-snapshot volume increments.
+        3. If total_volume < min_total_volume, return None (dead market).
+        4. Compute concentration = recent_volume / total_volume, where
+           recent_volume sums deltas from snapshots within cluster_minutes of now.
+        5. If concentration <= cluster_threshold, return None (no burst anomaly).
+        6. confidence = clamp((concentration - threshold) / (1 - threshold), 0, 1).
+
+    Guards:
+        - Returns None if fewer than 12 snapshots in lookback window (min_snapshots).
+        - Returns None if total volume delta < min_total_volume (dead market).
+        - Returns None if concentration <= cluster_threshold (no anomaly).
+    """
+
+    _MIN_SNAPSHOTS: int = 12  # minimum snapshots in lookback window before firing
+
+    def __init__(
+        self,
+        cluster_minutes: int = 30,
+        lookback_minutes: int = 120,
+        cluster_threshold: float = 0.6,
+        min_total_volume: int = 10,
+    ) -> None:
+        """Initialize detector with configurable time windows and thresholds.
+
+        Args:
+            cluster_minutes: Length of the recent burst window in minutes. Volume
+                in this window is compared to the full lookback window. Defaults to 30.
+            lookback_minutes: Total lookback window in minutes for baseline volume.
+                Defaults to 120.
+            cluster_threshold: Minimum concentration ratio [0, 1] to fire a signal.
+                Defaults to 0.6.
+            min_total_volume: Minimum total volume delta required to produce a signal.
+                Markets below this threshold are considered dead. Defaults to 10.
+        """
+        self.cluster_minutes = cluster_minutes
+        self.lookback_minutes = lookback_minutes
+        self.cluster_threshold = cluster_threshold
+        self.min_total_volume = min_total_volume
+
+    def detect(self, snapshots: list) -> DetectionResult | None:
+        """Run timing cluster detection over the provided snapshots.
+
+        Args:
+            snapshots: List of objects with .volume_24h and .captured_at attributes.
+                Must be ordered oldest first. Must have at least 12 snapshots within
+                the lookback window to produce a result.
+
+        Returns:
+            DetectionResult with signal_type='timing_cluster' if a burst is detected,
+            None otherwise (insufficient data, dead market, or below threshold).
+        """
+        if not snapshots:
+            return None
+
+        now = snapshots[-1].captured_at
+        lookback_cutoff = now - timedelta(minutes=self.lookback_minutes)
+        cluster_cutoff = now - timedelta(minutes=self.cluster_minutes)
+
+        # Filter to lookback window only
+        window_snaps = [s for s in snapshots if s.captured_at >= lookback_cutoff]
+
+        # Guard: need at least min_snapshots to compute meaningful concentration
+        if len(window_snaps) < self._MIN_SNAPSHOTS:
+            return None
+
+        # Compute volume deltas (consecutive differences, clamp negatives to 0)
+        # delta[0] = 0 — no previous snapshot to diff against
+        deltas = [0] + [
+            max(window_snaps[i].volume_24h - window_snaps[i - 1].volume_24h, 0)
+            for i in range(1, len(window_snaps))
+        ]
+
+        total_volume = sum(deltas)
+
+        # Guard: dead market — no meaningful volume to analyze
+        if total_volume < self.min_total_volume:
+            return None
+
+        # Sum deltas for snapshots within the burst window (cluster_minutes of now)
+        recent_deltas = [
+            deltas[i]
+            for i, s in enumerate(window_snaps)
+            if s.captured_at >= cluster_cutoff
+        ]
+        recent_volume = sum(recent_deltas)
+
+        concentration = recent_volume / total_volume
+
+        # Guard: below threshold — no burst anomaly
+        if concentration <= self.cluster_threshold:
+            return None
+
+        # Scale confidence linearly above the threshold, clamped to [0, 1]
+        confidence = float(
+            min(
+                max(
+                    (concentration - self.cluster_threshold) / (1.0 - self.cluster_threshold),
+                    0.0,
+                ),
+                1.0,
+            )
+        )
+
+        logger.debug(
+            "timing_cluster_detected",
+            concentration=round(concentration, 4),
+            confidence=confidence,
+            recent_volume=recent_volume,
+            total_volume=total_volume,
+        )
+
+        return DetectionResult(
+            signal_type="timing_cluster",
+            confidence=confidence,
+            details={
+                "concentration": round(concentration, 4),
+                "recent_volume": recent_volume,
+                "total_volume": total_volume,
+                "cluster_minutes": self.cluster_minutes,
+            },
+        )
+
+
+class WinStreakDetector:
+    """Win streak signal — INFEASIBLE with Kalshi public API v2.0.0.
+
+    The Kalshi /markets/trades endpoint (MarketsApi.get_trades) returns
+    anonymized Trade objects. Complete field list from SDK v2.0.0:
+      trade_id, ticker, price, count, taker_side, created_time
+    No user_id, account_id, member_id, or trader_id field exists.
+
+    The /portfolio/fills endpoint (PortfolioApi.get_fills) returns fills for
+    the authenticated user only — it cannot query another account's activity.
+
+    No public leaderboard or per-account trade history endpoint exists in
+    any API module: markets_api, portfolio_api, events_api, exchange_api,
+    series_api, milestones_api.
+
+    This stub satisfies SIG-04's success criterion: "formally documented as
+    infeasible with API evidence." It is NOT registered in SignalEngine.
+
+    Source: .venv/lib/python3.13/site-packages/kalshi_python/models/trade.py
+    """
+
+    def detect(self, snapshots: list) -> DetectionResult | None:
+        """Always returns None — win streak detection is infeasible."""
+        return None
