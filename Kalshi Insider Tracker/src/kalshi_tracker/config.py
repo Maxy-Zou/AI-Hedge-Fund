@@ -88,6 +88,28 @@ class KalshiSettings(BaseSettings):
         return v
 
 
+class SignalSettings(BaseSettings):
+    """Signal detection thresholds and rolling window configuration.
+
+    Loaded from environment variables with KALSHI_SIGNAL_ prefix,
+    or from a .env file in the working directory.
+    """
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_prefix="KALSHI_SIGNAL_",
+        extra="ignore",
+    )
+
+    volume_z_threshold: float = 2.5
+    volume_window: int = 60
+    price_move_threshold: float = 0.15
+    price_window: int = 60
+    resolution_blackout_minutes: int = 30
+    min_confidence: float = 0.0
+    signal_cooldown_seconds: int = 300
+
+
 def load_app_settings() -> AppSettings:
     """Factory function to create and validate AppSettings from environment."""
     return AppSettings()
@@ -96,3 +118,8 @@ def load_app_settings() -> AppSettings:
 def load_kalshi_settings() -> KalshiSettings:
     """Factory function to create and validate KalshiSettings from environment."""
     return KalshiSettings()
+
+
+def load_signal_settings() -> SignalSettings:
+    """Factory function to create and validate SignalSettings from environment."""
+    return SignalSettings()
