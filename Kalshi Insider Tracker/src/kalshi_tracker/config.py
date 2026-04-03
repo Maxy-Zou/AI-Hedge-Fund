@@ -28,6 +28,26 @@ class AppSettings(BaseSettings):
 
     database_url: str
     log_level: str = "INFO"
+    poll_interval_seconds: int = 10   # DATA-02: poll every 5-10s; env: KALSHI_TRACKER_POLL_INTERVAL_SECONDS
+    warmup_snapshots: int = 60        # DATA-06: ~10 min baseline at 10s interval; env: KALSHI_TRACKER_WARMUP_SNAPSHOTS
+
+    @field_validator("poll_interval_seconds")
+    @classmethod
+    def poll_interval_must_be_positive(cls, v: int) -> int:
+        """Poll interval must be 1-60 seconds for realistic polling cadence."""
+        if v <= 0 or v > 60:
+            msg = "poll_interval_seconds must be between 1 and 60"
+            raise ValueError(msg)
+        return v
+
+    @field_validator("warmup_snapshots")
+    @classmethod
+    def warmup_snapshots_must_be_positive(cls, v: int) -> int:
+        """Warmup threshold must be > 0 — zero warmup bypasses baseline collection."""
+        if v <= 0:
+            msg = "warmup_snapshots must be > 0"
+            raise ValueError(msg)
+        return v
 
 
 class KalshiSettings(BaseSettings):
