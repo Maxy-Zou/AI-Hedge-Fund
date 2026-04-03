@@ -95,8 +95,12 @@ Plans:
   2. Dashboard shows a live feed of detected signals with type, confidence score, and timestamp, updating every ~10 seconds
   3. Dashboard shows all open positions with their current status
   4. Dashboard shows running P&L (realized + unrealized) across all trades
-**Plans**: TBD
+**Plans**: 2 plans
 **UI hint**: yes
+
+Plans:
+- [ ] 05-01-PLAN.md — Add streamlit+pandas deps, implement read-only query layer (4 functions)
+- [ ] 05-02-PLAN.md — Build 4-panel Streamlit app, wire CLI dashboard command, verify in browser
 
 ### Phase 6: Advanced Signals
 **Goal**: The system detects suspicious timing clusters and win streak patterns, expanding anomaly coverage beyond Phase 3
