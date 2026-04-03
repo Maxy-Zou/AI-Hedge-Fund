@@ -1,8 +1,10 @@
 """Application and Kalshi API configuration loaded from environment variables.
 
-Two settings classes:
+Three settings classes:
 - AppSettings: infrastructure config (database, logging) with KALSHI_TRACKER_ prefix
 - KalshiSettings: Kalshi API credentials and connection settings with KALSHI_ prefix
+- SignalSettings: signal detection thresholds with KALSHI_SIGNAL_ prefix
+- ExecutionSettings: trade execution config with KALSHI_EXEC_ prefix
 """
 
 from __future__ import annotations
@@ -110,6 +112,34 @@ class SignalSettings(BaseSettings):
     signal_cooldown_seconds: int = 300
 
 
+class ExecutionSettings(BaseSettings):
+    """Trade execution configuration: confidence threshold and mode override.
+
+    Loaded from environment variables with KALSHI_EXEC_ prefix,
+    or from a .env file in the working directory.
+
+    Note: Risk limits ($50/trade, $500 total) are code constants in risk_guard.py,
+          NOT config fields. Changing these values requires a code change (EXEC-03, EXEC-04).
+    """
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_prefix="KALSHI_EXEC_",
+        extra="ignore",
+    )
+
+    confidence_threshold: float = 0.6  # min confidence to trigger execution
+
+    @field_validator("confidence_threshold")
+    @classmethod
+    def confidence_must_be_valid(cls, v: float) -> float:
+        """Confidence threshold must be in [0, 1]."""
+        if not (0.0 <= v <= 1.0):
+            msg = "confidence_threshold must be between 0.0 and 1.0"
+            raise ValueError(msg)
+        return v
+
+
 def load_app_settings() -> AppSettings:
     """Factory function to create and validate AppSettings from environment."""
     return AppSettings()
@@ -123,3 +153,8 @@ def load_kalshi_settings() -> KalshiSettings:
 def load_signal_settings() -> SignalSettings:
     """Factory function to create and validate SignalSettings from environment."""
     return SignalSettings()
+
+
+def load_execution_settings() -> ExecutionSettings:
+    """Factory function to create and validate ExecutionSettings from environment."""
+    return ExecutionSettings()

@@ -32,6 +32,7 @@ from kalshi_tracker.kalshi.client import KalshiClient, RateLimitError
 from kalshi_tracker.kalshi.types import MarketSnapshot as DomainSnapshot
 
 if TYPE_CHECKING:
+    from kalshi_tracker.execution.executor import TradeExecutor
     from kalshi_tracker.signals.engine import SignalEngine
 
 logger = structlog.get_logger(__name__)
@@ -88,6 +89,7 @@ def make_poll_tick(
     session_factory: sessionmaker[Session],
     warmup: WarmupTracker,
     signal_engine: SignalEngine | None = None,
+    trade_executor: "TradeExecutor | None" = None,
 ) -> Callable[[], None]:
     """Factory returning the polling job function with injected dependencies.
 
@@ -100,6 +102,8 @@ def make_poll_tick(
         warmup: WarmupTracker to update after each successful tick.
         signal_engine: Optional SignalEngine for signal detection after each tick.
             Pass None (default) to disable signal detection — preserves backwards compat.
+        trade_executor: Optional TradeExecutor for executing signals after detection.
+            Pass None (default) to disable execution — paper/live controlled by executor.
 
     Returns:
         poll_tick: Zero-argument callable suitable for APScheduler job.
@@ -143,10 +147,21 @@ def make_poll_tick(
                 )
             for snap in snapshots:
                 try:
-                    signal_engine.run(
+                    signals = signal_engine.run(
                         snap.ticker,
                         close_time=close_time_map.get(snap.ticker),
                     )
+                    if trade_executor is not None:
+                        for signal in signals:
+                            try:
+                                trade_executor.execute(signal)
+                            except Exception:
+                                logger.warning(
+                                    "poll_tick_execution_error",
+                                    ticker=snap.ticker,
+                                    signal_id=str(signal.id),
+                                    exc_info=True,
+                                )
                 except Exception:
                     logger.warning("poll_tick_signal_error", ticker=snap.ticker, exc_info=True)
 
