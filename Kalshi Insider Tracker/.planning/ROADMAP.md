@@ -50,7 +50,7 @@ Plans:
 
 Plans:
 - [x] 02-01-PLAN.md — Setup: add apscheduler dependency, extend AppSettings config fields, create daemon package, write RED test scaffolding
-- [ ] 02-02-PLAN.md — Implementation: WarmupTracker, polling job + _to_orm translator, PollingDaemon scheduler, wire CLI start command
+- [x] 02-02-PLAN.md — Implementation: WarmupTracker, polling job + _to_orm translator, PollingDaemon scheduler, wire CLI start command
 
 ### Phase 3: Core Signal Detection
 **Goal**: The system detects volume spikes and sharp price movements and scores them with confidence values
