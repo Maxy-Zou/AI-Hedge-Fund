@@ -29,7 +29,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. The database schema physically separates settlement results from price observations — the `result` column is never populated for bars before `close_time`
   4. A data validation report is printed after each ingestion run showing coverage, gap count, and any anomalies detected
   5. All stored timestamps are UTC; running the CLI on any machine produces identical data regardless of local timezone
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Project scaffold, pyproject.toml, Wave 0 test stubs and fixture JSON files
+- [ ] 01-02-PLAN.md — DuckDB schema DDL, KalshiBacktestSettings config, Pydantic types, MarketRepository
+- [ ] 01-03-PLAN.md — Dual API clients (live SDK + historical httpx), CutoffResolver, fetchers
+- [ ] 01-04-PLAN.md — IngestionPipeline orchestrator, DataValidator with gap detection
+- [ ] 01-05-PLAN.md — CLI `ingest` command wiring all components; full phase test suite green
 
 ### Phase 2: Simulation Engine
 **Goal**: Any strategy implementing the Strategy Protocol can be replayed bar-by-bar against historical data with correct P&L, fees, and fill prices — and look-ahead bias is structurally impossible
@@ -73,7 +80,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Foundation | 0/? | Not started | - |
+| 1. Data Foundation | 0/5 | Not started | - |
 | 2. Simulation Engine | 0/? | Not started | - |
 | 3. Metrics and Reporting | 0/? | Not started | - |
 | 4. First Strategy Consumer | 0/? | Not started | - |
