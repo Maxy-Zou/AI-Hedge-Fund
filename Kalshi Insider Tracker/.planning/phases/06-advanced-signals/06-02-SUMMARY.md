@@ -80,7 +80,7 @@ Each task was committed atomically:
 1. **Task 1: Add SignalSettings cluster fields, implement TimingClusterDetector + WinStreakDetector** - `6ab946f` (feat)
 2. **Task 2: Wire TimingClusterDetector into SignalEngine and fix _fetch_snapshots limit** - `84439de` (feat)
 
-**Plan metadata:** (final commit below)
+**Plan metadata:** `e3018c8` (docs: complete plan)
 
 ## Files Created/Modified
 - `src/kalshi_tracker/signals/detectors.py` - Added TimingClusterDetector (concentration ratio algorithm) and WinStreakDetector (infeasibility stub with docstring); updated module docstring
