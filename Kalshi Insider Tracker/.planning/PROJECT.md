@@ -12,20 +12,20 @@ Detect and copy insider-like trades on Kalshi politics/policy markets before the
 
 ### Validated
 
-(None yet — ship to validate)
+- ✓ System polls Kalshi API every 5-10 seconds for politics/policy market activity — v1.0
+- ✓ Detect abnormal volume spikes relative to market baseline (z-score) — v1.0
+- ✓ Detect sharp price movements before event resolution (% range) — v1.0
+- ✓ Detect suspicious timing clusters (concentration ratio) — v1.0
+- ✓ Auto-execute copy trades when signal confidence exceeds threshold — v1.0
+- ✓ Enforce per-trade limit ($50) and total exposure limit ($500) as code constants — v1.0
+- ✓ Live dashboard showing monitored markets, active signals, and current positions — v1.0
+- ✓ Full trade log (every signal detected, every trade placed, outcomes) — v1.0
+- ✓ Running P&L tracking across all trades — v1.0
+- ✓ Win streak detection formally documented as infeasible (Kalshi API has no per-account data) — v1.0
 
 ### Active
 
-- [ ] System polls Kalshi API every 5-10 seconds for politics/policy market activity
-- [ ] Detect abnormal volume spikes relative to market baseline
-- [ ] Detect sharp price movements before event resolution
-- [ ] Detect accounts/patterns with unusual win streaks on low-liquidity markets
-- [ ] Detect suspicious timing clusters (trades bunched in narrow windows before resolution)
-- [ ] Auto-execute copy trades when signal confidence exceeds threshold
-- [ ] Enforce per-trade limit (~$50) and total exposure limit (~$500)
-- [ ] Live dashboard showing monitored markets, active signals, and current positions
-- [ ] Full trade log (every signal detected, every trade placed, outcomes)
-- [ ] Running P&L tracking across all trades
+(None — v1.0 shipped. Define new requirements with `/gsd:new-milestone`.)
 
 ### Out of Scope
 
@@ -57,10 +57,13 @@ Detect and copy insider-like trades on Kalshi politics/policy markets before the
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Politics/policy markets only | Insider knowledge most actionable and detectable in this category | -- Pending |
-| Polling over WebSocket | Simpler implementation, politics markets don't require sub-second latency | -- Pending |
-| Full auto-execution | User wants no human-in-the-loop; conservative limits mitigate risk | -- Pending |
-| All four signal types from day one | Volume, price, win streaks, timing — comprehensive detection vs. shipping one at a time | -- Pending |
+| Politics/policy markets only | Insider knowledge most actionable and detectable in this category | ✓ Good |
+| Polling over WebSocket | Simpler implementation, politics markets don't require sub-second latency | ✓ Good |
+| Full auto-execution | User wants no human-in-the-loop; conservative limits mitigate risk | ✓ Good |
+| All four signal types from day one | Volume, price, win streaks, timing — comprehensive detection vs. shipping one at a time | ⚠️ Revisit — win streak infeasible due to Kalshi API |
+| Risk limits as code constants | $50/trade, $500 total as module-level constants, not config | ✓ Good |
+| APScheduler over Prefect | Sub-minute polling needs APScheduler; Prefect is for batch | ✓ Good |
+| Win streak formally infeasible | Kalshi SDK Trade model has no account identifier | ✓ Good — documented with evidence |
 
 ## Evolution
 
@@ -80,4 +83,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-02 after initialization*
+*Last updated: 2026-04-03 after v1.0 milestone*
