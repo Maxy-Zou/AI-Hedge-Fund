@@ -2,7 +2,7 @@
 
 Provides:
     duckdb_con: In-memory DuckDB connection with schema applied (reusable fixture).
-    load_fixture: Helper to load JSON fixture files from tests/fixtures/.
+    load_fixture: Fixture factory returning a callable that loads JSON fixture files.
 """
 from __future__ import annotations
 
@@ -29,21 +29,35 @@ def duckdb_con() -> duckdb.DuckDBPyConnection:
     return con
 
 
-def load_fixture(name: str) -> dict | list:
-    """Load a JSON fixture file from tests/fixtures/.
+@pytest.fixture()
+def load_fixture():
+    """Fixture factory: returns a callable that loads JSON fixtures from tests/fixtures/.
 
-    Args:
-        name: Filename without path (e.g. 'markets.json').
+    Usage in tests:
+        def test_something(load_fixture):
+            data = load_fixture("markets.json")
 
     Returns:
-        Parsed JSON content as dict or list.
-
-    Raises:
-        FileNotFoundError: If the fixture file does not exist.
+        Callable[[str], dict | list]: loads and parses the named JSON file.
     """
-    path = FIXTURES_DIR / name
-    with path.open() as f:
-        return json.load(f)
+
+    def _load(name: str) -> dict | list:
+        """Load a JSON fixture file from tests/fixtures/.
+
+        Args:
+            name: Filename without path (e.g. 'markets.json').
+
+        Returns:
+            Parsed JSON content as dict or list.
+
+        Raises:
+            FileNotFoundError: If the fixture file does not exist.
+        """
+        path = FIXTURES_DIR / name
+        with path.open() as f:
+            return json.load(f)
+
+    return _load
 
 
 __all__ = ["SCHEMA_DDL", "duckdb_con", "load_fixture"]
