@@ -79,36 +79,36 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | Pending | Pending |
-| DATA-02 | Pending | Pending |
-| DATA-03 | Pending | Pending |
-| DATA-04 | Pending | Pending |
-| DATA-05 | Pending | Pending |
-| DATA-06 | Pending | Pending |
-| SIM-01 | Pending | Pending |
-| SIM-02 | Pending | Pending |
-| SIM-03 | Pending | Pending |
-| SIM-04 | Pending | Pending |
-| SIM-05 | Pending | Pending |
-| SIM-06 | Pending | Pending |
-| SIM-07 | Pending | Pending |
-| MET-01 | Pending | Pending |
-| MET-02 | Pending | Pending |
-| MET-03 | Pending | Pending |
-| MET-04 | Pending | Pending |
-| MET-05 | Pending | Pending |
-| MET-06 | Pending | Pending |
-| MET-07 | Pending | Pending |
-| STRAT-01 | Pending | Pending |
-| STRAT-02 | Pending | Pending |
-| CLI-01 | Pending | Pending |
-| CLI-02 | Pending | Pending |
+| DATA-01 | Phase 1 | Pending |
+| DATA-02 | Phase 1 | Pending |
+| DATA-03 | Phase 1 | Pending |
+| DATA-04 | Phase 1 | Pending |
+| DATA-05 | Phase 1 | Pending |
+| DATA-06 | Phase 1 | Pending |
+| CLI-01 | Phase 1 | Pending |
+| SIM-01 | Phase 2 | Pending |
+| SIM-02 | Phase 2 | Pending |
+| SIM-03 | Phase 2 | Pending |
+| SIM-04 | Phase 2 | Pending |
+| SIM-05 | Phase 2 | Pending |
+| SIM-06 | Phase 2 | Pending |
+| SIM-07 | Phase 2 | Pending |
+| CLI-02 | Phase 2 | Pending |
+| MET-01 | Phase 3 | Pending |
+| MET-02 | Phase 3 | Pending |
+| MET-03 | Phase 3 | Pending |
+| MET-05 | Phase 3 | Pending |
+| MET-06 | Phase 3 | Pending |
+| MET-07 | Phase 3 | Pending |
+| STRAT-01 | Phase 4 | Pending |
+| STRAT-02 | Phase 4 | Pending |
+| MET-04 | Phase 4 | Pending |
 
 **Coverage:**
 - v1 requirements: 24 total
-- Mapped to phases: 0
-- Unmapped: 24 (pending roadmap creation)
+- Mapped to phases: 24
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-04*
-*Last updated: 2026-04-04 after initial definition*
+*Last updated: 2026-04-04 after roadmap creation*
