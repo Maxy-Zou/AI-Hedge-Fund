@@ -128,3 +128,12 @@ None. The only stub in this plan (`return {}` in `_build_auth_headers()`) has be
 ---
 *Phase: 01-data-foundation*
 *Completed: 2026-04-05*
+
+## Self-Check: PASSED
+
+- FOUND: `src/kalshi_backtest/ingestion/client.py`
+- FOUND: `tests/test_ingest.py`
+- FOUND: `tests/test_coverage_boost.py`
+- FOUND: `.planning/phases/01-data-foundation/01-06-SUMMARY.md`
+- FOUND commit: `639f639` (feat: implement RSA-PSS auth headers)
+- FOUND commit: `5844773` (docs: complete gap closure)
