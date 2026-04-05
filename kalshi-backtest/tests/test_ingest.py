@@ -1,8 +1,9 @@
 """Tests for ingestion clients and fetchers — DATA-01, DATA-02, DATA-04."""
 from __future__ import annotations
 
+import time
 from datetime import datetime
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from kalshi_backtest.ingestion.cutoff import CutoffResult, HistoricalCutoffResolver
 from kalshi_backtest.ingestion.types import CandlestickRecord
@@ -108,3 +109,82 @@ def test_idempotent_ingest(duckdb_con, load_fixture):
 
     count = repo.count_candles("KXBTCD-25JAN31-T99999")
     assert count == len(candles), f"Expected {len(candles)} rows, got {count} (duplicates detected)"
+
+
+# ── Gap closure: RSA-PSS auth headers ──────────────────────────────────────
+
+
+def _make_rsa_key_and_settings(tmp_path):
+    """Generate a real RSA private key and return (key_path, settings_mock)."""
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    key_path = tmp_path / "test_key.pem"
+    key_path.write_bytes(
+        private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption(),
+        )
+    )
+    settings = MagicMock()
+    settings.api_key_id = "test-key-id"
+    settings.private_key_path = key_path
+    settings.rate_limit_rpm = 60
+    return key_path, settings
+
+
+def test_historical_auth_headers_are_non_empty(tmp_path):
+    """Gap closure DATA-01: _get_auth_headers() returns dict with all 3 Kalshi auth keys."""
+    from kalshi_backtest.ingestion.client import KalshiHistoricalClient
+
+    _, settings = _make_rsa_key_and_settings(tmp_path)
+    client = KalshiHistoricalClient(settings)
+    url = "https://api.elections.kalshi.com/trade-api/v2/historical/markets"
+    headers = client._get_auth_headers("GET", url)
+
+    assert headers, "Auth headers must not be empty"
+    assert "KALSHI-ACCESS-KEY" in headers
+    assert "KALSHI-ACCESS-SIGNATURE" in headers
+    assert "KALSHI-ACCESS-TIMESTAMP" in headers
+    assert headers["KALSHI-ACCESS-KEY"] == "test-key-id"
+    assert len(headers["KALSHI-ACCESS-SIGNATURE"]) > 0
+
+
+def test_historical_auth_headers_are_per_request(tmp_path):
+    """Gap closure: KALSHI-ACCESS-TIMESTAMP is live per call — not cached from init."""
+    from kalshi_backtest.ingestion.client import KalshiHistoricalClient
+
+    _, settings = _make_rsa_key_and_settings(tmp_path)
+    client = KalshiHistoricalClient(settings)
+    url = "https://api.elections.kalshi.com/trade-api/v2/historical/markets"
+
+    h1 = client._get_auth_headers("GET", url)
+    time.sleep(0.02)  # 20ms gap — timestamp must differ
+    h2 = client._get_auth_headers("GET", url)
+
+    assert h1["KALSHI-ACCESS-TIMESTAMP"] != h2["KALSHI-ACCESS-TIMESTAMP"], (
+        "Timestamp must be fresh on each call — not cached at init"
+    )
+
+
+def test_historical_get_candlesticks_sends_auth_headers(tmp_path):
+    """Gap closure DATA-01: get_candlesticks() passes non-empty auth headers to httpx.get()."""
+    from kalshi_backtest.ingestion.client import KalshiHistoricalClient
+
+    _, settings = _make_rsa_key_and_settings(tmp_path)
+    client = KalshiHistoricalClient(settings)
+
+    mock_resp = MagicMock()
+    mock_resp.json.return_value = {"candlesticks": []}
+    mock_resp.raise_for_status.return_value = None
+
+    with patch.object(client._http, "get", return_value=mock_resp) as mock_get:
+        client.get_candlesticks("KXBTCD-25JAN31-T99999", 1700000000, 1710000000)
+
+    call_kwargs = mock_get.call_args.kwargs
+    headers_sent = call_kwargs.get("headers", {})
+    assert "KALSHI-ACCESS-KEY" in headers_sent, (
+        f"httpx.get() was called with headers={headers_sent!r} — expected Kalshi auth headers"
+    )

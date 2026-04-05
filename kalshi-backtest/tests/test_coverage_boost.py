@@ -420,7 +420,13 @@ class TestHistoricalClientParsing:
         client = KalshiHistoricalClient.__new__(KalshiHistoricalClient)
         client._rate_bucket = MagicMock()
         client._rate_bucket.consume.return_value = None
-        client._auth_headers = {}
+        mock_kalshi_auth = MagicMock()
+        mock_kalshi_auth.create_auth_headers.return_value = {
+            "KALSHI-ACCESS-KEY": "k",
+            "KALSHI-ACCESS-SIGNATURE": "s",
+            "KALSHI-ACCESS-TIMESTAMP": "t",
+        }
+        client._kalshi_auth = mock_kalshi_auth
         mock_http = MagicMock()
         mock_http.get.return_value = mock_response
         client._http = mock_http
@@ -448,7 +454,13 @@ class TestHistoricalClientParsing:
         client = KalshiHistoricalClient.__new__(KalshiHistoricalClient)
         client._rate_bucket = MagicMock()
         client._rate_bucket.consume.return_value = None
-        client._auth_headers = {}
+        mock_kalshi_auth = MagicMock()
+        mock_kalshi_auth.create_auth_headers.return_value = {
+            "KALSHI-ACCESS-KEY": "k",
+            "KALSHI-ACCESS-SIGNATURE": "s",
+            "KALSHI-ACCESS-TIMESTAMP": "t",
+        }
+        client._kalshi_auth = mock_kalshi_auth
         mock_http = MagicMock()
         mock_http.get.return_value = mock_response
         client._http = mock_http

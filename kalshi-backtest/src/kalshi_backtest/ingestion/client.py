@@ -128,36 +128,30 @@ class KalshiHistoricalClient:
     """
 
     def __init__(self, settings: KalshiBacktestSettings) -> None:
+        from kalshi_python.api_client import KalshiAuth
+
         self._settings = settings
         self._http = httpx.Client(timeout=30.0)
         self._rate_bucket = _TokenBucket(settings.rate_limit_rpm)
-        self._auth_headers = self._build_auth_headers()
-
-    def _build_auth_headers(self) -> dict[str, str]:
-        """Build RSA-PSS auth headers for direct httpx calls.
-
-        Delegates to the SDK's auth mechanism by constructing a throwaway
-        ApiClient and extracting the signed headers. This ensures the same
-        RSA-PSS algorithm as live endpoints.
-
-        Note: At implementation time, verify that kalshi_python.ApiClient
-        exposes a sign_request() method or equivalent. If not, use the
-        Insider Tracker's kalshi/client.py sign_request() implementation
-        as reference — it uses cryptography.hazmat.primitives.asymmetric.padding.PSS.
-        """
-        from kalshi_python import ApiClient, Configuration
-
-        config = Configuration(host=_HISTORICAL_BASE)
-        api_client = ApiClient(configuration=config)
-        api_client.set_kalshi_auth(
+        self._kalshi_auth = KalshiAuth(
             key_id=self._settings.api_key_id,
             private_key_path=str(self._settings.private_key_path),
         )
-        # The SDK patches the client's sign_request method — extract auth header builder
-        # Implementation detail: check api_client.configuration.api_key_prefix or
-        # api_client.call_api for the signing hook. At runtime, verify against live API.
-        # Fallback: copy sign_request() from Insider Tracker client.py.
-        return {}  # TODO: wire SDK signing into httpx headers at implementation time
+
+    def _get_auth_headers(self, method: str, url: str) -> dict[str, str]:
+        """Build per-request RSA-PSS auth headers via the SDK's KalshiAuth signer.
+
+        Must be called per request — KALSHI-ACCESS-TIMESTAMP embeds current time.
+        Reusing headers across requests will cause 401 due to timestamp replay rejection.
+
+        Args:
+            method: HTTP method (e.g., "GET").
+            url: Full URL being requested (path is extracted internally by KalshiAuth).
+
+        Returns:
+            Dict with KALSHI-ACCESS-KEY, KALSHI-ACCESS-SIGNATURE, KALSHI-ACCESS-TIMESTAMP.
+        """
+        return self._kalshi_auth.create_auth_headers(method, url)
 
     @retry(
         stop=stop_after_attempt(3),
@@ -185,7 +179,7 @@ class KalshiHistoricalClient:
         resp = self._http.get(
             url,
             params={"start_ts": start_ts, "end_ts": end_ts, "period_interval": _DAILY_INTERVAL},
-            headers=self._auth_headers,
+            headers=self._get_auth_headers("GET", url),
         )
         resp.raise_for_status()
         data = resp.json()
@@ -237,7 +231,7 @@ class KalshiHistoricalClient:
         resp = self._http.get(
             f"{_HISTORICAL_BASE}/historical/markets",
             params=params,
-            headers=self._auth_headers,
+            headers=self._get_auth_headers("GET", f"{_HISTORICAL_BASE}/historical/markets"),
         )
         resp.raise_for_status()
         data = resp.json()
