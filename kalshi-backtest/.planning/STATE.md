@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-data-foundation/01-06-PLAN.md
-last_updated: "2026-04-05T23:26:52.627Z"
+stopped_at: Completed 02-simulation-engine/02-01-PLAN.md
+last_updated: "2026-04-05T23:50:15.861Z"
 last_activity: 2026-04-05
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
+  total_plans: 11
+  completed_plans: 7
+  percent: 64
 ---
 
 # Project State
@@ -21,12 +21,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** Accurately simulate any Kalshi trading strategy against historical data so you can validate signal quality and optimize parameters before risking real capital.
-**Current focus:** Phase 1 — Data Foundation
+**Current focus:** Phase 2 — Simulation Engine
 
 ## Current Position
 
-Phase: 2
-Plan: Not started
+Phase: 2 (Simulation Engine) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
 Last activity: 2026-04-05
 
@@ -56,6 +56,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-data-foundation P04 | 824 | 2 tasks | 5 files |
 | Phase 01-data-foundation P05 | 45 | 2 tasks | 18 files |
 | Phase 01-data-foundation P06 | 16 | 1 tasks | 3 files |
+| Phase 02-simulation-engine P01 | 15 | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -76,6 +77,9 @@ Recent decisions affecting current work:
 - [Phase 01-data-foundation]: numpy added alongside pandas — DuckDB numeric array support requires both
 - [Phase 01-data-foundation]: Use KalshiAuth.create_auth_headers() directly — SDK exposes RSA-PSS signing cleanly without needing to port it manually
 - [Phase 01-data-foundation]: Per-request signing in _get_auth_headers(method, url) — KALSHI-ACCESS-TIMESTAMP must be fresh per request to avoid 401 replay rejection
+- [Phase 02-simulation-engine]: Strategy uses typing.Protocol (not ABC) — strategies implement generate_signals() without importing engine internals
+- [Phase 02-simulation-engine]: MarketSnapshot is passive container — BarIterator controls suppress_result flag, not the model itself
+- [Phase 02-simulation-engine]: _to_naive_utc duplicated in simulation layer intentionally to keep simulation decoupled from ingestion internals
 
 ### Pending Todos
 
@@ -89,6 +93,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-05T23:25:58.388Z
-Stopped at: Completed 01-data-foundation/01-06-PLAN.md
+Last session: 2026-04-05T23:50:15.858Z
+Stopped at: Completed 02-simulation-engine/02-01-PLAN.md
 Resume file: None
