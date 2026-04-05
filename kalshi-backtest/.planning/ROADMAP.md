@@ -48,7 +48,14 @@ Plans:
   3. Fee calculations match the exact Kalshi formula `ceil(0.07 * C * P * (1-P))` — verified by unit tests against known contract sizes and prices
   4. Fills use ask price for buys and bid price for sells with a minimum spread floor applied — no midpoint fills
   5. Running `kalshi-backtest run --lookback 90d` executes a full backtest and prints a summary of trades and P&L
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Simulation type contracts: Strategy Protocol, Signal, Position, MarketSnapshot
+- [ ] 02-02-PLAN.md — BarIterator (lookahead prevention) and FillEngine (fee formula, fill model, P&L)
+- [ ] 02-03-PLAN.md — PositionTracker (open/close lifecycle) and BacktestRunner (full bar-by-bar loop)
+- [ ] 02-04-PLAN.md — ParameterSweeper (grid sweep) and WalkForwardValidator (rolling splits)
+- [ ] 02-05-PLAN.md — CLI `run` command with --lookback-days and --dry-run (CLI-02)
 
 ### Phase 3: Metrics and Reporting
 **Goal**: After any backtest run, an investor-useful performance summary and interactive dashboard are generated automatically
@@ -81,6 +88,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Data Foundation | 6/6 | Complete    | 2026-04-05 |
-| 2. Simulation Engine | 0/? | Not started | - |
+| 2. Simulation Engine | 0/5 | Not started | - |
 | 3. Metrics and Reporting | 0/? | Not started | - |
 | 4. First Strategy Consumer | 0/? | Not started | - |
