@@ -43,7 +43,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### CLI
 
-- [ ] **CLI-01**: CLI entry point for running backtests, data ingestion, and viewing results
+- [x] **CLI-01**: CLI entry point for running backtests, data ingestion, and viewing results
 - [ ] **CLI-02**: Configurable lookback window per backtest run (default ~1 year)
 
 ## v2 Requirements
@@ -85,7 +85,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-04 | Phase 1 | Complete |
 | DATA-05 | Phase 1 | Complete |
 | DATA-06 | Phase 1 | Complete |
-| CLI-01 | Phase 1 | Pending |
+| CLI-01 | Phase 1 | Complete |
 | SIM-01 | Phase 2 | Pending |
 | SIM-02 | Phase 2 | Pending |
 | SIM-03 | Phase 2 | Pending |

@@ -12,7 +12,7 @@ Four phases deliver a complete strategy-agnostic backtesting engine for Kalshi p
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Data Foundation** - Ingest historical Kalshi contract data into a lookahead-safe, append-only DuckDB store
+- [x] **Phase 1: Data Foundation** - Ingest historical Kalshi contract data into a lookahead-safe, append-only DuckDB store (completed 2026-04-05)
 - [ ] **Phase 2: Simulation Engine** - Bar-by-bar replay with Strategy Protocol, exact fee formula, and conservative fill model
 - [ ] **Phase 3: Metrics and Reporting** - Turn the fill stream into performance metrics, trade logs, and an interactive dashboard
 - [ ] **Phase 4: First Strategy Consumer** - Insider Tracker adapter and example template prove the Strategy Protocol end-to-end
@@ -36,7 +36,7 @@ Plans:
 - [x] 01-02-PLAN.md — DuckDB schema DDL, KalshiBacktestSettings config, Pydantic types, MarketRepository
 - [x] 01-03-PLAN.md — Dual API clients (live SDK + historical httpx), CutoffResolver, fetchers
 - [x] 01-04-PLAN.md — IngestionPipeline orchestrator, DataValidator with gap detection
-- [ ] 01-05-PLAN.md — CLI `ingest` command wiring all components; full phase test suite green
+- [x] 01-05-PLAN.md — CLI `ingest` command wiring all components; full phase test suite green
 
 ### Phase 2: Simulation Engine
 **Goal**: Any strategy implementing the Strategy Protocol can be replayed bar-by-bar against historical data with correct P&L, fees, and fill prices — and look-ahead bias is structurally impossible
@@ -80,7 +80,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Foundation | 4/5 | In Progress|  |
+| 1. Data Foundation | 5/5 | Complete   | 2026-04-05 |
 | 2. Simulation Engine | 0/? | Not started | - |
 | 3. Metrics and Reporting | 0/? | Not started | - |
 | 4. First Strategy Consumer | 0/? | Not started | - |
