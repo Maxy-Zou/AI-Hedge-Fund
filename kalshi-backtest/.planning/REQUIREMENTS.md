@@ -9,8 +9,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Data Ingestion
 
-- [ ] **DATA-01**: Ingest historical market and contract data from Kalshi API (all event categories)
-- [ ] **DATA-02**: Handle live/historical API tier split with runtime cutoff resolution
+- [x] **DATA-01**: Ingest historical market and contract data from Kalshi API (all event categories)
+- [x] **DATA-02**: Handle live/historical API tier split with runtime cutoff resolution
 - [ ] **DATA-03**: Store contract snapshots in append-only DuckDB with lookahead-safe schema (settlement result physically separated from price observations)
 - [ ] **DATA-04**: Support incremental sync — only fetch new data on subsequent runs
 - [ ] **DATA-05**: Validate ingested data — gap detection, anomaly alerting, coverage reporting
@@ -79,8 +79,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DATA-01 | Phase 1 | Pending |
-| DATA-02 | Phase 1 | Pending |
+| DATA-01 | Phase 1 | Complete |
+| DATA-02 | Phase 1 | Complete |
 | DATA-03 | Phase 1 | Pending |
 | DATA-04 | Phase 1 | Pending |
 | DATA-05 | Phase 1 | Pending |
