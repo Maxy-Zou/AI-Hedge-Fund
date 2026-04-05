@@ -80,7 +80,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Foundation | 5/5 | Complete   | 2026-04-05 |
+| 1. Data Foundation | 6/6 | Complete   | 2026-04-05 |
 | 2. Simulation Engine | 0/? | Not started | - |
 | 3. Metrics and Reporting | 0/? | Not started | - |
 | 4. First Strategy Consumer | 0/? | Not started | - |

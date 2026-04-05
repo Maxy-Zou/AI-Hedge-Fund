@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 01-data-foundation/01-05-PLAN.md
-last_updated: "2026-04-05T23:09:24.213Z"
+stopped_at: Completed 01-data-foundation/01-06-PLAN.md
+last_updated: "2026-04-05T23:25:58.390Z"
 last_activity: 2026-04-05
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 5
-  completed_plans: 5
+  total_plans: 6
+  completed_plans: 6
   percent: 100
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Phase: 1 (Data Foundation) — EXECUTING
-Plan: 4 of 5
+Plan: 5 of 5
 Status: Ready to execute
 Last activity: 2026-04-05
 
@@ -55,6 +55,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-data-foundation P03 | 20 | 2 tasks | 7 files |
 | Phase 01-data-foundation P04 | 824 | 2 tasks | 5 files |
 | Phase 01-data-foundation P05 | 45 | 2 tasks | 18 files |
+| Phase 01-data-foundation P06 | 16 | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -73,6 +74,8 @@ Recent decisions affecting current work:
 - [Phase 01-data-foundation]: pandas added as explicit dep — fetchdf() requires it; was missing causing runtime failures in get_markets()/get_candles()
 - [Phase 01-data-foundation]: CLI test invocation: runner.invoke(app, []) not runner.invoke(app, ["ingest"]) — Typer single-command app has no subcommand prefix
 - [Phase 01-data-foundation]: numpy added alongside pandas — DuckDB numeric array support requires both
+- [Phase 01-data-foundation]: Use KalshiAuth.create_auth_headers() directly — SDK exposes RSA-PSS signing cleanly without needing to port it manually
+- [Phase 01-data-foundation]: Per-request signing in _get_auth_headers(method, url) — KALSHI-ACCESS-TIMESTAMP must be fresh per request to avoid 401 replay rejection
 
 ### Pending Todos
 
@@ -86,6 +89,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-05T23:09:24.210Z
-Stopped at: Completed 01-data-foundation/01-05-PLAN.md
+Last session: 2026-04-05T23:25:58.388Z
+Stopped at: Completed 01-data-foundation/01-06-PLAN.md
 Resume file: None
