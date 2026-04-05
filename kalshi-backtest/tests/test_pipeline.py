@@ -2,9 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import MagicMock
 
 from kalshi_backtest.ingestion.types import CandlestickRecord, MarketRecord
 
@@ -95,7 +93,9 @@ def test_pipeline_incremental_sync_skips_existing_candles(duckdb_con):
     # Verify get_last_candle_ts was called on second run (incremental sync check)
     assert candle_fetcher.fetch_for_market.call_count == 2
     _, kwargs = candle_fetcher.fetch_for_market.call_args
-    assert kwargs.get("last_ingested_ts") is not None or candle_fetcher.fetch_for_market.call_args[1].get("last_ingested_ts") is not None or len(candle_fetcher.fetch_for_market.call_args[0]) >= 3
+    last_ts_kwarg = kwargs.get("last_ingested_ts")
+    positional_args = candle_fetcher.fetch_for_market.call_args[0]
+    assert last_ts_kwarg is not None or len(positional_args) >= 3
 
 
 def test_pipeline_lookahead_protection_non_settled_market(duckdb_con):

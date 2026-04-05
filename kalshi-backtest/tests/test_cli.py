@@ -4,11 +4,9 @@ from __future__ import annotations
 import os
 from unittest.mock import MagicMock, patch
 
-import pytest
 from typer.testing import CliRunner
 
 from kalshi_backtest.cli import app
-
 
 runner = CliRunner()
 

@@ -18,7 +18,6 @@ import structlog
 
 from kalshi_backtest.ingestion.types import CandlestickRecord, MarketRecord
 
-
 logger = structlog.get_logger(__name__)
 
 _INSERT_MARKET = """

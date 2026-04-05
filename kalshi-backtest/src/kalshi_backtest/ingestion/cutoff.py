@@ -16,7 +16,6 @@ import httpx
 import structlog
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
-
 logger = structlog.get_logger(__name__)
 
 _HISTORICAL_CUTOFF_URL = "https://api.elections.kalshi.com/trade-api/v2/historical/cutoff"

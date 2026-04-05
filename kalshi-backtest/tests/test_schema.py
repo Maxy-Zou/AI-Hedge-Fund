@@ -10,7 +10,7 @@ Covers:
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import duckdb
 import pytest
@@ -97,17 +97,22 @@ class TestMarketUpsert:
         count = mem_db.execute("SELECT COUNT(*) FROM markets WHERE ticker = 'KXBTC-25'").fetchone()
         assert count[0] == 1
 
-    def test_null_result_for_unsettled_market(self, repo, mem_db: duckdb.DuckDBPyConnection) -> None:
+    def test_null_result_for_unsettled_market(  # noqa: E501
+        self, repo, mem_db: duckdb.DuckDBPyConnection
+    ) -> None:
         """Unsettled market stores NULL in result column (lookahead_safe_schema)."""
         repo.upsert_market(_make_market("KXBTC-25", status="active", result=None))
         row = mem_db.execute("SELECT result FROM markets WHERE ticker = 'KXBTC-25'").fetchone()
         assert row[0] is None
 
-    def test_upsert_updates_status_and_result(self, repo, mem_db: duckdb.DuckDBPyConnection) -> None:
+    def test_upsert_updates_status_and_result(  # noqa: E501
+        self, repo, mem_db: duckdb.DuckDBPyConnection
+    ) -> None:
         """upsert_market overwrites status and result on conflict (settled market)."""
         repo.upsert_market(_make_market("KXBTC-25", status="active", result=None))
         repo.upsert_market(_make_market("KXBTC-25", status="settled", result="yes"))
-        row = mem_db.execute("SELECT status, result FROM markets WHERE ticker = 'KXBTC-25'").fetchone()
+        query = "SELECT status, result FROM markets WHERE ticker = 'KXBTC-25'"
+        row = mem_db.execute(query).fetchone()
         assert row[0] == "settled"
         assert row[1] == "yes"
 
@@ -186,7 +191,7 @@ class TestDstTimestampRoundtrip:
         assert len(rows) == 1
         stored_ts = rows[0][0]
         # DuckDB returns naive datetime — verify it equals original naive UTC
-        expected = datetime.fromtimestamp(ts_epoch, tz=timezone.utc).replace(tzinfo=None)
+        expected = datetime.fromtimestamp(ts_epoch, tz=UTC).replace(tzinfo=None)
         assert stored_ts == expected
 
 

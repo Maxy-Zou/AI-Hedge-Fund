@@ -1,11 +1,7 @@
 """Tests for DataValidator — DATA-05."""
 from __future__ import annotations
 
-from datetime import datetime
-
-import pytest
-
-from kalshi_backtest.ingestion.validator import DataValidator, ValidationReport
+from kalshi_backtest.ingestion.validator import DataValidator
 
 
 def test_gap_detection_finds_missing_days(duckdb_con):

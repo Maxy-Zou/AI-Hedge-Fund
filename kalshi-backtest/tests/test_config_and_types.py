@@ -8,7 +8,7 @@ Covers:
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -71,7 +71,7 @@ class TestCandlestickRecord:
         """CandlestickRecord strips tzinfo from tz-aware ts field."""
         from kalshi_backtest.ingestion.types import CandlestickRecord
 
-        ts_aware = datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
+        ts_aware = datetime(2025, 1, 1, 0, 0, 0, tzinfo=UTC)
         record = CandlestickRecord(ticker="X", ts=ts_aware, close_price=42)
         assert record.ts.tzinfo is None
 
@@ -101,7 +101,7 @@ class TestCandlestickRecord:
         from kalshi_backtest.ingestion.types import CandlestickRecord
 
         record = CandlestickRecord(ticker="X", ts=1735689600, close_price=50)
-        with pytest.raises(Exception):  # ValidationError or TypeError for frozen models
+        with pytest.raises((TypeError, ValueError)):  # frozen model raises TypeError
             record.close_price = 60  # type: ignore[misc]
 
 
@@ -112,8 +112,8 @@ class TestMarketRecord:
         """MarketRecord strips tzinfo from all datetime fields on construction."""
         from kalshi_backtest.ingestion.types import MarketRecord
 
-        open_time = datetime(2025, 1, 1, tzinfo=timezone.utc)
-        close_time = datetime(2025, 12, 31, tzinfo=timezone.utc)
+        open_time = datetime(2025, 1, 1, tzinfo=UTC)
+        close_time = datetime(2025, 12, 31, tzinfo=UTC)
         record = MarketRecord(
             ticker="KXBTC-25",
             event_ticker="KXBTC",
@@ -151,5 +151,5 @@ class TestMarketRecord:
             close_time=datetime(2025, 12, 31),
             status="active",
         )
-        with pytest.raises(Exception):
+        with pytest.raises((TypeError, ValueError)):  # frozen model raises TypeError
             record.status = "closed"  # type: ignore[misc]

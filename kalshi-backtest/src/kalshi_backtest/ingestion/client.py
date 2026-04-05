@@ -18,9 +18,8 @@ import structlog
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from kalshi_backtest.config import KalshiBacktestSettings
-from kalshi_backtest.ingestion.cutoff import CutoffResult, HistoricalCutoffResolver
+from kalshi_backtest.ingestion.cutoff import HistoricalCutoffResolver
 from kalshi_backtest.ingestion.types import CandlestickRecord, MarketRecord
-
 
 logger = structlog.get_logger(__name__)
 

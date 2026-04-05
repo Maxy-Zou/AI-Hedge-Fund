@@ -14,7 +14,6 @@ from pathlib import Path
 
 import duckdb
 
-
 SCHEMA_DDL = """
 CREATE TABLE IF NOT EXISTS markets (
     ticker          VARCHAR NOT NULL PRIMARY KEY,

@@ -4,11 +4,8 @@ from __future__ import annotations
 from datetime import datetime
 from unittest.mock import MagicMock
 
-import pytest
-
 from kalshi_backtest.ingestion.cutoff import CutoffResult, HistoricalCutoffResolver
-from kalshi_backtest.ingestion.types import CandlestickRecord, MarketRecord
-
+from kalshi_backtest.ingestion.types import CandlestickRecord
 
 # ── DATA-01: live + historical client parse fixture responses ─────────────────
 

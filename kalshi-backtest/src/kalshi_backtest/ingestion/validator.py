@@ -19,7 +19,6 @@ import structlog
 from rich.console import Console
 from rich.table import Table
 
-
 logger = structlog.get_logger(__name__)
 _console = Console()
 

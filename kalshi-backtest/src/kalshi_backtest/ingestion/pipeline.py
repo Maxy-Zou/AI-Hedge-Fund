@@ -20,8 +20,6 @@ import structlog
 
 from kalshi_backtest.db.repository import MarketRepository
 from kalshi_backtest.ingestion.fetcher import CandlestickFetcher, MarketFetcher
-from kalshi_backtest.ingestion.types import MarketRecord
-
 
 logger = structlog.get_logger(__name__)
 

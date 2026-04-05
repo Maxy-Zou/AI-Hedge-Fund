@@ -14,7 +14,6 @@ import pytest
 
 from kalshi_backtest.db.schema import SCHEMA_DDL, apply_schema
 
-
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 

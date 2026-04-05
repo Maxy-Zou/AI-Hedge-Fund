@@ -17,7 +17,6 @@ import structlog
 from kalshi_backtest.ingestion.client import KalshiClientRouter, KalshiHistoricalClient
 from kalshi_backtest.ingestion.types import CandlestickRecord, MarketRecord
 
-
 logger = structlog.get_logger(__name__)
 
 

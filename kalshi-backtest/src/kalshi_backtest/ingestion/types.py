@@ -8,7 +8,7 @@ Design: frozen=True enforces immutability — fund-wide convention.
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, field_validator
 
@@ -20,7 +20,7 @@ def _to_naive_utc(dt: datetime) -> datetime:
     columns store naive UTC — strip tzinfo before writing.
     """
     if dt.tzinfo is not None:
-        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+        return dt.astimezone(UTC).replace(tzinfo=None)
     return dt
 
 
@@ -76,7 +76,7 @@ class CandlestickRecord(BaseModel):
         if isinstance(v, int):
             # Convert Unix epoch to naive UTC datetime. fromtimestamp with UTC then strip tzinfo
             # to match DuckDB TIMESTAMP (naive UTC) storage convention.
-            return datetime.fromtimestamp(v, tz=timezone.utc).replace(tzinfo=None)
+            return datetime.fromtimestamp(v, tz=UTC).replace(tzinfo=None)
         return _to_naive_utc(v)
 
     @field_validator("close_price", "open_price", "high_price", "low_price", mode="before")
