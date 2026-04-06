@@ -54,7 +54,7 @@ Plans:
 - [x] 02-01-PLAN.md — Simulation type contracts: Strategy Protocol, Signal, Position, MarketSnapshot
 - [x] 02-02-PLAN.md — BarIterator (lookahead prevention) and FillEngine (fee formula, fill model, P&L)
 - [x] 02-03-PLAN.md — PositionTracker (open/close lifecycle) and BacktestRunner (full bar-by-bar loop)
-- [ ] 02-04-PLAN.md — ParameterSweeper (grid sweep) and WalkForwardValidator (rolling splits)
+- [x] 02-04-PLAN.md — ParameterSweeper (grid sweep) and WalkForwardValidator (rolling splits)
 - [ ] 02-05-PLAN.md — CLI `run` command with --lookback-days and --dry-run (CLI-02)
 
 ### Phase 3: Metrics and Reporting
@@ -88,6 +88,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Data Foundation | 6/6 | Complete    | 2026-04-05 |
-| 2. Simulation Engine | 2/5 | In Progress|  |
+| 2. Simulation Engine | 4/5 | In Progress|  |
 | 3. Metrics and Reporting | 0/? | Not started | - |
 | 4. First Strategy Consumer | 0/? | Not started | - |

@@ -23,8 +23,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **SIM-03**: Exact Kalshi fee formula: `ceil(0.07 * C * P * (1-P))`
 - [x] **SIM-04**: Conservative fill model with spread-aware execution
 - [x] **SIM-05**: Binary P&L calculation — hold-to-settlement ($0/$1 payoff) and pre-resolution exit (mark-to-market)
-- [ ] **SIM-06**: Parameter grid sweep — test multiple strategy configurations in a single run
-- [ ] **SIM-07**: Walk-forward validation — rolling train/test splits to detect overfitting
+- [x] **SIM-06**: Parameter grid sweep — test multiple strategy configurations in a single run
+- [x] **SIM-07**: Walk-forward validation — rolling train/test splits to detect overfitting
 
 ### Metrics & Reporting
 
@@ -91,8 +91,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SIM-03 | Phase 2 | Complete |
 | SIM-04 | Phase 2 | Complete |
 | SIM-05 | Phase 2 | Complete |
-| SIM-06 | Phase 2 | Pending |
-| SIM-07 | Phase 2 | Pending |
+| SIM-06 | Phase 2 | Complete |
+| SIM-07 | Phase 2 | Complete |
 | CLI-02 | Phase 2 | Pending |
 | MET-01 | Phase 3 | Pending |
 | MET-02 | Phase 3 | Pending |
