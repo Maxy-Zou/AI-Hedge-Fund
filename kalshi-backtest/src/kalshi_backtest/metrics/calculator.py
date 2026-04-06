@@ -61,23 +61,23 @@ class BacktestMetrics(BaseModel):
 
     model_config = ConfigDict(frozen=True, arbitrary_types_allowed=True)
 
-    run_id: str
-    strategy_name: str
-    start_date: str
-    end_date: str
-    total_return_pct: float
-    cagr_pct: float
-    sharpe: float
-    sortino: float
-    max_drawdown_pct: float
-    win_rate_pct: float
-    avg_trade_pnl_cents: float
-    profit_factor: float
-    total_trades: int
-    settled_markets: int
-    sample_size_warning: bool
-    equity_curve: pd.Series
-    daily_returns: pd.Series
+    run_id: str = ""
+    strategy_name: str = ""
+    start_date: str = ""
+    end_date: str = ""
+    total_return_pct: float = 0.0
+    cagr_pct: float = 0.0
+    sharpe: float = 0.0
+    sortino: float = 0.0
+    max_drawdown_pct: float = 0.0
+    win_rate_pct: float = 0.0
+    avg_trade_pnl_cents: float = 0.0
+    profit_factor: float = 0.0
+    total_trades: int = 0
+    settled_markets: int = 0
+    sample_size_warning: bool = False
+    equity_curve: pd.Series = pd.Series(dtype=float)
+    daily_returns: pd.Series = pd.Series(dtype=float)
 
 
 # ---------------------------------------------------------------------------
