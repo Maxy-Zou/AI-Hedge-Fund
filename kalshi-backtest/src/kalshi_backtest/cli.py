@@ -50,6 +50,7 @@ _SCALAR_ROWS = [
     ("Profit Factor", lambda m: f"{m.profit_factor:.3f}"),
     ("Total Trades", lambda m: str(m.total_trades)),
     ("Settled Markets", lambda m: str(m.settled_markets)),
+    ("Brier Score", lambda m: f"{m.brier_score:.4f}" if m.brier_score is not None else "N/A"),
 ]
 
 
@@ -254,10 +255,15 @@ def run(
         "--output-dir",
         help="Write trade_log.csv and dashboard.html to this directory.",
     ),
+    strategy_name: str = typer.Option(
+        "pass-through",
+        "--strategy",
+        help="Strategy to use: pass-through, example, insider-tracker (default: pass-through)",
+    ),
 ) -> None:
     """Run a backtest against historical Kalshi contract data.
 
-    Uses a naive pass-through stub strategy for demonstration.
+    Uses the selected strategy (default: pass-through) to generate signals.
     Replace with a real Strategy implementation to evaluate signal quality.
 
     Loads credentials from environment variables (or .env file):
@@ -308,12 +314,34 @@ def run(
     fill_engine = FillEngine(spread_floor=1)
     runner_obj = BacktestRunner(repo=repo, fill_engine=fill_engine)
 
-    # Stub strategy — always passes (no signals generated). Replace in Phase 4.
-    class _PassThroughStrategy:
-        def generate_signals(self, snapshot, open_positions):  # type: ignore[override]
-            return []
+    # Dispatch to STRATEGY_REGISTRY
+    from kalshi_backtest.strategies import STRATEGY_REGISTRY
 
-    strategy = _PassThroughStrategy()
+    if strategy_name not in STRATEGY_REGISTRY:
+        _console.print(
+            f"[red]Unknown strategy:[/red] {strategy_name!r}. "
+            f"Available: {', '.join(STRATEGY_REGISTRY)}"
+        )
+        raise typer.Exit(code=1)
+
+    strategy_cls = STRATEGY_REGISTRY[strategy_name]
+
+    # InsiderTrackerAdapter requires KALSHI_TRACKER_DATABASE_URL
+    if strategy_name == "insider-tracker":
+        import os
+
+        tracker_db_url = os.environ.get("KALSHI_TRACKER_DATABASE_URL")
+        if not tracker_db_url:
+            _console.print(
+                "[red]Configuration error:[/red] KALSHI_TRACKER_DATABASE_URL is not set.\n"
+                "  The insider-tracker strategy requires access to the Insider Tracker PostgreSQL database.\n"
+                "  Set KALSHI_TRACKER_DATABASE_URL in your .env file."
+            )
+            raise typer.Exit(code=1)
+        strategy = strategy_cls(database_url=tracker_db_url)
+    else:
+        strategy = strategy_cls()
+
     _console.print(f"[bold]Starting backtest:[/bold] last {lookback_days} days")
 
     result = runner_obj.run(
@@ -372,8 +400,18 @@ def compare(
         "--output-dir",
         help="Write per-strategy HTML dashboards to this directory.",
     ),
+    strategy_a_name: str = typer.Option(
+        "pass-through",
+        "--strategy-a",
+        help="First strategy (default: pass-through)",
+    ),
+    strategy_b_name: str = typer.Option(
+        "example",
+        "--strategy-b",
+        help="Second strategy (default: example)",
+    ),
 ) -> None:
-    """Run two stub strategies side-by-side and print a Rich comparison table.
+    """Run two strategies side-by-side and print a Rich comparison table.
 
     In dry-run mode, prints the comparison table with zero-valued metrics for
     StrategyA and StrategyB without loading credentials or accessing the database.
@@ -421,24 +459,36 @@ def compare(
     repo = MarketRepository(con)
     fill_engine = FillEngine(spread_floor=1)
 
-    class _PassThroughStrategy:
-        def __init__(self, name: str) -> None:
-            self._name = name
+    from kalshi_backtest.strategies import STRATEGY_REGISTRY
 
-        @property
-        def name(self) -> str:
-            return self._name
+    strategies_to_run = []
+    for sname in (strategy_a_name, strategy_b_name):
+        if sname not in STRATEGY_REGISTRY:
+            _console.print(
+                f"[red]Unknown strategy:[/red] {sname!r}. "
+                f"Available: {', '.join(STRATEGY_REGISTRY)}"
+            )
+            raise typer.Exit(code=1)
+        strategy_cls = STRATEGY_REGISTRY[sname]
+        if sname == "insider-tracker":
+            import os
 
-        def generate_signals(self, snapshot, open_positions):  # type: ignore[override]
-            return []
-
-    strategy_a = _PassThroughStrategy("StrategyA")
-    strategy_b = _PassThroughStrategy("StrategyB")
+            tracker_db_url = os.environ.get("KALSHI_TRACKER_DATABASE_URL")
+            if not tracker_db_url:
+                _console.print(
+                    "[red]Configuration error:[/red] KALSHI_TRACKER_DATABASE_URL is not set.\n"
+                    "  The insider-tracker strategy requires access to the Insider Tracker PostgreSQL database.\n"
+                    "  Set KALSHI_TRACKER_DATABASE_URL in your .env file."
+                )
+                raise typer.Exit(code=1)
+            strategies_to_run.append((sname, strategy_cls(database_url=tracker_db_url)))
+        else:
+            strategies_to_run.append((sname, strategy_cls()))
 
     all_metrics = []
-    for strat in (strategy_a, strategy_b):
+    for sname, strat in strategies_to_run:
         runner_obj = BacktestRunner(repo=repo, fill_engine=fill_engine)
-        _console.print(f"[bold]Running {strat.name}...[/bold]")
+        _console.print(f"[bold]Running {sname}...[/bold]")
         result = runner_obj.run(
             strategy=strat,
             start_date=start_date,
@@ -446,9 +496,9 @@ def compare(
             series_tickers=series_list,
         )
         metrics = MetricsCalculator().compute(result)
-        # Override strategy_name from the strat object (stub result may not carry it)
-        metrics = metrics.model_copy(update={"strategy_name": strat.name})
-        all_metrics.append((strat.name, metrics, result))
+        # Override strategy_name using the registry key name
+        metrics = metrics.model_copy(update={"strategy_name": sname})
+        all_metrics.append((sname, metrics, result))
 
     print_comparison_table([m for _, m, _ in all_metrics], _console)
 
