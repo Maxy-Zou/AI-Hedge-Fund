@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-simulation-engine/02-01-PLAN.md
-last_updated: "2026-04-05T23:50:15.861Z"
-last_activity: 2026-04-05
+stopped_at: Completed 02-simulation-engine/02-02-PLAN.md
+last_updated: "2026-04-06T00:01:12.461Z"
+last_activity: 2026-04-06
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 11
-  completed_plans: 7
-  percent: 64
+  completed_plans: 8
+  percent: 73
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Phase: 2 (Simulation Engine) — EXECUTING
-Plan: 2 of 5
+Plan: 3 of 5
 Status: Ready to execute
-Last activity: 2026-04-05
+Last activity: 2026-04-06
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -57,6 +57,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-data-foundation P05 | 45 | 2 tasks | 18 files |
 | Phase 01-data-foundation P06 | 16 | 1 tasks | 3 files |
 | Phase 02-simulation-engine P01 | 15 | 3 tasks | 4 files |
+| Phase 02-simulation-engine P02 | 8 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -80,6 +81,8 @@ Recent decisions affecting current work:
 - [Phase 02-simulation-engine]: Strategy uses typing.Protocol (not ABC) — strategies implement generate_signals() without importing engine internals
 - [Phase 02-simulation-engine]: MarketSnapshot is passive container — BarIterator controls suppress_result flag, not the model itself
 - [Phase 02-simulation-engine]: _to_naive_utc duplicated in simulation layer intentionally to keep simulation decoupled from ingestion internals
+- [Phase 02-simulation-engine]: calculate_fee_cents minimum 1 cent floor — fee of 0 would misrepresent cost in edge-case price ranges
+- [Phase 02-simulation-engine]: calculate_settlement_pnl raises ValueError for void result — BacktestRunner handles void markets, not FillEngine
 
 ### Pending Todos
 
@@ -93,6 +96,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-05T23:50:15.858Z
-Stopped at: Completed 02-simulation-engine/02-01-PLAN.md
+Last session: 2026-04-06T00:01:12.458Z
+Stopped at: Completed 02-simulation-engine/02-02-PLAN.md
 Resume file: None

@@ -20,9 +20,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **SIM-01**: Strategy Protocol interface — implement `generate_signals()` to plug in any strategy
 - [x] **SIM-02**: Bar-by-bar replay engine that prevents look-ahead bias (settlement result hidden until after close_time)
-- [ ] **SIM-03**: Exact Kalshi fee formula: `ceil(0.07 * C * P * (1-P))`
-- [ ] **SIM-04**: Conservative fill model with spread-aware execution
-- [ ] **SIM-05**: Binary P&L calculation — hold-to-settlement ($0/$1 payoff) and pre-resolution exit (mark-to-market)
+- [x] **SIM-03**: Exact Kalshi fee formula: `ceil(0.07 * C * P * (1-P))`
+- [x] **SIM-04**: Conservative fill model with spread-aware execution
+- [x] **SIM-05**: Binary P&L calculation — hold-to-settlement ($0/$1 payoff) and pre-resolution exit (mark-to-market)
 - [ ] **SIM-06**: Parameter grid sweep — test multiple strategy configurations in a single run
 - [ ] **SIM-07**: Walk-forward validation — rolling train/test splits to detect overfitting
 
@@ -88,9 +88,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLI-01 | Phase 1 | Complete |
 | SIM-01 | Phase 2 | Complete |
 | SIM-02 | Phase 2 | Complete |
-| SIM-03 | Phase 2 | Pending |
-| SIM-04 | Phase 2 | Pending |
-| SIM-05 | Phase 2 | Pending |
+| SIM-03 | Phase 2 | Complete |
+| SIM-04 | Phase 2 | Complete |
+| SIM-05 | Phase 2 | Complete |
 | SIM-06 | Phase 2 | Pending |
 | SIM-07 | Phase 2 | Pending |
 | CLI-02 | Phase 2 | Pending |
