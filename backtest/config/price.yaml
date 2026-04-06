@@ -1,9 +1,0 @@
-# Price data download configuration
-# batch_sleep_secs: seconds to sleep between yfinance batch requests
-# Increase to 3.0 for first bulk download (200-400 tickers) to avoid 429 errors
-# After initial load, 1.0 is sufficient for daily incremental updates
-price:
-  batch_sleep_secs: 3.0
-  batch_size: 80
-  lookback_years: 5
-  coverage_alert_threshold: 0.95

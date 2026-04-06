@@ -1,6 +1,0 @@
-universe:
-  market_cap_min_cents: 200000000000   # $2B in cents
-  market_cap_max_cents: 1000000000000  # $10B in cents
-  seed_url: "https://en.wikipedia.org/wiki/List_of_S%26P_400_companies"
-  yfinance_delay_secs: 1.0
-  yfinance_max_retries: 3
