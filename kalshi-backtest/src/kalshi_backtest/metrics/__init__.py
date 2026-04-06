@@ -8,5 +8,6 @@ Public exports:
 from __future__ import annotations
 
 from kalshi_backtest.metrics.calculator import BacktestMetrics, MetricsCalculator
+from kalshi_backtest.metrics.trade_log import export_trade_log
 
-__all__ = ["BacktestMetrics", "MetricsCalculator"]
+__all__ = ["BacktestMetrics", "MetricsCalculator", "export_trade_log"]
