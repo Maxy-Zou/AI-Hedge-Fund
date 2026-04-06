@@ -86,7 +86,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Wave 0 RED test scaffolds: test_strategies.py, brier score tests, --strategy CLI test
+- [x] 04-01-PLAN.md — Wave 0 RED test scaffolds: test_strategies.py, brier score tests, --strategy CLI test
 - [ ] 04-02-PLAN.md — strategies/ module: ExampleStrategy (STRAT-02) + InsiderTrackerAdapter (STRAT-01)
 - [ ] 04-03-PLAN.md — Brier score in BacktestMetrics/MetricsCalculator (MET-04) + --strategy CLI flag
 
@@ -100,4 +100,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Data Foundation | 6/6 | Complete    | 2026-04-05 |
 | 2. Simulation Engine | 5/5 | Complete    | 2026-04-06 |
 | 3. Metrics and Reporting | 4/4 | Complete    | 2026-04-06 |
-| 4. First Strategy Consumer | 0/3 | Not started | - |
+| 4. First Strategy Consumer | 1/3 | In Progress|  |

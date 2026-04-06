@@ -237,7 +237,7 @@ v1.1: 9 → 10 → 11 → 12 (parallel with 11) → 13
 |-------|----------------|--------|-----------|
 | 1. Universe and Sector Data | 3/3 | Complete | 2026-03-28 |
 | 2. Price Data Pipeline | 4/4 | Complete | 2026-03-29 |
-| 3. Signal Adapter and Integration Contract | 2/2 | Complete | 2026-03-29 |
+| 3. Signal Adapter and Integration Contract | 2/2 | Complete   | 2026-04-06 |
 | 4. Cost Model and Portfolio Simulator | 2/2 | Complete | 2026-03-29 |
 | 5. Risk Metrics Engine | 2/2 | Complete | 2026-03-29 |
 | 6. Streamlit Dashboard | 3/3 | Complete | 2026-03-29 |
