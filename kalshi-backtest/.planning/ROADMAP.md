@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Data Foundation** - Ingest historical Kalshi contract data into a lookahead-safe, append-only DuckDB store (completed 2026-04-05)
 - [x] **Phase 2: Simulation Engine** - Bar-by-bar replay with Strategy Protocol, exact fee formula, and conservative fill model (completed 2026-04-06)
 - [x] **Phase 3: Metrics and Reporting** - Turn the fill stream into performance metrics, trade logs, and an interactive dashboard (completed 2026-04-06)
-- [ ] **Phase 4: First Strategy Consumer** - Insider Tracker adapter and example template prove the Strategy Protocol end-to-end
+- [x] **Phase 4: First Strategy Consumer** - Insider Tracker adapter and example template prove the Strategy Protocol end-to-end (completed 2026-04-06)
 
 ## Phase Details
 
@@ -88,7 +88,7 @@ Plans:
 Plans:
 - [x] 04-01-PLAN.md — Wave 0 RED test scaffolds: test_strategies.py, brier score tests, --strategy CLI test
 - [x] 04-02-PLAN.md — strategies/ module: ExampleStrategy (STRAT-02) + InsiderTrackerAdapter (STRAT-01)
-- [ ] 04-03-PLAN.md — Brier score in BacktestMetrics/MetricsCalculator (MET-04) + --strategy CLI flag
+- [x] 04-03-PLAN.md — Brier score in BacktestMetrics/MetricsCalculator (MET-04) + --strategy CLI flag
 
 ## Progress
 
@@ -100,4 +100,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 | 1. Data Foundation | 6/6 | Complete    | 2026-04-05 |
 | 2. Simulation Engine | 5/5 | Complete    | 2026-04-06 |
 | 3. Metrics and Reporting | 4/4 | Complete    | 2026-04-06 |
-| 4. First Strategy Consumer | 2/3 | In Progress|  |
+| 4. First Strategy Consumer | 3/3 | Complete   | 2026-04-06 |

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-first-strategy-consumer/04-02-PLAN.md
-last_updated: "2026-04-06T04:04:37.741Z"
+stopped_at: Completed 04-first-strategy-consumer/04-03-PLAN.md
+last_updated: "2026-04-06T04:25:36.884Z"
 last_activity: 2026-04-06
 progress:
   total_phases: 4
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 18
-  completed_plans: 17
-  percent: 94
+  completed_plans: 18
+  percent: 100
 ---
 
 # Project State
@@ -110,6 +110,8 @@ Recent decisions affecting current work:
 - [Phase 04-first-strategy-consumer]: SimpleNamespace used for MarketSnapshot stand-ins in strategy test scaffold to avoid import coupling
 - [Phase 04-first-strategy-consumer]: buy_threshold parameter name matches test scaffold (not entry_threshold as plan text suggested)
 - [Phase 04-first-strategy-consumer]: InsiderTrackerAdapter details column: isinstance(details, dict) guard handles SQLite TEXT (JSON string) and PostgreSQL JSONB (dict) transparently
+- [Phase 04-first-strategy-consumer]: brier_score is float | None — None distinguishes no settlement data from perfect calibration (0.0)
+- [Phase 04-first-strategy-consumer]: STRATEGY_REGISTRY dispatch replaces all inline _PassThroughStrategy stubs in CLI
 
 ### Pending Todos
 
@@ -123,6 +125,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-06T04:04:37.739Z
-Stopped at: Completed 04-first-strategy-consumer/04-02-PLAN.md
+Last session: 2026-04-06T04:25:36.881Z
+Stopped at: Completed 04-first-strategy-consumer/04-03-PLAN.md
 Resume file: None
