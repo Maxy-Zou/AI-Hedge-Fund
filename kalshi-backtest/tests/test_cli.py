@@ -133,3 +133,23 @@ def test_compare_dry_run_shows_both_strategies():
     assert result.exit_code == 0
     assert "StrategyA" in result.output, f"Expected 'StrategyA' in output: {result.output}"
     assert "StrategyB" in result.output, f"Expected 'StrategyB' in output: {result.output}"
+
+
+# ---------------------------------------------------------------------------
+# CLI STRAT-01/02: --strategy flag tests
+# ---------------------------------------------------------------------------
+# This test will fail RED until Plan 04-03 wires the --strategy flag into the
+# `run` command and registers strategy names in the CLI.
+# ---------------------------------------------------------------------------
+
+
+def test_run_strategy_flag_dry_run():
+    """CLI STRAT: `run --strategy pass-through --dry-run` exits 0.
+
+    The --strategy flag selects a named strategy to run. 'pass-through' is the
+    built-in default strategy. This test will fail RED until Plan 04-03 adds
+    the --strategy option to the `run` command.
+    """
+    result = runner.invoke(app, ["run", "--strategy", "pass-through", "--dry-run"])
+
+    assert result.exit_code == 0, f"Expected exit 0, got {result.exit_code}: {result.output}"

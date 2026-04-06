@@ -193,3 +193,199 @@ def test_empty_result_no_error(empty_backtest_result: BacktestResult) -> None:
     assert isinstance(metrics, BacktestMetrics)
     assert metrics.total_return_pct == 0.0
     assert metrics.sample_size_warning is True
+
+
+# ---------------------------------------------------------------------------
+# Tests — MET-04 Brier score
+# ---------------------------------------------------------------------------
+# These tests will fail RED until Plan 04-03 adds brier_score to BacktestMetrics
+# and the corresponding computation to MetricsCalculator.compute().
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def brier_trade_log_yes_settlement() -> BacktestResult:
+    """BacktestResult with one settled YES trade at 60 cents.
+
+    Entry price 60 cents = 0.6 probability. Settlement at YES (exit=100).
+    Brier score = (0.6 - 1.0)^2 = 0.16
+    """
+    trade_log = pd.DataFrame(
+        {
+            "ticker": ["KXBTC-A"],
+            "direction": ["yes"],
+            "contracts": [1],
+            "entry_price": [60],
+            "entry_ts": [datetime(2024, 1, 10)],
+            "exit_price": [100],
+            "exit_ts": [datetime(2024, 1, 10, 16)],
+            "pnl_cents": [400],
+            "fee_cents": [5],
+            "exit_reason": ["settlement"],
+        }
+    )
+    daily_pnl = pd.Series({date(2024, 1, 10): 400}, dtype=int)
+    return BacktestResult(
+        run_id="brier-yes-001",
+        strategy_name="TestStrategy",
+        start_date=datetime(2024, 1, 1),
+        end_date=datetime(2024, 1, 31),
+        trade_log=trade_log,
+        daily_pnl=daily_pnl,
+        total_pnl_cents=400,
+        total_fees_cents=5,
+        settled_contracts=1,
+        open_contracts=0,
+    )
+
+
+@pytest.fixture()
+def brier_trade_log_no_settlement() -> BacktestResult:
+    """BacktestResult with one settled NO trade at 40 cents.
+
+    Entry price 40 cents on NO side. Implied YES probability = 1 - 0.40 = 0.60.
+    Settlement at NO (exit=0 from YES perspective, meaning NO settled correctly).
+    Brier score for NO trade: (0.60 - 1.0)^2 = 0.16
+    """
+    trade_log = pd.DataFrame(
+        {
+            "ticker": ["KXBTC-B"],
+            "direction": ["no"],
+            "contracts": [1],
+            "entry_price": [40],
+            "entry_ts": [datetime(2024, 1, 11)],
+            "exit_price": [0],
+            "exit_ts": [datetime(2024, 1, 11, 16)],
+            "pnl_cents": [600],
+            "fee_cents": [5],
+            "exit_reason": ["settlement"],
+        }
+    )
+    daily_pnl = pd.Series({date(2024, 1, 11): 600}, dtype=int)
+    return BacktestResult(
+        run_id="brier-no-001",
+        strategy_name="TestStrategy",
+        start_date=datetime(2024, 1, 1),
+        end_date=datetime(2024, 1, 31),
+        trade_log=trade_log,
+        daily_pnl=daily_pnl,
+        total_pnl_cents=600,
+        total_fees_cents=5,
+        settled_contracts=1,
+        open_contracts=0,
+    )
+
+
+@pytest.fixture()
+def brier_trade_log_mtm_only() -> BacktestResult:
+    """BacktestResult with only mark-to-market exits (no settlements).
+
+    brier_score must be None — cannot compute without settled trades.
+    """
+    trade_log = pd.DataFrame(
+        {
+            "ticker": ["KXBTC-C"],
+            "direction": ["yes"],
+            "contracts": [1],
+            "entry_price": [50],
+            "entry_ts": [datetime(2024, 1, 12)],
+            "exit_price": [55],
+            "exit_ts": [datetime(2024, 1, 12, 16)],
+            "pnl_cents": [50],
+            "fee_cents": [5],
+            "exit_reason": ["mark-to-market"],
+        }
+    )
+    daily_pnl = pd.Series({date(2024, 1, 12): 50}, dtype=int)
+    return BacktestResult(
+        run_id="brier-mtm-001",
+        strategy_name="TestStrategy",
+        start_date=datetime(2024, 1, 1),
+        end_date=datetime(2024, 1, 31),
+        trade_log=trade_log,
+        daily_pnl=daily_pnl,
+        total_pnl_cents=50,
+        total_fees_cents=5,
+        settled_contracts=0,
+        open_contracts=0,
+    )
+
+
+@pytest.fixture()
+def brier_trade_log_mixed() -> BacktestResult:
+    """BacktestResult mixing settlement and mark-to-market rows.
+
+    Only settlement rows should contribute to the Brier score computation.
+    """
+    trade_log = pd.DataFrame(
+        {
+            "ticker": ["KXBTC-D", "KXBTC-E"],
+            "direction": ["yes", "yes"],
+            "contracts": [1, 1],
+            "entry_price": [60, 50],
+            "entry_ts": [datetime(2024, 1, 13), datetime(2024, 1, 13)],
+            "exit_price": [100, 55],
+            "exit_ts": [datetime(2024, 1, 13, 16), datetime(2024, 1, 13, 16)],
+            "pnl_cents": [400, 50],
+            "fee_cents": [5, 5],
+            "exit_reason": ["settlement", "mark-to-market"],
+        }
+    )
+    daily_pnl = pd.Series({date(2024, 1, 13): 450}, dtype=int)
+    return BacktestResult(
+        run_id="brier-mixed-001",
+        strategy_name="TestStrategy",
+        start_date=datetime(2024, 1, 1),
+        end_date=datetime(2024, 1, 31),
+        trade_log=trade_log,
+        daily_pnl=daily_pnl,
+        total_pnl_cents=450,
+        total_fees_cents=10,
+        settled_contracts=1,
+        open_contracts=0,
+    )
+
+
+def test_brier_score_yes_settlement(brier_trade_log_yes_settlement: BacktestResult) -> None:
+    """MET-04: YES trade at 60 cents settling YES → brier_score ≈ 0.16.
+
+    Probability implied by entry: 60/100 = 0.60.
+    Outcome: YES settled = 1.0.
+    Brier = (0.60 - 1.0)^2 = 0.16
+    """
+    metrics = MetricsCalculator().compute(brier_trade_log_yes_settlement)
+    # brier_score attribute will fail RED until Plan 04-03 adds it to BacktestMetrics
+    assert metrics.brier_score is not None
+    assert abs(metrics.brier_score - 0.16) < 1e-6
+
+
+def test_brier_score_no_settlement(brier_trade_log_no_settlement: BacktestResult) -> None:
+    """MET-04: NO trade at 40 cents settling NO → brier_score ≈ 0.16.
+
+    Entry price 40 on NO side → implied YES probability = 1 - 0.40 = 0.60.
+    NO settled means YES outcome = 0.0.
+    Brier = (0.60 - 0.0)^2 = 0.36... wait — that's the YES side.
+    For a NO trade: predicted NO probability = 1 - entry/100 = 0.60.
+    Actual NO outcome = 1.0 (NO settled).
+    Brier = (0.60 - 1.0)^2 = 0.16
+    """
+    metrics = MetricsCalculator().compute(brier_trade_log_no_settlement)
+    assert metrics.brier_score is not None
+    assert abs(metrics.brier_score - 0.16) < 1e-6
+
+
+def test_brier_score_none_when_no_settlement(brier_trade_log_mtm_only: BacktestResult) -> None:
+    """MET-04: All exit_reason='mark-to-market' → brier_score is None."""
+    metrics = MetricsCalculator().compute(brier_trade_log_mtm_only)
+    assert metrics.brier_score is None
+
+
+def test_brier_score_excludes_mtm(brier_trade_log_mixed: BacktestResult) -> None:
+    """MET-04: Mixed settlement and mark-to-market → only settlement rows counted.
+
+    The mark-to-market row (KXBTC-E at 50 cents) must not contribute.
+    Only KXBTC-D (YES at 60 cents, settled YES) contributes → brier_score ≈ 0.16.
+    """
+    metrics = MetricsCalculator().compute(brier_trade_log_mixed)
+    assert metrics.brier_score is not None
+    assert abs(metrics.brier_score - 0.16) < 1e-6
