@@ -28,13 +28,13 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Metrics & Reporting
 
-- [ ] **MET-01**: Core metrics — total return, Sharpe, Sortino, max drawdown, win rate, avg trade P&L, CAGR
-- [ ] **MET-02**: Trade log — every entry/exit with timestamps, prices, contract details, fees paid
-- [ ] **MET-03**: Equity curve visualization
+- [x] **MET-01**: Core metrics — total return, Sharpe, Sortino, max drawdown, win rate, avg trade P&L, CAGR
+- [x] **MET-02**: Trade log — every entry/exit with timestamps, prices, contract details, fees paid
+- [x] **MET-03**: Equity curve visualization
 - [ ] **MET-04**: Brier score — prediction calibration quality metric
 - [ ] **MET-05**: Strategy comparison — run multiple strategies side-by-side with comparative metrics
-- [ ] **MET-06**: Interactive Plotly dashboard with per-category performance breakdown
-- [ ] **MET-07**: Sample size warnings — flag results with N<30 events as statistically unreliable
+- [x] **MET-06**: Interactive Plotly dashboard with per-category performance breakdown
+- [x] **MET-07**: Sample size warnings — flag results with N<30 events as statistically unreliable
 
 ### Strategy Plugins
 
@@ -94,12 +94,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SIM-06 | Phase 2 | Complete |
 | SIM-07 | Phase 2 | Complete |
 | CLI-02 | Phase 2 | Complete |
-| MET-01 | Phase 3 | Pending |
-| MET-02 | Phase 3 | Pending |
-| MET-03 | Phase 3 | Pending |
+| MET-01 | Phase 3 | Complete |
+| MET-02 | Phase 3 | Complete |
+| MET-03 | Phase 3 | Complete |
 | MET-05 | Phase 3 | Pending |
-| MET-06 | Phase 3 | Pending |
-| MET-07 | Phase 3 | Pending |
+| MET-06 | Phase 3 | Complete |
+| MET-07 | Phase 3 | Complete |
 | STRAT-01 | Phase 4 | Pending |
 | STRAT-02 | Phase 4 | Pending |
 | MET-04 | Phase 4 | Pending |

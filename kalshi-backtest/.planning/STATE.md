@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: verifying
-stopped_at: Completed 02-simulation-engine/02-05-PLAN.md
-last_updated: "2026-04-06T00:26:23.058Z"
+status: executing
+stopped_at: Completed 03-metrics-and-reporting/03-01-PLAN.md
+last_updated: "2026-04-06T01:23:11.536Z"
 last_activity: 2026-04-06
 progress:
   total_phases: 4
   completed_phases: 2
-  total_plans: 11
-  completed_plans: 11
-  percent: 100
+  total_plans: 15
+  completed_plans: 12
+  percent: 80
 ---
 
 # Project State
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-04)
 
 **Core value:** Accurately simulate any Kalshi trading strategy against historical data so you can validate signal quality and optimize parameters before risking real capital.
-**Current focus:** Phase 2 — Simulation Engine
+**Current focus:** Phase 3 — Metrics and Reporting
 
 ## Current Position
 
-Phase: 3
-Plan: Not started
-Status: Phase complete — ready for verification
+Phase: 3 (Metrics and Reporting) — EXECUTING
+Plan: 2 of 4
+Status: Ready to execute
 Last activity: 2026-04-06
 
 Progress: [░░░░░░░░░░] 0%
@@ -62,6 +62,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02-simulation-engine P03 | 6 | 2 tasks | 5 files |
 | Phase 02-simulation-engine P04 | 3 | 2 tasks | 5 files |
 | Phase 02-simulation-engine P05 | 3 | 1 tasks | 3 files |
+| Phase 03-metrics-and-reporting P01 | 10 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -94,6 +95,8 @@ Recent decisions affecting current work:
 - [Phase 02-simulation-engine]: WalkForwardValidator uses expanding-window design (train_start fixed at global start); runner.run() called twice per fold (train + test)
 - [Phase 02-simulation-engine]: Dry-run skips credentials: --dry-run exits 0 without load_settings(); credentials only required for live execution
 - [Phase 02-simulation-engine]: Stub strategy inline in CLI run(): _PassThroughStrategy defined inside command, not in simulation module; Phase 4 replaces with real InsiderTrackerStrategy
+- [Phase 03-metrics-and-reporting]: plotly resolved to 6.6.0 (plan spec >=5.0) — no dep conflicts with pandas 3.x / numpy 2.x
+- [Phase 03-metrics-and-reporting]: sample_size_warning threshold: 30 distinct settled tickers per MET-07
 
 ### Pending Todos
 
@@ -107,6 +110,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-06T00:22:15.072Z
-Stopped at: Completed 02-simulation-engine/02-05-PLAN.md
+Last session: 2026-04-06T01:23:11.533Z
+Stopped at: Completed 03-metrics-and-reporting/03-01-PLAN.md
 Resume file: None

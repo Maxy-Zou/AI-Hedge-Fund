@@ -70,7 +70,7 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Add quantstats + plotly deps; write RED test scaffolds for metrics, trade log, and dashboard
+- [x] 03-01-PLAN.md — Add quantstats + plotly deps; write RED test scaffolds for metrics, trade log, and dashboard
 - [ ] 03-02-PLAN.md — BacktestMetrics model, MetricsCalculator (quantstats), export_trade_log CSV
 - [ ] 03-03-PLAN.md — Plotly 4-panel dashboard: equity curve, drawdown, monthly P&L, per-category breakdown
 - [ ] 03-04-PLAN.md — CLI compare command + run command enriched with --output-dir and metrics summary table
@@ -94,5 +94,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Data Foundation | 6/6 | Complete    | 2026-04-05 |
 | 2. Simulation Engine | 5/5 | Complete    | 2026-04-06 |
-| 3. Metrics and Reporting | 0/4 | Not started | - |
+| 3. Metrics and Reporting | 1/4 | In Progress|  |
 | 4. First Strategy Consumer | 0/? | Not started | - |
