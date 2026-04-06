@@ -53,7 +53,7 @@ Plans:
 Plans:
 - [x] 02-01-PLAN.md — Simulation type contracts: Strategy Protocol, Signal, Position, MarketSnapshot
 - [x] 02-02-PLAN.md — BarIterator (lookahead prevention) and FillEngine (fee formula, fill model, P&L)
-- [ ] 02-03-PLAN.md — PositionTracker (open/close lifecycle) and BacktestRunner (full bar-by-bar loop)
+- [x] 02-03-PLAN.md — PositionTracker (open/close lifecycle) and BacktestRunner (full bar-by-bar loop)
 - [ ] 02-04-PLAN.md — ParameterSweeper (grid sweep) and WalkForwardValidator (rolling splits)
 - [ ] 02-05-PLAN.md — CLI `run` command with --lookback-days and --dry-run (CLI-02)
 

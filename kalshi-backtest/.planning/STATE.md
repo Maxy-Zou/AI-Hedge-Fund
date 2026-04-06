@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 02-simulation-engine/02-02-PLAN.md
-last_updated: "2026-04-06T00:01:12.461Z"
+stopped_at: Completed 02-simulation-engine/02-03-PLAN.md
+last_updated: "2026-04-06T00:11:11.831Z"
 last_activity: 2026-04-06
 progress:
   total_phases: 4
   completed_phases: 1
   total_plans: 11
-  completed_plans: 8
-  percent: 73
+  completed_plans: 9
+  percent: 82
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Phase: 2 (Simulation Engine) — EXECUTING
-Plan: 3 of 5
+Plan: 4 of 5
 Status: Ready to execute
 Last activity: 2026-04-06
 
@@ -58,6 +58,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-data-foundation P06 | 16 | 1 tasks | 3 files |
 | Phase 02-simulation-engine P01 | 15 | 3 tasks | 4 files |
 | Phase 02-simulation-engine P02 | 8 | 2 tasks | 5 files |
+| Phase 02-simulation-engine P03 | 6 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -83,6 +84,9 @@ Recent decisions affecting current work:
 - [Phase 02-simulation-engine]: _to_naive_utc duplicated in simulation layer intentionally to keep simulation decoupled from ingestion internals
 - [Phase 02-simulation-engine]: calculate_fee_cents minimum 1 cent floor — fee of 0 would misrepresent cost in edge-case price ranges
 - [Phase 02-simulation-engine]: calculate_settlement_pnl raises ValueError for void result — BacktestRunner handles void markets, not FillEngine
+- [Phase 02-simulation-engine]: ClosedPosition carries entry fee_cents — settlement has no exit fee; entry cost preserved in _entry_fees dict
+- [Phase 02-simulation-engine]: BacktestResult custom __eq__ handles DataFrame/Series fields — frozen dataclass default fails on pandas equality semantics
+- [Phase 02-simulation-engine]: settled_tickers set prevents double-settlement per market ticker across post-close bars
 
 ### Pending Todos
 
@@ -96,6 +100,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-06T00:01:12.458Z
-Stopped at: Completed 02-simulation-engine/02-02-PLAN.md
+Last session: 2026-04-06T00:11:11.828Z
+Stopped at: Completed 02-simulation-engine/02-03-PLAN.md
 Resume file: None
