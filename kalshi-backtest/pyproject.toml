@@ -18,6 +18,7 @@ dependencies = [
     "pandas>=3.0.2",
     "quantstats>=0.0.81",
     "plotly>=5.0",
+    "sqlalchemy>=2.0.0",
 ]
 
 [project.scripts]
