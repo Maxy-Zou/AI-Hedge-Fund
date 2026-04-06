@@ -101,3 +101,35 @@ def test_run_series_filter():
 
     assert result.exit_code == 0
     assert "KXBTC" in result.output, f"Expected 'KXBTC' in output: {result.output}"
+
+
+# ---------------------------------------------------------------------------
+# CLI-03: `compare` command tests
+# ---------------------------------------------------------------------------
+
+
+def test_compare_command():
+    """CLI-03: `kalshi-backtest compare --dry-run` exits 0 with comparison table."""
+    result = runner.invoke(app, ["compare", "--dry-run"])
+
+    assert result.exit_code == 0, f"Expected exit 0, got {result.exit_code}: {result.output}"
+    assert "Strategy Comparison" in result.output, (
+        f"Expected 'Strategy Comparison' in output: {result.output}"
+    )
+
+
+def test_compare_dry_run_no_credentials():
+    """CLI-03: compare --dry-run exits 0 without any credentials in environment."""
+    with patch.dict(os.environ, {}, clear=True):
+        result = runner.invoke(app, ["compare", "--dry-run"])
+
+    assert result.exit_code == 0, f"Expected exit 0, got {result.exit_code}: {result.output}"
+
+
+def test_compare_dry_run_shows_both_strategies():
+    """CLI-03: compare --dry-run output includes both strategy column names."""
+    result = runner.invoke(app, ["compare", "--dry-run"])
+
+    assert result.exit_code == 0
+    assert "StrategyA" in result.output, f"Expected 'StrategyA' in output: {result.output}"
+    assert "StrategyB" in result.output, f"Expected 'StrategyB' in output: {result.output}"
