@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Data Foundation** - Ingest historical Kalshi contract data into a lookahead-safe, append-only DuckDB store (completed 2026-04-05)
 - [x] **Phase 2: Simulation Engine** - Bar-by-bar replay with Strategy Protocol, exact fee formula, and conservative fill model (completed 2026-04-06)
-- [ ] **Phase 3: Metrics and Reporting** - Turn the fill stream into performance metrics, trade logs, and an interactive dashboard
+- [x] **Phase 3: Metrics and Reporting** - Turn the fill stream into performance metrics, trade logs, and an interactive dashboard (completed 2026-04-06)
 - [ ] **Phase 4: First Strategy Consumer** - Insider Tracker adapter and example template prove the Strategy Protocol end-to-end
 
 ## Phase Details
@@ -72,8 +72,8 @@ Plans:
 Plans:
 - [x] 03-01-PLAN.md — Add quantstats + plotly deps; write RED test scaffolds for metrics, trade log, and dashboard
 - [x] 03-02-PLAN.md — BacktestMetrics model, MetricsCalculator (quantstats), export_trade_log CSV
-- [ ] 03-03-PLAN.md — Plotly 4-panel dashboard: equity curve, drawdown, monthly P&L, per-category breakdown
-- [ ] 03-04-PLAN.md — CLI compare command + run command enriched with --output-dir and metrics summary table
+- [x] 03-03-PLAN.md — Plotly 4-panel dashboard: equity curve, drawdown, monthly P&L, per-category breakdown
+- [x] 03-04-PLAN.md — CLI compare command + run command enriched with --output-dir and metrics summary table
 
 ### Phase 4: First Strategy Consumer
 **Goal**: The Insider Tracker's signals drive a complete end-to-end backtest, proving the Strategy Protocol works with a real signal source, and a template plugin makes adding future strategies trivial
@@ -94,5 +94,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Data Foundation | 6/6 | Complete    | 2026-04-05 |
 | 2. Simulation Engine | 5/5 | Complete    | 2026-04-06 |
-| 3. Metrics and Reporting | 2/4 | In Progress|  |
+| 3. Metrics and Reporting | 4/4 | Complete   | 2026-04-06 |
 | 4. First Strategy Consumer | 0/? | Not started | - |
