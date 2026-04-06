@@ -338,7 +338,7 @@ def run(
                 "  Set KALSHI_TRACKER_DATABASE_URL in your .env file."
             )
             raise typer.Exit(code=1)
-        strategy = strategy_cls(database_url=tracker_db_url)
+        strategy = strategy_cls(db_url=tracker_db_url)
     else:
         strategy = strategy_cls()
 
@@ -481,7 +481,7 @@ def compare(
                     "  Set KALSHI_TRACKER_DATABASE_URL in your .env file."
                 )
                 raise typer.Exit(code=1)
-            strategies_to_run.append((sname, strategy_cls(database_url=tracker_db_url)))
+            strategies_to_run.append((sname, strategy_cls(db_url=tracker_db_url)))
         else:
             strategies_to_run.append((sname, strategy_cls()))
 
