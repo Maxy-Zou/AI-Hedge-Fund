@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 04-first-strategy-consumer/04-01-PLAN.md
-last_updated: "2026-04-06T02:42:46.687Z"
+stopped_at: Completed 04-first-strategy-consumer/04-02-PLAN.md
+last_updated: "2026-04-06T04:04:37.741Z"
 last_activity: 2026-04-06
 progress:
   total_phases: 4
   completed_phases: 3
   total_plans: 18
-  completed_plans: 16
-  percent: 89
+  completed_plans: 17
+  percent: 94
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Phase: 4 (First Strategy Consumer) — EXECUTING
-Plan: 2 of 3
+Plan: 3 of 3
 Status: Ready to execute
 Last activity: 2026-04-06
 
@@ -67,6 +67,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03-metrics-and-reporting P02 | 5 | 2 tasks | 3 files |
 | Phase 03-metrics-and-reporting P04 | 152 | 1 tasks | 2 files |
 | Phase 04-first-strategy-consumer P01 | 480 | 1 tasks | 4 files |
+| Phase 04-first-strategy-consumer P02 | 25 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -107,6 +108,8 @@ Recent decisions affecting current work:
 - [Phase 03-metrics-and-reporting]: print_comparison_table defined as module-level function in cli.py for testability and reuse
 - [Phase 04-first-strategy-consumer]: sqlite_signals_db uses temp-file SQLite (not :memory:) so InsiderTrackerAdapter can open it by URL — SQLAlchemy not in project deps
 - [Phase 04-first-strategy-consumer]: SimpleNamespace used for MarketSnapshot stand-ins in strategy test scaffold to avoid import coupling
+- [Phase 04-first-strategy-consumer]: buy_threshold parameter name matches test scaffold (not entry_threshold as plan text suggested)
+- [Phase 04-first-strategy-consumer]: InsiderTrackerAdapter details column: isinstance(details, dict) guard handles SQLite TEXT (JSON string) and PostgreSQL JSONB (dict) transparently
 
 ### Pending Todos
 
@@ -120,6 +123,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-06T02:42:46.684Z
-Stopped at: Completed 04-first-strategy-consumer/04-01-PLAN.md
+Last session: 2026-04-06T04:04:37.739Z
+Stopped at: Completed 04-first-strategy-consumer/04-02-PLAN.md
 Resume file: None
