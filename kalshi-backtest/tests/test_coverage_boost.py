@@ -523,8 +523,7 @@ class TestCliIngestFullPath:
             mock_pipeline.run.return_value = mock_result
             mock_pipeline_cls.return_value = mock_pipeline
 
-            # Single-command app: invoke with [] (no subcommand prefix)
-            result = runner.invoke(app, [])
+            result = runner.invoke(app, ["ingest"])
 
         assert result.exit_code == 0, f"Expected exit 0: {result.output}"
         assert "Ingestion complete" in result.output
@@ -572,8 +571,7 @@ class TestCliIngestFullPath:
             mock_pipeline.run.return_value = mock_result
             mock_pipeline_cls.return_value = mock_pipeline
 
-            # Single-command app: invoke with [] (no subcommand prefix)
-            result = runner.invoke(app, [])
+            result = runner.invoke(app, ["ingest"])
 
         assert result.exit_code == 1, f"Expected exit 1: {result.output}"
         assert "KXBTC-FAIL" in result.output
@@ -591,8 +589,7 @@ class TestCliIngestFullPath:
 
         runner = CliRunner()
         with patch("kalshi_backtest.cli.load_settings", return_value=mock_settings):
-            # Single-command app: no "ingest" prefix
-            result = runner.invoke(app, ["--dry-run", "--series", "KXBTC"])
+            result = runner.invoke(app, ["ingest", "--dry-run", "--series", "KXBTC"])
 
         assert result.exit_code == 0
         assert "KXBTC" in result.output
@@ -605,8 +602,7 @@ class TestCliIngestFullPath:
 
         runner = CliRunner()
         with patch.dict(os.environ, {}, clear=True):
-            # Single-command app: no "ingest" prefix
-            result = runner.invoke(app, ["--dry-run"])
+            result = runner.invoke(app, ["ingest", "--dry-run"])
 
         assert result.exit_code == 1
         assert "Configuration error" in result.output or "error" in result.output.lower()

@@ -1,12 +1,15 @@
 """CLI entry point for the Kalshi backtesting engine.
 
-Commands available in Phase 1:
+Commands available:
     ingest — pull and store historical Kalshi contract data
+    run    — execute a backtest against stored historical data
 
 Usage:
     kalshi-backtest ingest --help
     kalshi-backtest ingest --lookback-days 365 --dry-run
     kalshi-backtest ingest --series KXBTC --series PRES
+    kalshi-backtest run --lookback-days 90
+    kalshi-backtest run --dry-run
 """
 from __future__ import annotations
 
@@ -144,3 +147,103 @@ def ingest(
 
     con.close()
     http_client.close()
+
+
+@app.command()
+def run(
+    lookback_days: int = typer.Option(
+        365,
+        "--lookback-days",
+        help="Days of history to replay (default: 365)",
+    ),
+    series: list[str] = typer.Option(  # noqa: B008
+        [],
+        "--series",
+        help="Series tickers to filter (e.g. --series KXBTC). Default: all.",
+    ),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Print intended backtest plan without executing.",
+    ),
+    log_level: str = typer.Option(
+        "INFO",
+        "--log-level",
+        help="Log level: DEBUG, INFO, WARNING",
+    ),
+) -> None:
+    """Run a backtest against historical Kalshi contract data.
+
+    Uses a naive pass-through stub strategy for demonstration.
+    Replace with a real Strategy implementation to evaluate signal quality.
+
+    Loads credentials from environment variables (or .env file):
+        KALSHI_BACKTEST_API_KEY_ID
+        KALSHI_BACKTEST_PRIVATE_KEY_PATH
+        KALSHI_BACKTEST_DB_PATH (optional, default: kalshi_backtest.duckdb)
+
+    Run with --dry-run to preview the backtest window without executing.
+    """
+    configure_logging(log_level)
+
+    from datetime import datetime, timedelta, timezone
+
+    end_date = datetime.now(tz=timezone.utc).replace(tzinfo=None)
+    start_date = end_date - timedelta(days=lookback_days)
+    series_list = list(series) if series else None
+
+    if dry_run:
+        _console.print("[bold]Dry-run mode — no simulation will be executed.[/bold]")
+        _console.print(
+            f"  Backtest window: last {lookback_days} days"
+            f" ({start_date.date()} to {end_date.date()})"
+        )
+        if series_list:
+            _console.print(f"  Series filter:   {', '.join(series_list)}")
+        raise typer.Exit(code=0)
+
+    # Credentials required for live execution — fail fast with a clear message
+    try:
+        settings = load_settings()
+    except ValidationError as exc:
+        _console.print("[red]Configuration error:[/red] Missing required environment variables.")
+        for err in exc.errors():
+            field = " -> ".join(str(f) for f in err["loc"])
+            _console.print(f"  * [yellow]{field}[/yellow]: {err['msg']}")
+        _console.print("\nSee .env.example for required variables.")
+        raise typer.Exit(code=1) from exc
+
+    # Lazy imports — only load heavy deps when actually running
+    from kalshi_backtest.db.repository import MarketRepository
+    from kalshi_backtest.db.schema import get_or_create_db
+    from kalshi_backtest.simulation.fill_engine import FillEngine
+    from kalshi_backtest.simulation.runner import BacktestRunner
+
+    con = get_or_create_db(settings.db_path)
+    repo = MarketRepository(con)
+    fill_engine = FillEngine(spread_floor=1)
+    runner_obj = BacktestRunner(repo=repo, fill_engine=fill_engine)
+
+    # Stub strategy — always passes (no signals generated). Replace in Phase 4.
+    class _PassThroughStrategy:
+        def generate_signals(self, snapshot, open_positions):  # type: ignore[override]
+            return []
+
+    strategy = _PassThroughStrategy()
+    _console.print(f"[bold]Starting backtest:[/bold] last {lookback_days} days")
+
+    result = runner_obj.run(
+        strategy=strategy,
+        start_date=start_date,
+        end_date=end_date,
+        series_tickers=series_list,
+    )
+
+    _console.print(
+        f"\n[green]Backtest complete.[/green] "
+        f"Settled contracts: {result.settled_contracts}, "
+        f"Total P&L: {result.total_pnl_cents / 100:.2f} USD, "
+        f"Total fees: {result.total_fees_cents / 100:.2f} USD, "
+        f"Trades: {len(result.trade_log)}"
+    )
+    con.close()
