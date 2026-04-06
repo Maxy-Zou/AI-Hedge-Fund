@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 02-simulation-engine/02-04-PLAN.md
-last_updated: "2026-04-06T00:17:19.291Z"
+status: verifying
+stopped_at: Completed 02-simulation-engine/02-05-PLAN.md
+last_updated: "2026-04-06T00:22:15.075Z"
 last_activity: 2026-04-06
 progress:
   total_phases: 4
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 11
-  completed_plans: 10
-  percent: 91
+  completed_plans: 11
+  percent: 100
 ---
 
 # Project State
@@ -27,7 +27,7 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 
 Phase: 2 (Simulation Engine) — EXECUTING
 Plan: 5 of 5
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-04-06
 
 Progress: [░░░░░░░░░░] 0%
@@ -60,6 +60,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02-simulation-engine P02 | 8 | 2 tasks | 5 files |
 | Phase 02-simulation-engine P03 | 6 | 2 tasks | 5 files |
 | Phase 02-simulation-engine P04 | 3 | 2 tasks | 5 files |
+| Phase 02-simulation-engine P05 | 3 | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,8 @@ Recent decisions affecting current work:
 - [Phase 02-simulation-engine]: settled_tickers set prevents double-settlement per market ticker across post-close bars
 - [Phase 02-simulation-engine]: Sharpe in ParameterSweeper = mean/std of daily_pnl, returns 0.0 on edge cases; Phase 3 metrics may replace with annualised calculation
 - [Phase 02-simulation-engine]: WalkForwardValidator uses expanding-window design (train_start fixed at global start); runner.run() called twice per fold (train + test)
+- [Phase 02-simulation-engine]: Dry-run skips credentials: --dry-run exits 0 without load_settings(); credentials only required for live execution
+- [Phase 02-simulation-engine]: Stub strategy inline in CLI run(): _PassThroughStrategy defined inside command, not in simulation module; Phase 4 replaces with real InsiderTrackerStrategy
 
 ### Pending Todos
 
@@ -103,6 +106,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-06T00:17:19.288Z
-Stopped at: Completed 02-simulation-engine/02-04-PLAN.md
+Last session: 2026-04-06T00:22:15.072Z
+Stopped at: Completed 02-simulation-engine/02-05-PLAN.md
 Resume file: None
