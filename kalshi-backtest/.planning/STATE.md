@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 03-metrics-and-reporting/03-01-PLAN.md
-last_updated: "2026-04-06T01:23:11.536Z"
+stopped_at: Completed 03-metrics-and-reporting/03-02-PLAN.md
+last_updated: "2026-04-06T01:34:13.715Z"
 last_activity: 2026-04-06
 progress:
   total_phases: 4
   completed_phases: 2
   total_plans: 15
-  completed_plans: 12
-  percent: 80
+  completed_plans: 13
+  percent: 87
 ---
 
 # Project State
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-04)
 ## Current Position
 
 Phase: 3 (Metrics and Reporting) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 Status: Ready to execute
 Last activity: 2026-04-06
 
@@ -63,6 +63,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02-simulation-engine P04 | 3 | 2 tasks | 5 files |
 | Phase 02-simulation-engine P05 | 3 | 1 tasks | 3 files |
 | Phase 03-metrics-and-reporting P01 | 10 | 2 tasks | 5 files |
+| Phase 03-metrics-and-reporting P02 | 5 | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,8 @@ Recent decisions affecting current work:
 - [Phase 02-simulation-engine]: Stub strategy inline in CLI run(): _PassThroughStrategy defined inside command, not in simulation module; Phase 4 replaces with real InsiderTrackerStrategy
 - [Phase 03-metrics-and-reporting]: plotly resolved to 6.6.0 (plan spec >=5.0) — no dep conflicts with pandas 3.x / numpy 2.x
 - [Phase 03-metrics-and-reporting]: sample_size_warning threshold: 30 distinct settled tickers per MET-07
+- [Phase 03-metrics-and-reporting]: export_trade_log accepts BacktestResult (not pd.DataFrame) — test scaffold passes result directly; plan spec was incorrect on signature
+- [Phase 03-metrics-and-reporting]: Sparse daily P&L must be filled to full calendar range before quantstats (reindex fill_value=0) — prevents NaN Sharpe/Sortino on real backtest data
 
 ### Pending Todos
 
@@ -110,6 +113,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-06T01:23:11.533Z
-Stopped at: Completed 03-metrics-and-reporting/03-01-PLAN.md
+Last session: 2026-04-06T01:34:13.712Z
+Stopped at: Completed 03-metrics-and-reporting/03-02-PLAN.md
 Resume file: None
