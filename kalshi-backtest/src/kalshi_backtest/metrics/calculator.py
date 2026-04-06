@@ -16,6 +16,7 @@ from __future__ import annotations
 import math
 from datetime import datetime
 
+import numpy as np
 import pandas as pd
 import quantstats as qs
 from pydantic import BaseModel, ConfigDict
@@ -76,6 +77,7 @@ class BacktestMetrics(BaseModel):
     total_trades: int = 0
     settled_markets: int = 0
     sample_size_warning: bool = False
+    brier_score: float | None = None  # None when no settlement trades exist (MET-04)
     equity_curve: pd.Series = pd.Series(dtype=float)
     daily_returns: pd.Series = pd.Series(dtype=float)
 
@@ -153,6 +155,44 @@ def _build_equity_curve(daily_pnl: pd.Series) -> pd.Series:
     return (pnl / 100.0).cumsum().astype(float)
 
 
+def _compute_brier_score(trade_log: pd.DataFrame) -> float | None:
+    """Compute Brier score for settled binary prediction market trades.
+
+    Only settlement exits have a deterministic ground truth outcome.
+    Mark-to-market exits are excluded (no ground truth).
+
+    Args:
+        trade_log: BacktestResult.trade_log DataFrame.
+            Required columns: direction, entry_price, exit_price, exit_reason.
+
+    Returns:
+        Float Brier score in [0.0, 1.0], or None if no settlement trades exist.
+    """
+    settled = trade_log[trade_log["exit_reason"] == "settlement"]
+    if settled.empty:
+        return None
+
+    # exit_price == 100 means YES won; 0 means NO won
+    yes_won = (settled["exit_price"] == 100).astype(float)
+    no_won = (settled["exit_price"] == 0).astype(float)
+
+    # Predicted probability that the HELD direction wins
+    predicted = np.where(
+        settled["direction"] == "yes",
+        settled["entry_price"] / 100.0,          # YES: price = P(YES)
+        (100 - settled["entry_price"]) / 100.0,  # NO: 1-price = P(NO)
+    )
+
+    # Outcome = 1 if our held direction was the winning side
+    outcome = np.where(
+        settled["direction"] == "yes",
+        yes_won.values,
+        no_won.values,
+    )
+
+    return float(np.mean((predicted - outcome) ** 2))
+
+
 def _safe_qs(func, *args, default: float = 0.0, **kwargs) -> float:
     """Call a quantstats function, returning default on any exception or NaN.
 
@@ -219,6 +259,7 @@ class MetricsCalculator:
                 total_trades=0,
                 settled_markets=0,
                 sample_size_warning=True,
+                brier_score=None,
                 equity_curve=pd.Series(dtype=float),
                 daily_returns=pd.Series(dtype=float),
             )
@@ -253,6 +294,9 @@ class MetricsCalculator:
         settled_markets = _count_settled_markets(result.trade_log)
         sample_size_warning = settled_markets < 30
 
+        # Brier score — calibration quality for settled trades (MET-04)
+        brier_score = _compute_brier_score(result.trade_log)
+
         return BacktestMetrics(
             run_id=result.run_id,
             strategy_name=result.strategy_name,
@@ -269,6 +313,7 @@ class MetricsCalculator:
             total_trades=total_trades,
             settled_markets=settled_markets,
             sample_size_warning=sample_size_warning,
+            brier_score=brier_score,
             equity_curve=equity_curve,
             daily_returns=returns,
         )
