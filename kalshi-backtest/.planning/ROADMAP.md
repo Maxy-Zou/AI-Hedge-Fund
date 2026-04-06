@@ -67,8 +67,13 @@ Plans:
   3. An interactive `dashboard.html` opens in the browser showing an equity curve with trade markers and per-category performance breakdown
   4. Running two strategies through `kalshi-backtest compare` produces a side-by-side metrics table in the terminal
   5. Any backtest result with fewer than 30 settled contracts prints a visible warning flagging the result as statistically unreliable
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 4 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Add quantstats + plotly deps; write RED test scaffolds for metrics, trade log, and dashboard
+- [ ] 03-02-PLAN.md — BacktestMetrics model, MetricsCalculator (quantstats), export_trade_log CSV
+- [ ] 03-03-PLAN.md — Plotly 4-panel dashboard: equity curve, drawdown, monthly P&L, per-category breakdown
+- [ ] 03-04-PLAN.md — CLI compare command + run command enriched with --output-dir and metrics summary table
 
 ### Phase 4: First Strategy Consumer
 **Goal**: The Insider Tracker's signals drive a complete end-to-end backtest, proving the Strategy Protocol works with a real signal source, and a template plugin makes adding future strategies trivial
@@ -89,5 +94,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4
 |-------|----------------|--------|-----------|
 | 1. Data Foundation | 6/6 | Complete    | 2026-04-05 |
 | 2. Simulation Engine | 5/5 | Complete    | 2026-04-06 |
-| 3. Metrics and Reporting | 0/? | Not started | - |
+| 3. Metrics and Reporting | 0/4 | Not started | - |
 | 4. First Strategy Consumer | 0/? | Not started | - |
