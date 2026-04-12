@@ -49,13 +49,13 @@ Plans:
   3. Equity price data for any ticker in the universe is served from PostgreSQL cache (not live yfinance calls), with Tiingo fallback tested, and corporate actions (splits/dividends) are correctly adjusted
   4. Insider trade clusters (3+ insiders buying within 14 days), daily news sentiment summaries, and macro indicators (Fed Funds, CPI, GDP, yield curve) are each retrievable via a single tool call with an as-of date filter
   5. Every data retrieval tool enforces a mandatory as_of_date parameter -- calling without it raises an error, and no tool returns data timestamped after the as_of_date
-**Plans**: TBD
+**Plans:** 4 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
-- [ ] 02-03: TBD
-- [ ] 02-04: TBD
+- [ ] 02-01-PLAN.md -- Data foundation: temporal enforcement, DB models, NL summary formatters, Alembic migrations
+- [ ] 02-02-PLAN.md -- SEC EDGAR filing retrieval and XBRL financial data extraction
+- [ ] 02-03-PLAN.md -- Equity price caching (yfinance + Tiingo) and insider trade cluster detection
+- [ ] 02-04-PLAN.md -- Finnhub news sentiment and FRED macro indicators
 
 ### Phase 3: Single-Agent Research
 **Goal**: A single research agent can analyze a company from SEC filings and produce an investment thesis with quantitative signal -- proving the core research loop works end-to-end before adding multi-agent complexity
@@ -158,8 +158,8 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
-| 1. Foundation | 0/3 | Planned | - |
-| 2. Data Ingestion | 0/4 | Not started | - |
+| 1. Foundation | 3/3 | Complete | 2026-04-12 |
+| 2. Data Ingestion | 0/4 | Planned | - |
 | 3. Single-Agent Research | 0/3 | Not started | - |
 | 4. Multi-Agent Specialization | 0/3 | Not started | - |
 | 5. Adversarial Critique | 0/3 | Not started | - |
