@@ -19,6 +19,7 @@ dependencies = [
     "httpx>=0.28.0",
     "tenacity>=9.0.0",
     "langfuse>=4.0.0",
+    "langchain>=1.2.15",
 ]
 
 [project.optional-dependencies]
