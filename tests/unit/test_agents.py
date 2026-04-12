@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import os
 
-import pytest
 from pydantic import BaseModel
 from pydantic_ai import Agent
 from pydantic_ai.usage import UsageLimits
