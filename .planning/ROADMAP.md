@@ -69,9 +69,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md -- Tighten ThesisOutput schema and build research agent with 6 data tool wrappers
-- [ ] 03-02-PLAN.md -- Signal agent, ResearchPipelineState, and LangGraph research -> signal pipeline
-- [ ] 03-03-PLAN.md -- Integration tests, package exports, and human-verified real-ticker demo
+- [x] 03-01-PLAN.md -- Tighten ThesisOutput schema and build research agent with 6 data tool wrappers
+- [x] 03-02-PLAN.md -- Signal agent, ResearchPipelineState, and LangGraph research -> signal pipeline
+- [x] 03-03-PLAN.md -- Integration tests, package exports, and human-verified real-ticker demo
 
 ### Phase 4: Multi-Agent Specialization
 **Goal**: Three specialized analyst agents each contribute domain-specific analysis, and a Research Manager synthesizes their outputs into a unified thesis with explicit conflict resolution
