@@ -131,22 +131,84 @@ class TestAnalysisOutput:
         assert "summary" in dumped
 
 
+def _valid_thesis_point(
+    *,
+    claim: str = "Strong iPhone demand",
+    evidence: str = "Revenue grew 15% YoY in iPhone segment",
+    source_tool: str = "get_financials",
+) -> dict[str, str]:
+    """Helper: Build a valid ThesisPoint-compatible dict."""
+    return {"claim": claim, "evidence": evidence, "source_tool": source_tool}
+
+
+class TestThesisPoint:
+    """Tests for ThesisPoint sub-model (bull/bear case entries)."""
+
+    def test_valid_thesis_point(self) -> None:
+        """ThesisPoint validates with all required non-empty fields."""
+        from ai_hedge_fund.schemas.agents import ThesisPoint
+
+        point = ThesisPoint(
+            claim="Strong iPhone demand",
+            evidence="Revenue grew 15% YoY",
+            source_tool="get_financials",
+        )
+        assert point.claim == "Strong iPhone demand"
+        assert point.evidence == "Revenue grew 15% YoY"
+        assert point.source_tool == "get_financials"
+
+    def test_rejects_empty_claim(self) -> None:
+        """ThesisPoint rejects empty claim string."""
+        from ai_hedge_fund.schemas.agents import ThesisPoint
+
+        with pytest.raises(ValidationError):
+            ThesisPoint(claim="", evidence="x", source_tool="x")
+
+    def test_rejects_empty_evidence(self) -> None:
+        """ThesisPoint rejects empty evidence string."""
+        from ai_hedge_fund.schemas.agents import ThesisPoint
+
+        with pytest.raises(ValidationError):
+            ThesisPoint(claim="x", evidence="", source_tool="x")
+
+    def test_rejects_empty_source_tool(self) -> None:
+        """ThesisPoint rejects empty source_tool string."""
+        from ai_hedge_fund.schemas.agents import ThesisPoint
+
+        with pytest.raises(ValidationError):
+            ThesisPoint(claim="x", evidence="x", source_tool="")
+
+
 class TestThesisOutput:
-    """Tests for ThesisOutput PydanticAI schema."""
+    """Tests for ThesisOutput PydanticAI schema (tightened for AGENT-03)."""
+
+    def _thesis_points(self, count: int, source: str) -> list[dict[str, str]]:
+        """Helper: Build `count` valid thesis points."""
+        return [
+            _valid_thesis_point(
+                claim=f"{source} point {i}",
+                evidence=f"{source} evidence {i}",
+                source_tool="get_financials",
+            )
+            for i in range(count)
+        ]
 
     def test_valid_thesis(self) -> None:
-        """ThesisOutput validates with all required fields."""
+        """ThesisOutput validates with 3+ bull/bear points and 2+ risks."""
         from ai_hedge_fund.schemas.agents import ThesisOutput
 
         output = ThesisOutput(
             ticker="AAPL",
-            bull_case=["Strong iPhone demand in emerging markets"],
-            bear_case=["Services revenue growth slowing"],
+            bull_case=self._thesis_points(3, "bull"),
+            bear_case=self._thesis_points(3, "bear"),
             confidence=75,
-            risk_factors=["China trade tensions"],
+            risk_factors=["China trade tensions", "Regulatory scrutiny"],
         )
         assert output.ticker == "AAPL"
         assert output.confidence == 75
+        assert len(output.bull_case) == 3
+        assert len(output.bear_case) == 3
+        assert len(output.risk_factors) == 2
 
     def test_rejects_confidence_above_100(self) -> None:
         """ThesisOutput rejects confidence > 100."""
@@ -155,10 +217,10 @@ class TestThesisOutput:
         with pytest.raises(ValidationError):
             ThesisOutput(
                 ticker="AAPL",
-                bull_case=["bull"],
-                bear_case=["bear"],
+                bull_case=self._thesis_points(3, "bull"),
+                bear_case=self._thesis_points(3, "bear"),
                 confidence=101,
-                risk_factors=["risk"],
+                risk_factors=["r1", "r2"],
             )
 
     def test_rejects_confidence_below_zero(self) -> None:
@@ -168,26 +230,72 @@ class TestThesisOutput:
         with pytest.raises(ValidationError):
             ThesisOutput(
                 ticker="AAPL",
-                bull_case=["bull"],
-                bear_case=["bear"],
+                bull_case=self._thesis_points(3, "bull"),
+                bear_case=self._thesis_points(3, "bear"),
                 confidence=-1,
-                risk_factors=["risk"],
+                risk_factors=["r1", "r2"],
             )
 
-    def test_model_dump_produces_dict(self) -> None:
-        """ThesisOutput.model_dump() returns a clean dict."""
+    def test_rejects_bull_case_with_two_points(self) -> None:
+        """ThesisOutput rejects bull_case with fewer than 3 ThesisPoints."""
+        from ai_hedge_fund.schemas.agents import ThesisOutput
+
+        with pytest.raises(ValidationError):
+            ThesisOutput(
+                ticker="AAPL",
+                bull_case=self._thesis_points(2, "bull"),
+                bear_case=self._thesis_points(3, "bear"),
+                confidence=50,
+                risk_factors=["r1", "r2"],
+            )
+
+    def test_rejects_bear_case_with_two_points(self) -> None:
+        """ThesisOutput rejects bear_case with fewer than 3 ThesisPoints."""
+        from ai_hedge_fund.schemas.agents import ThesisOutput
+
+        with pytest.raises(ValidationError):
+            ThesisOutput(
+                ticker="AAPL",
+                bull_case=self._thesis_points(3, "bull"),
+                bear_case=self._thesis_points(2, "bear"),
+                confidence=50,
+                risk_factors=["r1", "r2"],
+            )
+
+    def test_rejects_risk_factors_with_one_item(self) -> None:
+        """ThesisOutput rejects risk_factors with fewer than 2 items."""
+        from ai_hedge_fund.schemas.agents import ThesisOutput
+
+        with pytest.raises(ValidationError):
+            ThesisOutput(
+                ticker="AAPL",
+                bull_case=self._thesis_points(3, "bull"),
+                bear_case=self._thesis_points(3, "bear"),
+                confidence=50,
+                risk_factors=["only one"],
+            )
+
+    def test_model_dump_produces_dict_with_nested_thesis_points(self) -> None:
+        """ThesisOutput.model_dump() produces a dict with nested ThesisPoint dicts."""
         from ai_hedge_fund.schemas.agents import ThesisOutput
 
         output = ThesisOutput(
             ticker="AAPL",
-            bull_case=["bull"],
-            bear_case=["bear"],
+            bull_case=self._thesis_points(3, "bull"),
+            bear_case=self._thesis_points(3, "bear"),
             confidence=50,
-            risk_factors=["risk"],
+            risk_factors=["r1", "r2"],
         )
         dumped = output.model_dump()
         assert isinstance(dumped, dict)
         assert dumped["ticker"] == "AAPL"
+        # Nested ThesisPoints flatten to dicts
+        assert isinstance(dumped["bull_case"], list)
+        assert len(dumped["bull_case"]) == 3
+        assert set(dumped["bull_case"][0].keys()) == {"claim", "evidence", "source_tool"}
+        assert isinstance(dumped["bear_case"], list)
+        assert len(dumped["bear_case"]) == 3
+        assert set(dumped["bear_case"][0].keys()) == {"claim", "evidence", "source_tool"}
 
 
 class TestSignalOutput:
