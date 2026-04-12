@@ -10,6 +10,9 @@ Re-exports:
     get_extraction_limits: UsageLimits for extraction tier
     analysis_agent: Pre-configured Sonnet analysis agent
     get_analysis_limits: UsageLimits for analysis tier
+    research_agent: Pre-configured Sonnet research agent with tool wrappers
+    get_research_limits: UsageLimits for research agent (ANALYSIS tier)
+    ResearchDeps: Immutable dependency container for the research agent
 """
 
 from __future__ import annotations
@@ -23,15 +26,23 @@ from ai_hedge_fund.agents.base import (
     get_usage_limits,
 )
 from ai_hedge_fund.agents.extraction import extraction_agent, get_extraction_limits
+from ai_hedge_fund.agents.research import (
+    ResearchDeps,
+    get_research_limits,
+    research_agent,
+)
 
 __all__ = [
     "AgentUsageRecord",
     "BudgetExceededError",
     "PipelineBudgetTracker",
+    "ResearchDeps",
     "analysis_agent",
     "create_agent",
     "extraction_agent",
     "get_analysis_limits",
     "get_extraction_limits",
+    "get_research_limits",
     "get_usage_limits",
+    "research_agent",
 ]
