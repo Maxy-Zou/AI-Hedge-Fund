@@ -13,6 +13,8 @@ Re-exports:
     research_agent: Pre-configured Sonnet research agent with tool wrappers
     get_research_limits: UsageLimits for research agent (ANALYSIS tier)
     ResearchDeps: Immutable dependency container for the research agent
+    signal_agent: Pre-configured Sonnet signal agent (thesis -> SignalOutput)
+    get_signal_limits: UsageLimits for signal agent (ANALYSIS tier)
 """
 
 from __future__ import annotations
@@ -31,6 +33,7 @@ from ai_hedge_fund.agents.research import (
     get_research_limits,
     research_agent,
 )
+from ai_hedge_fund.agents.signal import get_signal_limits, signal_agent
 
 __all__ = [
     "AgentUsageRecord",
@@ -43,6 +46,8 @@ __all__ = [
     "get_analysis_limits",
     "get_extraction_limits",
     "get_research_limits",
+    "get_signal_limits",
     "get_usage_limits",
     "research_agent",
+    "signal_agent",
 ]
