@@ -135,3 +135,78 @@ class TestGetUsageLimitsOverrides:
     def test_total_override(self) -> None:
         limits = get_usage_limits(ModelTier.EXTRACTION, total_override=99_999)
         assert limits.total_tokens_limit == 99_999
+
+
+# ---- Concrete agent tests (Task 2) ----
+
+from ai_hedge_fund.agents.extraction import (
+    EXTRACTION_SYSTEM_PROMPT,
+    extraction_agent,
+    get_extraction_limits,
+)
+from ai_hedge_fund.agents.analysis import (
+    ANALYSIS_SYSTEM_PROMPT,
+    analysis_agent,
+    get_analysis_limits,
+)
+from ai_hedge_fund.schemas.agents import AnalysisOutput, ExtractionOutput
+
+
+class TestExtractionAgent:
+    """Test the concrete extraction agent instance."""
+
+    def test_is_agent_instance(self) -> None:
+        assert isinstance(extraction_agent, Agent)
+
+    def test_uses_haiku_model(self) -> None:
+        assert extraction_agent.model.model_name == "claude-haiku-4-5"
+
+    def test_output_type_is_extraction_output(self) -> None:
+        assert extraction_agent._output_type is ExtractionOutput
+
+    def test_has_system_prompt(self) -> None:
+        assert EXTRACTION_SYSTEM_PROMPT in extraction_agent._system_prompts
+
+
+class TestAnalysisAgent:
+    """Test the concrete analysis agent instance."""
+
+    def test_is_agent_instance(self) -> None:
+        assert isinstance(analysis_agent, Agent)
+
+    def test_uses_sonnet_model(self) -> None:
+        assert analysis_agent.model.model_name == "claude-sonnet-4-6"
+
+    def test_output_type_is_analysis_output(self) -> None:
+        assert analysis_agent._output_type is AnalysisOutput
+
+    def test_has_system_prompt(self) -> None:
+        assert ANALYSIS_SYSTEM_PROMPT in analysis_agent._system_prompts
+
+
+class TestGetExtractionLimits:
+    """Test get_extraction_limits returns correct UsageLimits."""
+
+    def test_returns_usage_limits(self) -> None:
+        limits = get_extraction_limits()
+        assert isinstance(limits, UsageLimits)
+
+    def test_extraction_tier_defaults(self) -> None:
+        limits = get_extraction_limits()
+        assert limits.input_tokens_limit == 20_000
+        assert limits.output_tokens_limit == 2_000
+        assert limits.total_tokens_limit == 22_000
+
+
+class TestGetAnalysisLimits:
+    """Test get_analysis_limits returns correct UsageLimits."""
+
+    def test_returns_usage_limits(self) -> None:
+        limits = get_analysis_limits()
+        assert isinstance(limits, UsageLimits)
+
+    def test_analysis_tier_defaults(self) -> None:
+        limits = get_analysis_limits()
+        assert limits.input_tokens_limit == 50_000
+        assert limits.output_tokens_limit == 8_000
+        assert limits.total_tokens_limit == 58_000
