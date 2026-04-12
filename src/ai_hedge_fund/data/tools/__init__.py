@@ -6,8 +6,10 @@ natural language summaries for LLM consumption.
 
 from __future__ import annotations
 
+from ai_hedge_fund.data.tools.insider_tools import get_insider_clusters
 from ai_hedge_fund.data.tools.price_tools import get_price_history
 
 __all__ = [
+    "get_insider_clusters",
     "get_price_history",
 ]
