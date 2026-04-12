@@ -1,7 +1,7 @@
 # Requirements: AI-Native Hedge Fund
 
 **Defined:** 2026-04-11
-**Core Value:** Produce institutional-quality investment research at scale — structured theses with quantitative signals that are rigorous enough to trade on and transparent enough to show investors.
+**Core Value:** Produce institutional-quality investment research at scale -- structured theses with quantitative signals that are rigorous enough to trade on and transparent enough to show investors.
 
 ## v1 Requirements
 
@@ -23,7 +23,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **DATA-04**: Insider trade detection from SEC Form 4 filings with cluster buy identification
 - [ ] **DATA-05**: News and sentiment aggregation from Finnhub with daily per-ticker summaries
 - [ ] **DATA-06**: Macro context from FRED (interest rates, CPI, GDP, yield curve)
-- [ ] **DATA-07**: Strict temporal controls — every data input timestamped, RAG filtered by "available as of" date
+- [ ] **DATA-07**: Strict temporal controls -- every data input timestamped, RAG filtered by "available as of" date
 - [ ] **DATA-08**: Natural language summaries generated from structured data before LLM consumption
 
 ### Single-Agent Research
@@ -35,16 +35,16 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Multi-Agent Specialization
 
-- [ ] **MULTI-01**: Fundamental Analyst agent — RAG over SEC filings, financial statement analysis, valuation
-- [ ] **MULTI-02**: Sentiment Analyst agent — news sentiment, earnings call tone, insider activity signals
-- [ ] **MULTI-03**: Technical/Quant Analyst agent — price patterns, momentum, volatility indicators via computed tools
+- [ ] **MULTI-01**: Fundamental Analyst agent -- RAG over SEC filings, financial statement analysis, valuation
+- [ ] **MULTI-02**: Sentiment Analyst agent -- news sentiment, earnings call tone, insider activity signals
+- [ ] **MULTI-03**: Technical/Quant Analyst agent -- price patterns, momentum, volatility indicators via computed tools
 - [ ] **MULTI-04**: Research Manager agent synthesizes analyst outputs into unified thesis with conflict resolution
 
 ### Adversarial Critique
 
 - [ ] **DEBATE-01**: Bull Advocate agent presents investment case using analyst evidence
 - [ ] **DEBATE-02**: Bear Advocate agent presents opposing case with counter-evidence
-- [ ] **DEBATE-03**: Structured 5-act debate protocol (thesis → counter-thesis → rebuttal → final arguments → synthesis)
+- [ ] **DEBATE-03**: Structured 5-act debate protocol (thesis -> counter-thesis -> rebuttal -> final arguments -> synthesis)
 - [ ] **DEBATE-04**: Thesis quality scoring based on evidence strength, logical consistency, and risk coverage
 
 ### Risk Management
@@ -55,17 +55,17 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Memory and Learning
 
-- [ ] **MEM-01**: Episodic memory in PostgreSQL — stores recent analyses and trade outcomes with 90-day active retention
-- [ ] **MEM-02**: Belief memory as structured human-readable documents (YAML/JSON) — investment theses, sector models, learned patterns
+- [ ] **MEM-01**: Episodic memory in PostgreSQL -- stores recent analyses and trade outcomes with 90-day active retention
+- [ ] **MEM-02**: Belief memory as structured human-readable documents (YAML/JSON) -- investment theses, sector models, learned patterns
 - [ ] **MEM-03**: Belief memory is editable by humans (transparency for investors, safety mechanism for corrections)
-- [ ] **MEM-04**: Cross-session learning — belief memory updated via self-critique after trade outcomes are known
+- [ ] **MEM-04**: Cross-session learning -- belief memory updated via self-critique after trade outcomes are known
 
 ### Signal and Output
 
 - [ ] **SIG-01**: Quantitative signal output per ticker: direction, conviction, thesis summary, risk score
 - [ ] **SIG-02**: Portfolio-level ranked opportunity list with thesis summaries
 - [ ] **SIG-03**: Human-in-the-loop review step for signals above a configurable conviction threshold
-- [ ] **SIG-04**: Decision audit trail — every agent step logged with inputs, outputs, and reasoning for compliance
+- [ ] **SIG-04**: Decision audit trail -- every agent step logged with inputs, outputs, and reasoning for compliance
 
 ## v2 Requirements
 
@@ -93,7 +93,7 @@ Deferred to future release. Tracked but not in current roadmap.
 
 - **ADV-01**: Earnings call transcript analysis via FMP Ultimate ($56/mo)
 - **ADV-02**: Survivorship-bias-free historical universe reconstruction from EDGAR submissions
-- **ADV-03**: Backtest integration — feed historical signals through vectorized backtester with transaction costs
+- **ADV-03**: Backtest integration -- feed historical signals through vectorized backtester with transaction costs
 
 ## Out of Scope
 
@@ -150,10 +150,10 @@ Deferred to future release. Tracked but not in current roadmap.
 | SIG-04 | Phase 8 | Pending |
 
 **Coverage:**
-- v1 requirements: 35 total
-- Mapped to phases: 35
+- v1 requirements: 36 total
+- Mapped to phases: 36
 - Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-11*
-*Last updated: 2026-04-11 after initial definition*
+*Last updated: 2026-04-11 after roadmap creation (traceability verified, 36/36 mapped)*
