@@ -53,9 +53,9 @@ Plans:
 
 Plans:
 - [x] 02-01-PLAN.md -- Data foundation: temporal enforcement, DB models, NL summary formatters, Alembic migrations
-- [ ] 02-02-PLAN.md -- SEC EDGAR filing retrieval and XBRL financial data extraction
-- [ ] 02-03-PLAN.md -- Equity price caching (yfinance + Tiingo) and insider trade cluster detection
-- [ ] 02-04-PLAN.md -- Finnhub news sentiment and FRED macro indicators
+- [x] 02-02-PLAN.md -- SEC EDGAR filing retrieval and XBRL financial data extraction
+- [x] 02-03-PLAN.md -- Equity price caching (yfinance + Tiingo) and insider trade cluster detection
+- [x] 02-04-PLAN.md -- Finnhub news sentiment and FRED macro indicators
 
 ### Phase 3: Single-Agent Research
 **Goal**: A single research agent can analyze a company from SEC filings and produce an investment thesis with quantitative signal -- proving the core research loop works end-to-end before adding multi-agent complexity
