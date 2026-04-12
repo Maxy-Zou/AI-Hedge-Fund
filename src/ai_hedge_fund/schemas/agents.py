@@ -2,7 +2,7 @@
 
 Each schema defines the typed, validated output for a specific agent type.
 Pydantic Field constraints enforce data quality at the validation boundary:
-- min_length prevents empty lists
+- min_length prevents empty or under-populated lists
 - ge/le constraints enforce numeric ranges
 - Literal types restrict categorical values
 
@@ -56,23 +56,48 @@ class AnalysisOutput(BaseModel):
     )
 
 
-class ThesisOutput(BaseModel):
-    """Output from thesis synthesis (Opus tier).
+class ThesisPoint(BaseModel):
+    """A single bull or bear case point with evidence citation.
 
-    Captures the structured investment thesis from the adversarial
-    bull/bear debate, including both sides, confidence, and risk factors.
+    Each ThesisPoint forces the agent to cite both the data that supports
+    its claim (``evidence``) and the tool that produced that data
+    (``source_tool``), enforcing the tool-first principle at the schema
+    boundary (AGENT-02, AGENT-03).
+    """
+
+    claim: str = Field(
+        min_length=1,
+        description="The investment argument",
+    )
+    evidence: str = Field(
+        min_length=1,
+        description="Specific data supporting the claim",
+    )
+    source_tool: str = Field(
+        min_length=1,
+        description="Which tool provided the evidence (e.g., 'get_financials')",
+    )
+
+
+class ThesisOutput(BaseModel):
+    """Output from thesis synthesis (investment research agent).
+
+    Captures the structured investment thesis with cited bull/bear cases,
+    a confidence score (0-100), and named risk factors. Constraints enforce
+    AGENT-03 requirements: at least 3 bull points, 3 bear points, and 2
+    risk factors, each bull/bear point backed by a ThesisPoint citation.
     """
 
     ticker: str = Field(
         description="Stock ticker symbol",
     )
-    bull_case: list[str] = Field(
-        min_length=1,
-        description="Bull case arguments with evidence citations",
+    bull_case: list[ThesisPoint] = Field(
+        min_length=3,
+        description="Bull case arguments with evidence citations (minimum 3)",
     )
-    bear_case: list[str] = Field(
-        min_length=1,
-        description="Bear case arguments with evidence citations",
+    bear_case: list[ThesisPoint] = Field(
+        min_length=3,
+        description="Bear case arguments with evidence citations (minimum 3)",
     )
     confidence: int = Field(
         ge=0,
@@ -80,8 +105,8 @@ class ThesisOutput(BaseModel):
         description="Confidence score 0-100 in the thesis direction",
     )
     risk_factors: list[str] = Field(
-        min_length=1,
-        description="Named risk factors that could invalidate the thesis",
+        min_length=2,
+        description="Named risk factors that could invalidate the thesis (minimum 2)",
     )
 
 

@@ -7,6 +7,7 @@ from ai_hedge_fund.schemas.agents import (
     ExtractionOutput,
     SignalOutput,
     ThesisOutput,
+    ThesisPoint,
 )
 from ai_hedge_fund.schemas.state import PipelineState
 
@@ -16,4 +17,5 @@ __all__ = [
     "PipelineState",
     "SignalOutput",
     "ThesisOutput",
+    "ThesisPoint",
 ]
