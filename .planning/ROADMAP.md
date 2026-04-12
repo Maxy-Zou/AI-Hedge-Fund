@@ -35,9 +35,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans:** 3 plans
 
 Plans:
-- [ ] 01-01-PLAN.md -- Project scaffold, dependencies, config, model routing, DB session, typed schemas
-- [ ] 01-02-PLAN.md -- PydanticAI agent factory with budget enforcement, extraction and analysis agents
-- [ ] 01-03-PLAN.md -- LangGraph pipeline, PostgreSQL checkpointing, Langfuse observability, budget-enforced invocation
+- [x] 01-01-PLAN.md -- Project scaffold, dependencies, config, model routing, DB session, typed schemas
+- [x] 01-02-PLAN.md -- PydanticAI agent factory with budget enforcement, extraction and analysis agents
+- [x] 01-03-PLAN.md -- LangGraph pipeline, PostgreSQL checkpointing, Langfuse observability, budget-enforced invocation
 
 ### Phase 2: Data Ingestion
 **Goal**: Agents can query any of the fund's data sources and receive pre-processed, temporally-correct financial data -- so research agents never touch raw APIs and never see future data
