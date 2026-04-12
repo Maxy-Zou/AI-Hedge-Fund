@@ -66,12 +66,12 @@ Plans:
   2. Every financial metric in the thesis (P/E ratio, revenue growth, margins, etc.) was computed by a deterministic tool call -- the Langfuse trace shows zero instances of the LLM generating a number without a preceding tool invocation
   3. The signal output includes direction (long/short/neutral), conviction level (low/medium/high), time horizon, and suggested position size -- all fields validated against the Pydantic schema with no missing values
   4. Running the agent on the same ticker with an as_of_date of 2024-01-01 vs 2025-01-01 produces materially different theses reflecting different filing data -- demonstrating temporal correctness rather than memorized knowledge
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
-- [ ] 03-03: TBD
+- [ ] 03-01-PLAN.md -- Tighten ThesisOutput schema and build research agent with 6 data tool wrappers
+- [ ] 03-02-PLAN.md -- Signal agent, ResearchPipelineState, and LangGraph research -> signal pipeline
+- [ ] 03-03-PLAN.md -- Integration tests, package exports, and human-verified real-ticker demo
 
 ### Phase 4: Multi-Agent Specialization
 **Goal**: Three specialized analyst agents each contribute domain-specific analysis, and a Research Manager synthesizes their outputs into a unified thesis with explicit conflict resolution
