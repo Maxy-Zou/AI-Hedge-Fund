@@ -32,12 +32,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. A PydanticAI agent accepts a typed input schema and returns a validated output schema -- invalid LLM output is rejected with a descriptive validation error (not silently passed through)
   3. A single pipeline run routes at least two different tasks to different Claude models (e.g., Haiku for extraction, Sonnet for analysis) and the Langfuse trace shows which model handled each step with latency and token counts
   4. When an agent exceeds its configured token budget mid-run, the pipeline halts that agent with a budget-exceeded error rather than continuing to spend
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
-- [ ] 01-03: TBD
+- [ ] 01-01-PLAN.md -- Project scaffold, dependencies, config, model routing, DB session, typed schemas
+- [ ] 01-02-PLAN.md -- PydanticAI agent factory with budget enforcement, extraction and analysis agents
+- [ ] 01-03-PLAN.md -- LangGraph pipeline, PostgreSQL checkpointing, Langfuse observability, budget-enforced invocation
 
 ### Phase 2: Data Ingestion
 **Goal**: Agents can query any of the fund's data sources and receive pre-processed, temporally-correct financial data -- so research agents never touch raw APIs and never see future data
@@ -158,7 +158,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|---------------|--------|-----------|
-| 1. Foundation | 0/3 | Not started | - |
+| 1. Foundation | 0/3 | Planned | - |
 | 2. Data Ingestion | 0/4 | Not started | - |
 | 3. Single-Agent Research | 0/3 | Not started | - |
 | 4. Multi-Agent Specialization | 0/3 | Not started | - |
