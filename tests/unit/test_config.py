@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import dataclasses
-import json
 
 import pytest
 
@@ -17,7 +16,9 @@ class TestAppSettings:
         from ai_hedge_fund.config import AppSettings
 
         settings = AppSettings(_env_file=None)
-        assert settings.database_url == "postgresql+psycopg://hedge:hedge@localhost:5432/ai_hedge_fund"
+        assert (
+            settings.database_url == "postgresql+psycopg://hedge:hedge@localhost:5432/ai_hedge_fund"
+        )
 
     def test_loads_from_env_vars(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """AppSettings loads from environment variables."""
