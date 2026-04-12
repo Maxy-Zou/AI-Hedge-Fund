@@ -1,7 +1,7 @@
-# Environment
+# Environment and secrets
 .env
-.env.*
-!.env.example
+.env.local
+.env.production
 
 # Python
 __pycache__/
@@ -10,28 +10,27 @@ __pycache__/
 *.egg-info/
 dist/
 build/
-.eggs/
 *.egg
+
+# Virtual environments
 .venv/
 venv/
 
-# Data (cache locally, don't commit)
-data/raw/
-data/cache/
-*.csv
-*.parquet
-*.pkl
-!data/**/.gitkeep
-
 # IDE
-.vscode/
 .idea/
+.vscode/
 *.swp
 *.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# uv
+uv.lock
 
 # OS
 .DS_Store
 Thumbs.db
-
-# Claude Code
-.claude/settings.local.json
