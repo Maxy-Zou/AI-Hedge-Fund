@@ -39,6 +39,7 @@ class AppSettings(BaseSettings):
     # Data sources (paid, add when budget allows)
     polygon_api_key: str = ""
     thetadata_api_key: str = ""
+    tiingo_api_key: str = ""
 
     # Observability
     langfuse_public_key: str = ""

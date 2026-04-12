@@ -20,6 +20,11 @@ dependencies = [
     "tenacity>=9.0.0",
     "langfuse>=4.0.0",
     "langchain>=1.2.15",
+    "edgartools>=5.28.5",
+    "yfinance>=1.2.1",
+    "tiingo>=0.16.1",
+    "fredapi>=0.5.2",
+    "finnhub-python>=2.4.27",
 ]
 
 [project.optional-dependencies]
@@ -47,3 +52,9 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+
+[dependency-groups]
+dev = [
+    "pytest-httpx>=0.36.2",
+    "ruff>=0.15.10",
+]
