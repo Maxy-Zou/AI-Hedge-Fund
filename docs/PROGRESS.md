@@ -43,3 +43,11 @@
 - Created `.planning/STATE.md` — project state tracking
 - Updated `CLAUDE.md` with architecture (Manager-Analyst + Adversarial Debate), stack (LangGraph + PydanticAI + Claude), data sources, conventions, and agent development rules
 - Updated `.env.example` with all required environment variables
+
+## 2026-04-11 — Networking Research
+
+- Compiled comprehensive outreach list across 9 categories (~60+ people)
+- Categories: AI finance founders, quant practitioners, LLM researchers, skeptics, compliance, data vendors, AI infra builders, allocators, YC alumni
+- Added 10 conferences/events, 10 online communities, 7 podcasts, 3 outreach templates
+- Prioritized first 5 outreach targets and sequenced by stage (now → pre-YC → post-YC → fundraising)
+- File: `docs/NETWORKING_RESEARCH.md`

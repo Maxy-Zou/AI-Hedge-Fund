@@ -1,0 +1,12 @@
+.env
+*.pem
+*.key
+.venv/
+__pycache__/
+*.pyc
+*.duckdb
+.coverage
+htmlcov/
+dist/
+*.egg-info/
+.pytest_cache/

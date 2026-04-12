@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ai_hedge_fund_postgres
+    environment:
+      POSTGRES_DB: ai_hedge_fund
+      POSTGRES_USER: hedge
+      POSTGRES_PASSWORD: hedge
+    ports:
+      - "5432:5432"
+    volumes:
+      - ai_hedge_fund_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hedge -d ai_hedge_fund"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  ai_hedge_fund_pgdata:
+    driver: local

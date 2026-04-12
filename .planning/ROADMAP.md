@@ -52,7 +52,7 @@ Plans:
 **Plans:** 4 plans
 
 Plans:
-- [ ] 02-01-PLAN.md -- Data foundation: temporal enforcement, DB models, NL summary formatters, Alembic migrations
+- [x] 02-01-PLAN.md -- Data foundation: temporal enforcement, DB models, NL summary formatters, Alembic migrations
 - [ ] 02-02-PLAN.md -- SEC EDGAR filing retrieval and XBRL financial data extraction
 - [ ] 02-03-PLAN.md -- Equity price caching (yfinance + Tiingo) and insider trade cluster detection
 - [ ] 02-04-PLAN.md -- Finnhub news sentiment and FRED macro indicators
