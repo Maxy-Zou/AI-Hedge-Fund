@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation** - LangGraph orchestration, PydanticAI agent base, Claude model routing, observability, and token budgets (completed 2026-04-12)
 - [x] **Phase 2: Data Ingestion** - SEC filings, XBRL financials, equity prices, insider trades, news, macro data with temporal controls (completed 2026-04-12)
-- [ ] **Phase 3: Single-Agent Research** - One agent that reads filings, uses tool-augmented calculations, and produces structured thesis + signal
+- [x] **Phase 3: Single-Agent Research** - One agent that reads filings, uses tool-augmented calculations, and produces structured thesis + signal (completed 2026-04-12)
 - [ ] **Phase 4: Multi-Agent Specialization** - Fundamental, Sentiment, and Technical analysts coordinated by a Research Manager
 - [ ] **Phase 5: Adversarial Critique** - Bull/Bear advocates argue structured 5-act debate, thesis quality scored
 - [ ] **Phase 6: Risk Management** - Risk Manager agent with veto power, position sizing constraints, portfolio-level checks
