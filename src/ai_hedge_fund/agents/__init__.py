@@ -15,6 +15,12 @@ Re-exports:
     ResearchDeps: Immutable dependency container for the research agent
     signal_agent: Pre-configured Sonnet signal agent (thesis -> SignalOutput)
     get_signal_limits: UsageLimits for signal agent (ANALYSIS tier)
+    fundamental_agent / get_fundamental_limits: Phase-4 fundamental analyst
+    sentiment_agent / get_sentiment_limits: Phase-4 sentiment analyst
+    technical_agent / get_technical_limits: Phase-4 technical analyst
+    manager_agent / get_manager_limits: Phase-4 research manager (Opus)
+    format_analyst_reports: Helper for converting analyst report dicts to a
+        readable string suitable for the manager's user prompt.
 """
 
 from __future__ import annotations
@@ -28,12 +34,20 @@ from ai_hedge_fund.agents.base import (
     get_usage_limits,
 )
 from ai_hedge_fund.agents.extraction import extraction_agent, get_extraction_limits
+from ai_hedge_fund.agents.fundamental import fundamental_agent, get_fundamental_limits
+from ai_hedge_fund.agents.manager import (
+    format_analyst_reports,
+    get_manager_limits,
+    manager_agent,
+)
 from ai_hedge_fund.agents.research import (
     ResearchDeps,
     get_research_limits,
     research_agent,
 )
+from ai_hedge_fund.agents.sentiment import get_sentiment_limits, sentiment_agent
 from ai_hedge_fund.agents.signal import get_signal_limits, signal_agent
+from ai_hedge_fund.agents.technical import get_technical_limits, technical_agent
 
 __all__ = [
     "AgentUsageRecord",
@@ -43,11 +57,20 @@ __all__ = [
     "analysis_agent",
     "create_agent",
     "extraction_agent",
+    "format_analyst_reports",
+    "fundamental_agent",
     "get_analysis_limits",
     "get_extraction_limits",
+    "get_fundamental_limits",
+    "get_manager_limits",
     "get_research_limits",
+    "get_sentiment_limits",
     "get_signal_limits",
+    "get_technical_limits",
     "get_usage_limits",
+    "manager_agent",
     "research_agent",
+    "sentiment_agent",
     "signal_agent",
+    "technical_agent",
 ]
