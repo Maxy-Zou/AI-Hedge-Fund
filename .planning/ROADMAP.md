@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Foundation** - LangGraph orchestration, PydanticAI agent base, Claude model routing, observability, and token budgets (completed 2026-04-12)
 - [x] **Phase 2: Data Ingestion** - SEC filings, XBRL financials, equity prices, insider trades, news, macro data with temporal controls (completed 2026-04-12)
 - [x] **Phase 3: Single-Agent Research** - One agent that reads filings, uses tool-augmented calculations, and produces structured thesis + signal (completed 2026-04-12)
-- [ ] **Phase 4: Multi-Agent Specialization** - Fundamental, Sentiment, and Technical analysts coordinated by a Research Manager
+- [x] **Phase 4: Multi-Agent Specialization** - Fundamental, Sentiment, and Technical analysts coordinated by a Research Manager (completed 2026-04-21)
 - [ ] **Phase 5: Adversarial Critique** - Bull/Bear advocates argue structured 5-act debate, thesis quality scored
 - [ ] **Phase 6: Risk Management** - Risk Manager agent with veto power, position sizing constraints, portfolio-level checks
 - [ ] **Phase 7: Memory and Learning** - Episodic memory in PostgreSQL, human-readable belief memory, cross-session learning
@@ -85,9 +85,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 04-01-PLAN.md -- Specialist output schemas + Fundamental/Sentiment/Technical analyst agents with domain-scoped tools
-- [ ] 04-02-PLAN.md -- Research Manager agent with conflict resolution synthesis (Opus tier, no tools)
-- [ ] 04-03-PLAN.md -- Multi-agent pipeline: fan-out/fan-in LangGraph topology, nodes, integration tests, re-exports
+- [x] 04-01-PLAN.md -- Specialist output schemas + Fundamental/Sentiment/Technical analyst agents with domain-scoped tools
+- [x] 04-02-PLAN.md -- Research Manager agent with conflict resolution synthesis (Opus tier, no tools)
+- [x] 04-03-PLAN.md -- Multi-agent pipeline: fan-out/fan-in LangGraph topology, nodes, integration tests, re-exports
 
 ### Phase 5: Adversarial Critique
 **Goal**: Every thesis is stress-tested through a structured bull/bear debate before becoming a signal -- so the system's output reflects adversarial scrutiny, not confirmation bias
@@ -161,7 +161,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 1. Foundation | 3/3 | Complete | 2026-04-12 |
 | 2. Data Ingestion | 0/4 | Planned | - |
 | 3. Single-Agent Research | 0/3 | Not started | - |
-| 4. Multi-Agent Specialization | 0/3 | Planned | - |
+| 4. Multi-Agent Specialization | 3/3 | Complete | 2026-04-21 |
 | 5. Adversarial Critique | 0/3 | Not started | - |
 | 6. Risk Management | 0/2 | Not started | - |
 | 7. Memory and Learning | 0/3 | Not started | - |
