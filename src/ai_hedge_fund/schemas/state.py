@@ -10,11 +10,18 @@ research -> signal flow: the research agent produces a thesis from
 tool calls and the signal agent converts that thesis into a trade
 signal. It intentionally does NOT carry raw_text -- the research
 agent calls data tools directly rather than being handed a filing blob.
+
+MultiAgentPipelineState (Phase-4) carries the fan-out/fan-in state for
+the specialist analysts + research manager pipeline. It uses an
+``operator.add`` reducer on ``analyst_reports`` so each parallel analyst
+can append its report without overwriting peers -- LangGraph merges the
+lists returned from each node.
 """
 
 from __future__ import annotations
 
-from typing import Required, TypedDict
+import operator
+from typing import Annotated, Required, TypedDict
 
 
 class PipelineState(TypedDict, total=False):
@@ -60,6 +67,41 @@ class ResearchPipelineState(TypedDict, total=False):
 
     ticker: Required[str]
     as_of_date: Required[str]
+    thesis: dict | None
+    signal: dict | None
+    error: str | None
+
+
+class MultiAgentPipelineState(TypedDict, total=False):
+    """State flowing through the Phase-4 multi-agent pipeline.
+
+    Uses ``Annotated[list, operator.add]`` on ``analyst_reports`` so each
+    parallel analyst node can append its single-element list without
+    overwriting peers -- LangGraph concatenates the lists returned from
+    all parallel nodes before the manager node executes.
+
+    Required fields:
+        ticker: Stock ticker symbol being analyzed.
+        as_of_date: Temporal cutoff as an ISO-format date string (e.g.
+            ``"2024-01-01"``). Kept as a string so the state is
+            JSON-serialisable for LangGraph checkpoints.
+
+    Optional fields (populated by pipeline nodes):
+        analyst_reports: Accumulated analyst outputs appended via the
+            ``operator.add`` reducer. Each entry is a dict with keys
+            ``analyst`` (Literal["fundamental","sentiment","technical"]),
+            ``analysis`` (dict), ``tokens_used`` (int), and optionally
+            ``error`` (str).
+        thesis: ``ThesisOutput.model_dump()`` produced by ``manager_node``.
+        signal: ``SignalOutput.model_dump()`` produced by the
+            multi-agent signal node.
+        error: Error message if a post-fan-in node (manager/signal)
+            failed; analyst-level errors live inside ``analyst_reports``.
+    """
+
+    ticker: Required[str]
+    as_of_date: Required[str]
+    analyst_reports: Annotated[list[dict], operator.add]
     thesis: dict | None
     signal: dict | None
     error: str | None
