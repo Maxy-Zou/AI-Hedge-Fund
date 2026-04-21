@@ -45,6 +45,12 @@ packages = ["src/ai_hedge_fund"]
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+extend-exclude = [
+    "archive",
+    ".venv",
+    ".planning",
+    "alembic/versions",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
