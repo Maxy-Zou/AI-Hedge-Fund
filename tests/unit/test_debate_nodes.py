@@ -442,3 +442,39 @@ class TestDebateSynthesisNode:
         result = asyncio.run(debate_synthesis_node(state))
         assert "error" in result
         assert "final" in result["error"].lower()
+
+    def test_missing_thesis_returns_error(self) -> None:
+        """WR-03: thesis missing entirely must surface an error, not a
+        silent `pre_debate_confidence = 0` default.
+        """
+        state = self._full_state()
+        state.pop("thesis")
+        result = asyncio.run(debate_synthesis_node(state))
+        assert "error" in result
+        assert "thesis" in result["error"].lower()
+
+    def test_thesis_is_none_returns_error(self) -> None:
+        """WR-03: thesis=None must surface an error."""
+        state = self._full_state()
+        state["thesis"] = None
+        result = asyncio.run(debate_synthesis_node(state))
+        assert "error" in result
+        assert "thesis" in result["error"].lower()
+
+    def test_empty_thesis_dict_returns_error(self) -> None:
+        """WR-03: thesis={} (missing 'confidence' key) must surface an error
+        rather than silently producing pre_debate_confidence=0.
+        """
+        state = self._full_state()
+        state["thesis"] = {}
+        result = asyncio.run(debate_synthesis_node(state))
+        assert "error" in result
+        assert "confidence" in result["error"].lower()
+
+    def test_thesis_with_null_confidence_returns_error(self) -> None:
+        """WR-03: thesis with confidence=None must surface an error."""
+        state = self._full_state()
+        state["thesis"] = {**_seed_thesis(), "confidence": None}
+        result = asyncio.run(debate_synthesis_node(state))
+        assert "error" in result
+        assert "confidence" in result["error"].lower()

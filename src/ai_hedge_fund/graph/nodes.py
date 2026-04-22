@@ -739,17 +739,36 @@ async def debate_synthesis_node(state: DebatePipelineState) -> dict:
 
     Returns:
         Dict with ``debate_synthesis`` and ``thesis`` on success, ``error``
-        when budget exceeded or required upstream act missing, or empty
-        dict when skipped due to upstream error.
+        when budget exceeded, thesis missing/malformed, or required upstream
+        act missing, or empty dict when skipped due to upstream error.
+
+    Preconditions (WR-03):
+        - ``state['thesis']`` is non-None.
+        - ``state['thesis']['confidence']`` is non-None. Silently defaulting
+          to 0 would distort DEBATE-04 success-criterion-4 (post - pre
+          delta) with a fabricated zero baseline.
+        - ``state['final_arguments']`` is non-None.
     """
     if state.get("error"):
         return {}
+    thesis = state.get("thesis")
+    if thesis is None:
+        logger.error("debate_synthesis_no_thesis", ticker=state.get("ticker"))
+        return {"error": "No thesis available for synthesis"}
     if state.get("final_arguments") is None:
         logger.error("debate_synthesis_no_final", ticker=state.get("ticker"))
         return {"error": "No final_arguments available for synthesis"}
 
     # Source-of-truth for pre_debate_confidence is state -- NOT LLM output.
-    pre_debate_confidence = state.get("thesis", {}).get("confidence", 0)
+    # Explicit None check (WR-03): silently defaulting to 0 would distort
+    # DEBATE-04 success-criterion-4 (post - pre delta) with a wrong baseline.
+    pre_debate_confidence = thesis.get("confidence")
+    if pre_debate_confidence is None:
+        logger.error(
+            "debate_synthesis_thesis_missing_confidence",
+            ticker=state.get("ticker"),
+        )
+        return {"error": "Thesis missing 'confidence' field"}
     prompt = format_debate_for_synthesis(state, pre_debate_confidence)
 
     try:
