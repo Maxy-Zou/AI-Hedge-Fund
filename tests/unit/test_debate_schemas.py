@@ -249,6 +249,42 @@ class TestBearCase:
                 headline="",
             )
 
+    def test_rejects_empty_string_in_addressed_bull_claims(self) -> None:
+        """WR-02 regression: addressed_bull_claims element type is NonEmptyStr.
+
+        Field(min_length=2) on a list[str] only constrains list length, so
+        `["", ""]` would pass a naive schema. The element-level NonEmptyStr
+        constraint rejects empty-string entries so a schema-compliant but
+        semantically hollow bear case cannot slip through.
+        """
+        from ai_hedge_fund.schemas.debate import BearCase
+
+        # Two empty strings: list length passes, but each element fails.
+        with pytest.raises(ValidationError):
+            BearCase(
+                ticker="AAPL",
+                claims=self._valid_claims(3),
+                addressed_bull_claims=["", ""],
+                headline="h",
+            )
+
+        # One valid + one empty: element check rejects the empty entry.
+        with pytest.raises(ValidationError):
+            BearCase(
+                ticker="AAPL",
+                claims=[
+                    {
+                        "claim": f"Bear claim {i}",
+                        "evidence": f"Evidence {i}",
+                        "source_analyst": "fundamental",
+                        "addresses_bull_claim": "Revenue grew 20% YoY",
+                    }
+                    for i in range(3)
+                ],
+                addressed_bull_claims=["Revenue grew 20% YoY", ""],
+                headline="h",
+            )
+
 
 class TestRebuttalPoint:
     """Tests for RebuttalPoint sub-model."""

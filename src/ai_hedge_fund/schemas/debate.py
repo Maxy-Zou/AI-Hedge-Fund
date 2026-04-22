@@ -29,13 +29,20 @@ Threat mitigations:
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
 
 from ai_hedge_fund.schemas.agents import ThesisOutput
 
 AnalystName = Literal["fundamental", "sentiment", "technical", "manager"]
+
+NonEmptyStr = Annotated[str, StringConstraints(min_length=1)]
+"""Element type for `list[str]` fields where empty strings are semantically
+meaningless. `Field(min_length=N)` on a `list[str]` only constrains list
+length, NOT element length -- an LLM can satisfy `min_length=2` with
+`["", ""]`. Use `list[NonEmptyStr]` to reject that failure mode.
+"""
 
 
 class BullClaim(BaseModel):
@@ -112,11 +119,12 @@ class BearCase(BaseModel):
 
     ticker: str
     claims: list[BearClaim] = Field(min_length=3)
-    addressed_bull_claims: list[str] = Field(
+    addressed_bull_claims: list[NonEmptyStr] = Field(
         min_length=2,
         description=(
             "Verbatim text of at least 2 bull claims that this bear case "
-            "directly rebuts -- per DEBATE-02."
+            "directly rebuts -- per DEBATE-02. Element type is NonEmptyStr "
+            "so `[\"\", \"\"]` is rejected (WR-02)."
         ),
     )
     headline: str = Field(min_length=1)
