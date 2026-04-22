@@ -15,5 +15,19 @@ Threat mitigations (see ``06-01-PLAN.md::threat_model``):
 from __future__ import annotations
 
 from ai_hedge_fund.risk.policy import RiskPolicy, compute_policy_sha, load_policy
+from ai_hedge_fund.risk.portfolio import (
+    PortfolioSnapshot,
+    PortfolioSnapshotPosition,
+    load_portfolio,
+    seed_portfolio_from_csv,
+)
 
-__all__ = ["RiskPolicy", "compute_policy_sha", "load_policy"]
+__all__ = [
+    "PortfolioSnapshot",
+    "PortfolioSnapshotPosition",
+    "RiskPolicy",
+    "compute_policy_sha",
+    "load_policy",
+    "load_portfolio",
+    "seed_portfolio_from_csv",
+]
