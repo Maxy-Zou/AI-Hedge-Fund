@@ -42,7 +42,6 @@ from ai_hedge_fund.agents.self_critique import (
 )
 from ai_hedge_fund.models import MODEL_BUDGETS, ModelTier
 
-
 # ---------- Schema contract (T-07-30 defense-in-depth) ----------
 
 
@@ -131,10 +130,7 @@ def test_self_critique_limits_applies_output_override() -> None:
 
 def test_self_critique_limits_uses_reasoning_tier() -> None:
     limits = get_self_critique_limits()
-    assert (
-        limits.input_tokens_limit
-        == MODEL_BUDGETS[ModelTier.REASONING].input_tokens_limit
-    )
+    assert limits.input_tokens_limit == MODEL_BUDGETS[ModelTier.REASONING].input_tokens_limit
 
 
 # ---------- End-to-end with TestModel stub ----------
@@ -143,9 +139,7 @@ def test_self_critique_limits_uses_reasoning_tier() -> None:
 def test_agent_runs_with_test_model_stub() -> None:
     """Stub the model so no real LLM call happens; wiring proven."""
     stub = "stubbed self-critique rationale"
-    with self_critique_agent.override(
-        model=TestModel(custom_output_args={"rationale": stub})
-    ):
+    with self_critique_agent.override(model=TestModel(custom_output_args={"rationale": stub})):
         result = asyncio.run(self_critique_agent.run("test prompt"))
 
     assert isinstance(result.output, RationaleOnly)
