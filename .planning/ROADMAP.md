@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Data Ingestion** - SEC filings, XBRL financials, equity prices, insider trades, news, macro data with temporal controls (completed 2026-04-12)
 - [x] **Phase 3: Single-Agent Research** - One agent that reads filings, uses tool-augmented calculations, and produces structured thesis + signal (completed 2026-04-12)
 - [x] **Phase 4: Multi-Agent Specialization** - Fundamental, Sentiment, and Technical analysts coordinated by a Research Manager (completed 2026-04-21)
-- [ ] **Phase 5: Adversarial Critique** - Bull/Bear advocates argue structured 5-act debate, thesis quality scored
+- [x] **Phase 5: Adversarial Critique** - Bull/Bear advocates argue structured 5-act debate, thesis quality scored (completed 2026-04-22)
 - [ ] **Phase 6: Risk Management** - Risk Manager agent with veto power, position sizing constraints, portfolio-level checks
 - [ ] **Phase 7: Memory and Learning** - Episodic memory in PostgreSQL, human-readable belief memory, cross-session learning
 - [ ] **Phase 8: Signal and Output** - Quantitative signal output, portfolio ranking, human-in-the-loop review, decision audit trail
@@ -98,12 +98,12 @@ Plans:
   2. The Bear Advocate constructs a negative investment case with counter-evidence -- it directly addresses and rebuts at least 2 specific bull claims rather than presenting an independent negative thesis
   3. The debate follows the 5-act protocol (thesis, counter-thesis, rebuttal, final arguments, synthesis) with each act producing a structured output -- skipping an act or producing an empty act causes a validation error
   4. The final synthesis includes a thesis quality score based on evidence strength, logical consistency, and risk coverage -- and the post-debate confidence score differs from the pre-debate score in at least 30% of runs (demonstrating the debate actually changes the assessment)
-**Plans:** 3 plans
+**Plans:** 3/3 plans complete
 
 Plans:
 - [x] 05-01-PLAN.md -- Debate schemas (BullCase, BearCase, RebuttalAct, FinalArguments, DebateSynthesis) + Bull and Bear agents with wiring tests
 - [x] 05-02-PLAN.md -- Rebuttal/Final/Synthesis agents + compute_quality_score (pure Python weighted mean) + DebatePipelineState TypedDict
-- [ ] 05-03-PLAN.md -- 5 debate nodes + build_debate_pipeline + TestModel-driven integration tests (end-to-end 10-agent flow)
+- [x] 05-03-PLAN.md -- 5 debate nodes + build_debate_pipeline + TestModel-driven integration tests (end-to-end 10-agent flow)
 
 ### Phase 6: Risk Management
 **Goal**: A Risk Manager agent enforces hard portfolio constraints that cannot be overridden by research agents -- so no signal reaches the human reviewer without passing quantitative risk checks
@@ -162,7 +162,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 2. Data Ingestion | 0/4 | Planned | - |
 | 3. Single-Agent Research | 0/3 | Not started | - |
 | 4. Multi-Agent Specialization | 3/3 | Complete | 2026-04-21 |
-| 5. Adversarial Critique | 2/3 | In progress | - |
+| 5. Adversarial Critique | 3/3 | Complete    | 2026-04-22 |
 | 6. Risk Management | 0/2 | Not started | - |
 | 7. Memory and Learning | 0/3 | Not started | - |
 | 8. Signal and Output | 0/3 | Not started | - |

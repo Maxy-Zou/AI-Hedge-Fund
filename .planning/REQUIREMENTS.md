@@ -42,9 +42,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Adversarial Critique
 
-- [ ] **DEBATE-01**: Bull Advocate agent presents investment case using analyst evidence
-- [ ] **DEBATE-02**: Bear Advocate agent presents opposing case with counter-evidence
-- [ ] **DEBATE-03**: Structured 5-act debate protocol (thesis -> counter-thesis -> rebuttal -> final arguments -> synthesis)  <!-- agents + schemas delivered in 05-01 + 05-02; graph wiring in 05-03 -->
+- [x] **DEBATE-01**: Bull Advocate agent presents investment case using analyst evidence
+- [x] **DEBATE-02**: Bear Advocate agent presents opposing case with counter-evidence
+- [x] **DEBATE-03**: Structured 5-act debate protocol (thesis -> counter-thesis -> rebuttal -> final arguments -> synthesis)  <!-- agents + schemas delivered in 05-01 + 05-02; graph wiring in 05-03 -->
 - [x] **DEBATE-04**: Thesis quality scoring based on evidence strength, logical consistency, and risk coverage (compute_quality_score + sub-score schema enforcement landed in 05-02)
 
 ### Risk Management
@@ -133,8 +133,8 @@ Deferred to future release. Tracked but not in current roadmap.
 | MULTI-02 | Phase 4 | Pending |
 | MULTI-03 | Phase 4 | Pending |
 | MULTI-04 | Phase 4 | Pending |
-| DEBATE-01 | Phase 5 | Pending |
-| DEBATE-02 | Phase 5 | Pending |
+| DEBATE-01 | Phase 5 | Complete |
+| DEBATE-02 | Phase 5 | Complete |
 | DEBATE-03 | Phase 5 | Partial (schemas + agents in 05-01/02; graph in 05-03) |
 | DEBATE-04 | Phase 5 | Complete (compute_quality_score + sub-score schema, 05-02) |
 | RISK-01 | Phase 6 | Pending |
