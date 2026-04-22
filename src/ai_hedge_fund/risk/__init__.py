@@ -19,6 +19,11 @@ from ai_hedge_fund.risk.checks import (
     check_position_size,
     check_sector_concentration,
 )
+from ai_hedge_fund.risk.correlation import (
+    check_correlation,
+    compute_max_correlation_with_portfolio,
+)
+from ai_hedge_fund.risk.drawdown import check_drawdown, project_max_drawdown_pct
 from ai_hedge_fund.risk.policy import RiskPolicy, compute_policy_sha, load_policy
 from ai_hedge_fund.risk.portfolio import (
     PortfolioSnapshot,
@@ -32,12 +37,16 @@ __all__ = [
     "PortfolioSnapshot",
     "PortfolioSnapshotPosition",
     "RiskPolicy",
+    "check_correlation",
+    "check_drawdown",
     "check_exclusions",
     "check_position_size",
     "check_sector_concentration",
+    "compute_max_correlation_with_portfolio",
     "compute_policy_sha",
     "derive_candidate_size_pct",
     "load_policy",
     "load_portfolio",
+    "project_max_drawdown_pct",
     "seed_portfolio_from_csv",
 ]
