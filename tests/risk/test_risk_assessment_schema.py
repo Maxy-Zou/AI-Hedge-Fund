@@ -13,8 +13,9 @@ Verifies T-06-02 (LLM cannot tamper with status) at the schema layer:
 from __future__ import annotations
 
 import pytest
-from ai_hedge_fund.schemas.risk import RiskAssessment, Violation
 from pydantic import ValidationError
+
+from ai_hedge_fund.schemas.risk import RiskAssessment, Violation
 
 # Valid 64-char hex SHA used across tests.
 _SHA: str = "0" * 64
