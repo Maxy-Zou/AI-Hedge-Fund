@@ -43,6 +43,16 @@ from ai_hedge_fund.agents.bull import (
     format_analyst_evidence,
     get_bull_limits,
 )
+from ai_hedge_fund.agents.debate_synthesis import (
+    DEBATE_SYNTHESIS_SYSTEM_PROMPT,
+    EVIDENCE_WEIGHT,
+    LOGIC_WEIGHT,
+    RISK_WEIGHT,
+    compute_quality_score,
+    debate_synthesis_agent,
+    format_debate_for_synthesis,
+    get_debate_synthesis_limits,
+)
 from ai_hedge_fund.agents.extraction import extraction_agent, get_extraction_limits
 from ai_hedge_fund.agents.final_arguments import (
     final_arguments_agent,
@@ -72,12 +82,18 @@ from ai_hedge_fund.agents.technical import get_technical_limits, technical_agent
 __all__ = [
     "AgentUsageRecord",
     "BudgetExceededError",
+    "DEBATE_SYNTHESIS_SYSTEM_PROMPT",
+    "EVIDENCE_WEIGHT",
+    "LOGIC_WEIGHT",
     "PipelineBudgetTracker",
+    "RISK_WEIGHT",
     "ResearchDeps",
     "analysis_agent",
     "bear_agent",
     "bull_agent",
+    "compute_quality_score",
     "create_agent",
+    "debate_synthesis_agent",
     "extraction_agent",
     "final_arguments_agent",
     "format_analyst_evidence",
@@ -85,10 +101,12 @@ __all__ = [
     "format_bull_case_for_bear",
     "format_debate_for_final",
     "format_debate_for_rebuttal",
+    "format_debate_for_synthesis",
     "fundamental_agent",
     "get_analysis_limits",
     "get_bear_limits",
     "get_bull_limits",
+    "get_debate_synthesis_limits",
     "get_extraction_limits",
     "get_final_arguments_limits",
     "get_fundamental_limits",
