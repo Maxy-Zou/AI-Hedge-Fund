@@ -75,6 +75,13 @@ from ai_hedge_fund.agents.research import (
     get_research_limits,
     research_agent,
 )
+from ai_hedge_fund.agents.risk_manager import (
+    RISK_MANAGER_SYSTEM_PROMPT,
+    RationaleOnly,
+    format_risk_context_for_rationale,
+    get_risk_manager_limits,
+    risk_manager_agent,
+)
 from ai_hedge_fund.agents.sentiment import get_sentiment_limits, sentiment_agent
 from ai_hedge_fund.agents.signal import get_signal_limits, signal_agent
 from ai_hedge_fund.agents.technical import get_technical_limits, technical_agent
@@ -86,7 +93,9 @@ __all__ = [
     "EVIDENCE_WEIGHT",
     "LOGIC_WEIGHT",
     "PipelineBudgetTracker",
+    "RISK_MANAGER_SYSTEM_PROMPT",
     "RISK_WEIGHT",
+    "RationaleOnly",
     "ResearchDeps",
     "analysis_agent",
     "bear_agent",
@@ -102,6 +111,7 @@ __all__ = [
     "format_debate_for_final",
     "format_debate_for_rebuttal",
     "format_debate_for_synthesis",
+    "format_risk_context_for_rationale",
     "fundamental_agent",
     "get_analysis_limits",
     "get_bear_limits",
@@ -113,6 +123,7 @@ __all__ = [
     "get_manager_limits",
     "get_rebuttal_limits",
     "get_research_limits",
+    "get_risk_manager_limits",
     "get_sentiment_limits",
     "get_signal_limits",
     "get_technical_limits",
@@ -120,6 +131,7 @@ __all__ = [
     "manager_agent",
     "rebuttal_agent",
     "research_agent",
+    "risk_manager_agent",
     "sentiment_agent",
     "signal_agent",
     "technical_agent",
