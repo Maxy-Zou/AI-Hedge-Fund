@@ -67,9 +67,7 @@ def _snapshot_with_tech_weight(tech_pct: float) -> PortfolioSnapshot:
 
 def test_sector_within_cap_is_approved(policy_sector_30pct: RiskPolicy) -> None:
     portfolio = _snapshot_with_tech_weight(20.0)
-    assert (
-        check_sector_concentration("Technology", 7.0, portfolio, policy_sector_30pct) is None
-    )
+    assert check_sector_concentration("Technology", 7.0, portfolio, policy_sector_30pct) is None
 
 
 def test_sector_over_cap_is_rejected_pre_trade(policy_sector_30pct: RiskPolicy) -> None:

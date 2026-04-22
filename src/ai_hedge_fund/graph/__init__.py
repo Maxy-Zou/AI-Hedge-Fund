@@ -43,6 +43,8 @@ from ai_hedge_fund.graph.nodes import (
     multi_agent_signal_node,
     rebuttal_node,
     research_node,
+    risk_manager_node,
+    route_after_risk,
     sentiment_node,
     signal_node,
     technical_node,
@@ -53,8 +55,10 @@ from ai_hedge_fund.graph.pipeline import (
     build_pipeline,
     build_research_pipeline,
 )
+from ai_hedge_fund.graph.risk_deps import RiskDeps
 
 __all__ = [
+    "RiskDeps",
     "analyze_node",
     "bear_node",
     "build_debate_pipeline",
@@ -72,6 +76,8 @@ __all__ = [
     "multi_agent_signal_node",
     "rebuttal_node",
     "research_node",
+    "risk_manager_node",
+    "route_after_risk",
     "sentiment_node",
     "signal_node",
     "technical_node",

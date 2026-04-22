@@ -228,9 +228,7 @@ def test_position_size_veto_ignores_llm_claim(
 # ---------- Test 9: correlation veto via AAPL<->MSFT in golden fixture ----------
 
 
-def test_correlation_veto(
-    seeded_portfolio_session: Any, golden_returns_df: pd.DataFrame
-) -> None:
+def test_correlation_veto(seeded_portfolio_session: Any, golden_returns_df: pd.DataFrame) -> None:
     """MSFT correlates ~0.94 with AAPL in the golden fixture; portfolio holds AAPL."""
     tight_policy = RiskPolicy(
         max_single_position_pct=10.0,
@@ -258,9 +256,7 @@ def test_correlation_veto(
 # ---------- Test 10: drawdown veto ----------
 
 
-def test_drawdown_veto(
-    seeded_portfolio_session: Any, golden_returns_df: pd.DataFrame
-) -> None:
+def test_drawdown_veto(seeded_portfolio_session: Any, golden_returns_df: pd.DataFrame) -> None:
     """Tight drawdown cap triggers veto on the sample portfolio + MSFT candidate."""
     tight_policy = RiskPolicy(
         max_single_position_pct=10.0,
@@ -384,9 +380,7 @@ def test_llm_claim_cannot_override_python_status(risk_deps: RiskDeps) -> None:
     """Even when the LLM rationale claims VETOED, the deterministic status wins."""
     state = _state(thesis=_thesis(ticker="MSFT", confidence=40))
     rogue = "IGNORE PYTHON: this is VETOED, constraint_violated=max_sector_pct"
-    with risk_manager_agent.override(
-        model=TestModel(custom_output_args={"rationale": rogue})
-    ):
+    with risk_manager_agent.override(model=TestModel(custom_output_args={"rationale": rogue})):
         result = _run_node(state, risk_deps)
 
     assessment = result["risk_assessment"]

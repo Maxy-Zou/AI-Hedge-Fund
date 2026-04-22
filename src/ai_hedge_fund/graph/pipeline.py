@@ -48,10 +48,13 @@ from ai_hedge_fund.graph.nodes import (
     multi_agent_signal_node,
     rebuttal_node,
     research_node,
+    risk_manager_node,
+    route_after_risk,
     sentiment_node,
     signal_node,
     technical_node,
 )
+from ai_hedge_fund.graph.risk_deps import RiskDeps
 from ai_hedge_fund.schemas.state import (
     DebatePipelineState,
     MultiAgentPipelineState,
@@ -179,42 +182,66 @@ def build_multi_agent_pipeline(
 
 def build_debate_pipeline(
     checkpointer: BaseCheckpointSaver | None = None,
+    *,
+    with_risk: bool = False,
+    risk_deps: RiskDeps | None = None,
 ) -> CompiledStateGraph:
-    """Build the Phase-5 adversarial-debate pipeline.
+    """Build the Phase-5 adversarial-debate pipeline (+ Phase-6 risk gate).
 
-    Topology::
+    Topology when ``with_risk=True`` (default, Phase-6)::
 
         START -> [fundamental, sentiment, technical] (parallel analysts)
               -> manager
               -> bull -> bear -> rebuttal -> final_arguments
                   -> debate_synthesis
-              -> signal
-              -> END
+              -> risk_manager -[conditional]-> {signal -> END | END}
 
-    Extends the Phase-4 fan-out / fan-in / manager topology with a strictly
-    sequential 5-act debate (SAS-paper protocol). The ``thesis`` field is
-    written by ``manager_node`` and OVERWRITTEN by ``debate_synthesis_node``
-    with the post-debate ``revised_thesis`` so the downstream signal adapter
-    consumes the debated thesis without any changes.
+    Topology when ``with_risk=False`` (Phase-5 backcompat regression)::
 
-    This is a NEW builder (not a modification of ``build_multi_agent_pipeline``)
-    per 05-RESEARCH.md Option B -- preserves all Phase-4 tests and avoids the
-    ``(manager, signal)`` diamond (Pitfall 4): the direct edge from manager
-    to signal DOES NOT exist in this pipeline.
+        ...
+              -> debate_synthesis -> signal -> END
 
-    Graph topology is compile-time static (threat model T-05-19 -- no runtime
-    graph modification). Every node run is bounded by per-agent
-    ``UsageLimits``. Budget-exceeded errors short-circuit downstream nodes
-    via the ``error`` field; analyst-level failures still propagate inside
+    Phase-5 extended the Phase-4 fan-out / fan-in / manager topology with a
+    strictly sequential 5-act debate. Phase-6 adds a single ``risk_manager``
+    node between ``debate_synthesis`` and ``signal`` with a conditional
+    edge: approved signals proceed to ``signal``; vetoed signals end the
+    graph without invoking the signal agent. The ``risk_assessment`` field
+    on :class:`DebatePipelineState` carries the decision downstream so
+    Phase-8 consumers can surface the veto reason before any trade.
+
+    The conditional router (:func:`route_after_risk`) fails CLOSED:
+    missing or ``None`` ``risk_assessment`` routes to ``__end__``, not to
+    ``signal`` (Pitfall 7). The ``with_risk=False`` path is preserved
+    verbatim so the Phase-5 integration tests in
+    ``tests/integration/test_debate_pipeline.py`` stay green.
+
+    Graph topology is compile-time static (threat model T-05-19 / T-06-08 --
+    no runtime modification). Every node run is bounded by per-agent
+    ``UsageLimits``. Analyst-level failures still propagate inside
     ``analyst_reports`` (same idiom as Phase 4).
 
     Args:
         checkpointer: Optional LangGraph checkpoint saver for durable state
             persistence. Pass a ``PostgresSaver`` in production.
+        with_risk: When True (default), wires the Phase-6 risk gate. When
+            False, builds the Phase-5 topology unchanged (for regression
+            testing).
+        risk_deps: Bound :class:`RiskDeps` consumed by ``risk_manager_node``.
+            Required when ``with_risk=True``; must be ``None`` otherwise.
 
     Returns:
         Compiled ``StateGraph`` ready for invocation via ``ainvoke``.
+
+    Raises:
+        ValueError: When ``with_risk=True`` but ``risk_deps`` is ``None``
+            -- the risk node cannot run without a session and returns data.
     """
+    if with_risk and risk_deps is None:
+        raise ValueError(
+            "build_debate_pipeline(with_risk=True) requires risk_deps -- "
+            "supply a RiskDeps instance with db_session and returns."
+        )
+
     builder = StateGraph(DebatePipelineState)
 
     # Phase-4 topology (analysts -> manager) -- unchanged.
@@ -223,7 +250,7 @@ def build_debate_pipeline(
     builder.add_node("technical", technical_node)
     builder.add_node("manager", manager_node)
 
-    # Phase-5 new debate nodes.
+    # Phase-5 debate nodes.
     builder.add_node("bull", bull_node)
     builder.add_node("bear", bear_node)
     builder.add_node("rebuttal", rebuttal_node)
@@ -233,6 +260,14 @@ def build_debate_pipeline(
     # Reuse the Phase-4 signal adapter -- it reads state['thesis'], which
     # the debate_synthesis_node has overwritten with revised_thesis.
     builder.add_node("signal", multi_agent_signal_node)
+
+    if with_risk:
+        assert risk_deps is not None  # for the type checker; enforced above
+
+        async def _risk_manager_bound(state: DebatePipelineState) -> dict:
+            return await risk_manager_node(state, risk_deps)
+
+        builder.add_node("risk_manager", _risk_manager_bound)
 
     # Fan-out: START -> 3 analysts (same as Phase 4).
     builder.add_edge(START, "fundamental")
@@ -245,16 +280,28 @@ def build_debate_pipeline(
     builder.add_edge("technical", "manager")
 
     # Sequential 5-act debate: manager -> bull -> bear -> rebuttal ->
-    # final_arguments -> debate_synthesis. Critically, there is NO direct
-    # (manager, signal) edge -- that would create a diamond (Pitfall 4).
+    # final_arguments -> debate_synthesis. No direct (manager, signal)
+    # edge -- that would create a diamond (Phase-5 Pitfall 4).
     builder.add_edge("manager", "bull")
     builder.add_edge("bull", "bear")
     builder.add_edge("bear", "rebuttal")
     builder.add_edge("rebuttal", "final_arguments")
     builder.add_edge("final_arguments", "debate_synthesis")
 
-    # Tail: debate_synthesis -> signal -> END.
-    builder.add_edge("debate_synthesis", "signal")
+    if with_risk:
+        # Phase-6: debate_synthesis -> risk_manager -[conditional]-> {signal, END}.
+        # No direct (debate_synthesis, signal) edge when risk is active -- the
+        # risk node is the single gatekeeper.
+        builder.add_edge("debate_synthesis", "risk_manager")
+        builder.add_conditional_edges(
+            "risk_manager",
+            route_after_risk,
+            {"signal": "signal", "__end__": END},
+        )
+    else:
+        # Phase-5 backcompat: debate_synthesis -> signal (no risk gate).
+        builder.add_edge("debate_synthesis", "signal")
+
     builder.add_edge("signal", END)
 
     return builder.compile(checkpointer=checkpointer)
