@@ -292,7 +292,7 @@ def test_insufficient_history_veto(
         returns=golden_returns_df,
         policy=safe_policy,
     )
-    state = _state(thesis=_thesis(ticker="NEW", confidence=40))
+    state = _state(ticker="NEW", thesis=_thesis(ticker="NEW", confidence=40))
     with risk_manager_agent.override(
         model=TestModel(custom_output_args={"rationale": STUB_RATIONALE})
     ):
