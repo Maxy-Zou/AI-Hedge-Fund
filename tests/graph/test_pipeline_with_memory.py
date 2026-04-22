@@ -47,7 +47,6 @@ from ai_hedge_fund.graph.risk_deps import RiskDeps  # noqa: E402
 from ai_hedge_fund.memory.episodic import seed_episodic_from_csv  # noqa: E402
 from ai_hedge_fund.risk.policy import RiskPolicy  # noqa: E402
 
-
 # ---------------------------------------------------------------------------
 # Structural tests (tests 16-19) -- compile-time inspection only
 # ---------------------------------------------------------------------------
@@ -73,9 +72,7 @@ def test_with_memory_requires_memory_deps() -> None:
         build_debate_pipeline(with_memory=True)
 
 
-def test_with_memory_nodes_registered(
-    memory_db_session: Session, beliefs_tmp_dir: Path
-) -> None:
+def test_with_memory_nodes_registered(memory_db_session: Session, beliefs_tmp_dir: Path) -> None:
     """Test 18: with_memory=True registers both memory nodes (no risk)."""
     deps = MemoryDeps(db_session=memory_db_session, beliefs_path=beliefs_tmp_dir)
     graph = build_debate_pipeline(with_memory=True, memory_deps=deps)
@@ -101,9 +98,7 @@ def test_with_memory_and_with_risk_compose(
         returns=golden_returns_df,
         policy=safe_policy,
     )
-    memory_deps = MemoryDeps(
-        db_session=seeded_portfolio_session, beliefs_path=beliefs_tmp_dir
-    )
+    memory_deps = MemoryDeps(db_session=seeded_portfolio_session, beliefs_path=beliefs_tmp_dir)
     graph = build_debate_pipeline(
         with_risk=True,
         risk_deps=risk_deps,
@@ -280,9 +275,7 @@ def test_end_to_end_policy_sha_links_phase6_to_phase7(
         returns=golden_returns_df,
         policy=safe_policy,
     )
-    memory_deps = MemoryDeps(
-        db_session=seeded_portfolio_session, beliefs_path=beliefs_tmp_dir
-    )
+    memory_deps = MemoryDeps(db_session=seeded_portfolio_session, beliefs_path=beliefs_tmp_dir)
     graph = build_debate_pipeline(
         with_risk=True,
         risk_deps=risk_deps,

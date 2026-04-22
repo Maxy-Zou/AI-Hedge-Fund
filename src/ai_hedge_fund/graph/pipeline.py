@@ -36,15 +36,18 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
+from ai_hedge_fund.graph.memory_deps import MemoryDeps
 from ai_hedge_fund.graph.nodes import (
     analyze_node,
     bear_node,
     bull_node,
     debate_synthesis_node,
+    episodic_store_node,
     extract_node,
     final_arguments_node,
     fundamental_node,
     manager_node,
+    memory_recall_node,
     multi_agent_signal_node,
     rebuttal_node,
     research_node,
@@ -185,10 +188,13 @@ def build_debate_pipeline(
     *,
     with_risk: bool = False,
     risk_deps: RiskDeps | None = None,
+    with_memory: bool = False,
+    memory_deps: MemoryDeps | None = None,
 ) -> CompiledStateGraph:
-    """Build the Phase-5 adversarial-debate pipeline (+ Phase-6 risk gate).
+    """Build the Phase-5 adversarial-debate pipeline (+ Phase-6 risk gate,
+    + Phase-7 memory substrate).
 
-    Topology when ``with_risk=True`` (default, Phase-6)::
+    Topology when ``with_risk=True`` only (Phase-6)::
 
         START -> [fundamental, sentiment, technical] (parallel analysts)
               -> manager
@@ -200,6 +206,25 @@ def build_debate_pipeline(
 
         ...
               -> debate_synthesis -> signal -> END
+
+    Topology when ``with_memory=True`` (Phase-7, no risk)::
+
+        START -> memory_recall -> [3 analysts] -> manager
+              -> bull -> bear -> rebuttal -> final_arguments
+                  -> debate_synthesis -> signal -> episodic_store -> END
+
+    Topology when both ``with_memory=True`` and ``with_risk=True``
+    (Phase-7 composed with Phase-6)::
+
+        START -> memory_recall -> [3 analysts] -> manager
+              -> bull -> bear -> rebuttal -> final_arguments
+                  -> debate_synthesis
+              -> risk_manager -[conditional]->
+                  {signal -> episodic_store -> END | episodic_store -> END}
+
+    BOTH the APPROVED and VETOED paths flow into ``episodic_store``
+    before END -- vetoes are the richest learning signal
+    (07-RESEARCH.md Open Question 1 recommendation).
 
     Phase-5 extended the Phase-4 fan-out / fan-in / manager topology with a
     strictly sequential 5-act debate. Phase-6 adds a single ``risk_manager``
@@ -215,31 +240,44 @@ def build_debate_pipeline(
     verbatim so the Phase-5 integration tests in
     ``tests/integration/test_debate_pipeline.py`` stay green.
 
-    Graph topology is compile-time static (threat model T-05-19 / T-06-08 --
-    no runtime modification). Every node run is bounded by per-agent
-    ``UsageLimits``. Analyst-level failures still propagate inside
-    ``analyst_reports`` (same idiom as Phase 4).
+    Graph topology is compile-time static (threat model T-05-19 / T-06-08 /
+    T-07-22 -- no runtime modification). Every node run is bounded by
+    per-agent ``UsageLimits``. Analyst-level failures still propagate
+    inside ``analyst_reports`` (same idiom as Phase 4).
 
     Args:
         checkpointer: Optional LangGraph checkpoint saver for durable state
             persistence. Pass a ``PostgresSaver`` in production.
-        with_risk: When True (default), wires the Phase-6 risk gate. When
-            False, builds the Phase-5 topology unchanged (for regression
+        with_risk: When True, wires the Phase-6 risk gate. When False
+            (default), builds the Phase-5 topology (for regression
             testing).
         risk_deps: Bound :class:`RiskDeps` consumed by ``risk_manager_node``.
             Required when ``with_risk=True``; must be ``None`` otherwise.
+        with_memory: When True, wires the Phase-7 memory substrate
+            (``memory_recall`` before the analysts, ``episodic_store``
+            after signal/veto). When False (default), memory nodes are
+            absent from the graph (backcompat).
+        memory_deps: Bound :class:`MemoryDeps` consumed by the two memory
+            nodes. Required when ``with_memory=True``; must be ``None``
+            otherwise.
 
     Returns:
         Compiled ``StateGraph`` ready for invocation via ``ainvoke``.
 
     Raises:
-        ValueError: When ``with_risk=True`` but ``risk_deps`` is ``None``
-            -- the risk node cannot run without a session and returns data.
+        ValueError: When ``with_risk=True`` but ``risk_deps`` is ``None``,
+            OR when ``with_memory=True`` but ``memory_deps`` is ``None``
+            -- the corresponding node(s) cannot run without dependencies.
     """
     if with_risk and risk_deps is None:
         raise ValueError(
             "build_debate_pipeline(with_risk=True) requires risk_deps -- "
             "supply a RiskDeps instance with db_session and returns."
+        )
+    if with_memory and memory_deps is None:
+        raise ValueError(
+            "build_debate_pipeline(with_memory=True) requires memory_deps -- "
+            "supply a MemoryDeps instance with db_session and beliefs_path."
         )
 
     builder = StateGraph(DebatePipelineState)
@@ -269,10 +307,30 @@ def build_debate_pipeline(
 
         builder.add_node("risk_manager", _risk_manager_bound)
 
-    # Fan-out: START -> 3 analysts (same as Phase 4).
-    builder.add_edge(START, "fundamental")
-    builder.add_edge(START, "sentiment")
-    builder.add_edge(START, "technical")
+    if with_memory:
+        assert memory_deps is not None  # for the type checker; enforced above
+
+        async def _memory_recall_bound(state: DebatePipelineState) -> dict:
+            return await memory_recall_node(state, memory_deps)
+
+        async def _episodic_store_bound(state: DebatePipelineState) -> dict:
+            return await episodic_store_node(state, memory_deps)
+
+        builder.add_node("memory_recall", _memory_recall_bound)
+        builder.add_node("episodic_store", _episodic_store_bound)
+
+    # Fan-out: START -> memory_recall (if enabled) -> 3 analysts, else
+    # START -> 3 analysts directly (Phase-4/5 topology preserved byte-for-byte
+    # when with_memory=False).
+    if with_memory:
+        builder.add_edge(START, "memory_recall")
+        builder.add_edge("memory_recall", "fundamental")
+        builder.add_edge("memory_recall", "sentiment")
+        builder.add_edge("memory_recall", "technical")
+    else:
+        builder.add_edge(START, "fundamental")
+        builder.add_edge(START, "sentiment")
+        builder.add_edge(START, "technical")
 
     # Fan-in: analysts -> manager (same as Phase 4).
     builder.add_edge("fundamental", "manager")
@@ -293,15 +351,35 @@ def build_debate_pipeline(
         # No direct (debate_synthesis, signal) edge when risk is active -- the
         # risk node is the single gatekeeper.
         builder.add_edge("debate_synthesis", "risk_manager")
-        builder.add_conditional_edges(
-            "risk_manager",
-            route_after_risk,
-            {"signal": "signal", "__end__": END},
-        )
+        if with_memory:
+            # Memory + risk: BOTH APPROVED and VETOED paths flow into
+            # episodic_store before END. Vetoed decisions are persisted
+            # (07-RESEARCH.md Open Question 1 -- vetoes are the richest
+            # learning signal).
+            builder.add_conditional_edges(
+                "risk_manager",
+                route_after_risk,
+                {"signal": "signal", "__end__": "episodic_store"},
+            )
+            builder.add_edge("signal", "episodic_store")
+            builder.add_edge("episodic_store", END)
+        else:
+            # Risk only (Phase-6 topology, unchanged).
+            builder.add_conditional_edges(
+                "risk_manager",
+                route_after_risk,
+                {"signal": "signal", "__end__": END},
+            )
+            builder.add_edge("signal", END)
     else:
-        # Phase-5 backcompat: debate_synthesis -> signal (no risk gate).
+        # No risk gate.
         builder.add_edge("debate_synthesis", "signal")
-
-    builder.add_edge("signal", END)
+        if with_memory:
+            # Memory only: signal -> episodic_store -> END.
+            builder.add_edge("signal", "episodic_store")
+            builder.add_edge("episodic_store", END)
+        else:
+            # Phase-5 backcompat: signal -> END (byte-for-byte unchanged).
+            builder.add_edge("signal", END)
 
     return builder.compile(checkpointer=checkpointer)
