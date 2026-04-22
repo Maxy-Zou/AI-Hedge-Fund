@@ -9,15 +9,18 @@ Monetary values are stored as BigInteger cents to avoid floating-point errors.
 from __future__ import annotations
 
 from sqlalchemy import (
+    JSON,
     BigInteger,
     Date,
     DateTime,
     Float,
+    Index,
     Integer,
     String,
     Text,
     UniqueConstraint,
 )
+from sqlalchemy.dialects.postgresql import JSONB as _JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ai_hedge_fund.db.base import Base, DualTimestampMixin
@@ -188,3 +191,47 @@ class PortfolioPosition(Base, DualTimestampMixin):
     cost_basis_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
     current_value_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
     instrument_type: Mapped[str] = mapped_column(String(20), nullable=False, default="equity")
+
+
+class EpisodicMemory(Base, DualTimestampMixin):
+    """Append-only episodic record of a completed analysis or trade outcome.
+
+    Two record types share this table:
+        record_type='analysis'  -- produced by episodic_store_node (Plan 07-03)
+        record_type='outcome'   -- produced by scripts/ingest_outcome.py (Plan 07-04)
+
+    Append-only by DESIGN: duplicates are allowed (multiple analyses of the
+    same ticker on the same day). Contrast with PortfolioPosition which
+    UniqueConstraint-guards (ticker, as_of_date) -- episodic memory
+    deliberately lifts that guard because duplicate analyses are a valid
+    operational signal, not an error.
+
+    Retention: 90 days from as_of_date, enforced by
+    ``src/ai_hedge_fund/scripts/purge_expired_episodic.py``.
+    """
+
+    __tablename__ = "episodic_memory"
+    __table_args__ = (
+        Index("ix_episodic_ticker_asof", "ticker", "as_of_date"),
+        Index("ix_episodic_sector_asof", "sector", "as_of_date"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    ticker: Mapped[str] = mapped_column(String(10), nullable=False)
+    sector: Mapped[str] = mapped_column(String(50), nullable=False, default="Unknown")
+    record_type: Mapped[str] = mapped_column(String(20), nullable=False)  # "analysis" | "outcome"
+
+    # Hot-path filter fields for B-tree indexing (rationale: 07-RESEARCH.md §Pattern 1)
+    signal_direction: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    confidence: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    outcome_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    linked_analysis_id: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+
+    # Phase-6 link-back audit key (policy version that produced the decision)
+    policy_sha: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+    # Full thesis + signal + risk_assessment snapshot.
+    # Uses JSONB on PostgreSQL (indexable via GIN) with a SQLite-JSON
+    # fallback for the in-memory test DB; the .with_variant() call binds
+    # both dialects. Nullable=False to prevent half-written audit rows.
+    payload: Mapped[dict] = mapped_column(_JSONB().with_variant(JSON, "sqlite"), nullable=False)
