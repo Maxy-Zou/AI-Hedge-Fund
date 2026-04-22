@@ -5,10 +5,22 @@ Episodic memory (SQLAlchemy, append-only) + Belief memory (ruamel.yaml)
 architecture map.
 """
 
+from ai_hedge_fund.memory.beliefs import (
+    belief_path_for_ticker,
+    load_belief,
+    write_belief,
+)
 from ai_hedge_fund.memory.episodic import (
     EpisodicHit,
     seed_episodic_from_csv,
 )
 from ai_hedge_fund.memory.recall import query_episodic
 
-__all__ = ["EpisodicHit", "query_episodic", "seed_episodic_from_csv"]
+__all__ = [
+    "EpisodicHit",
+    "belief_path_for_ticker",
+    "load_belief",
+    "query_episodic",
+    "seed_episodic_from_csv",
+    "write_belief",
+]

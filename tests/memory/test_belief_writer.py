@@ -25,8 +25,6 @@ from ai_hedge_fund.memory.beliefs import (
     load_belief,
     write_belief,
 )
-from ai_hedge_fund.schemas.memory import Belief
-
 
 # --------------------------------------------------------------------------
 # Test 1: comment preservation (THE MEM-02 contract)
@@ -201,11 +199,7 @@ def test_atomic_write_rollback_on_crash(
 def test_no_unsafe_yaml_load_in_beliefs_module() -> None:
     """T-07-10: the module must not call ``yaml.load(`` (RCE guard)."""
     source = (
-        Path(__file__).parent.parent.parent
-        / "src"
-        / "ai_hedge_fund"
-        / "memory"
-        / "beliefs.py"
+        Path(__file__).parent.parent.parent / "src" / "ai_hedge_fund" / "memory" / "beliefs.py"
     ).read_text()
     # Zero occurrences of the unsafe-loader call pattern. ``YAML().load`` from
     # ruamel is a different symbol and does not match this regex.
@@ -246,12 +240,8 @@ def test_path_traversal_guard(tmp_path: Path) -> None:
         belief_path_for_ticker(beliefs_dir, "AAPL/BAD")
 
     # Valid edge: dot (class-A shares) and dash tickers allowed
-    assert belief_path_for_ticker(beliefs_dir, "BRK.B") == (
-        beliefs_dir / "tickers" / "BRK.B.yaml"
-    )
-    assert belief_path_for_ticker(beliefs_dir, "RDS-A") == (
-        beliefs_dir / "tickers" / "RDS-A.yaml"
-    )
+    assert belief_path_for_ticker(beliefs_dir, "BRK.B") == (beliefs_dir / "tickers" / "BRK.B.yaml")
+    assert belief_path_for_ticker(beliefs_dir, "RDS-A") == (beliefs_dir / "tickers" / "RDS-A.yaml")
 
 
 # --------------------------------------------------------------------------
@@ -276,9 +266,7 @@ def test_version_monotone(beliefs_tmp_dir: Path) -> None:
     assert belief3.version == 5
 
     # Third write: all patches skipped (override-meta only) -> NO bump
-    outcome = write_belief(
-        path, raw3, patches={"human_edited": True, "edited_at": "2099-01-01"}
-    )
+    outcome = write_belief(path, raw3, patches={"human_edited": True, "edited_at": "2099-01-01"})
     assert outcome["applied"] == []
     belief4, _ = load_belief(path)
     assert belief4.version == 5
