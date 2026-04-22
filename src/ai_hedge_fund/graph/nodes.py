@@ -913,7 +913,9 @@ async def risk_manager_node(state: DebatePipelineState, deps: RiskDeps) -> dict:
     policy_sha = compute_policy_sha(policy)
     portfolio = load_portfolio(deps.db_session, state["as_of_date"])
 
-    candidate_ticker = thesis.get("ticker") or state["ticker"]
+    # state["ticker"] is the pipeline-level source of truth; thesis.ticker is
+    # LLM-produced and can drift under stubs or prompt variance.
+    candidate_ticker = state["ticker"]
     # Candidate sector + instrument_type come from state (NOT ThesisOutput).
     candidate_meta = state.get("candidate_metadata") or {}
     candidate_sector = candidate_meta.get("sector") or "Unknown"
