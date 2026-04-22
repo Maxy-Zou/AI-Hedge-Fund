@@ -12,8 +12,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from ai_hedge_fund.risk.policy import RiskPolicy, compute_policy_sha, load_policy
 from pydantic import ValidationError
+
+from ai_hedge_fund.risk.policy import RiskPolicy, compute_policy_sha, load_policy
 
 # Defaults that mirror config/risk_policy.yaml; kept here so tests do not
 # depend on the sample fixture for happy-path validation.

@@ -15,6 +15,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+
 from ai_hedge_fund.risk.policy import RiskPolicy, load_policy
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
