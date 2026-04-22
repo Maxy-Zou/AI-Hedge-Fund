@@ -2,18 +2,17 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_plan: 3
-total_plans: 6
-status: in-progress
-stopped_at: "Completed 07-01 (episodic memory substrate: EpisodicMemory model + Alembic 003 + query_episodic + purge_expired; 20 tests green); next: 07-02 (belief memory)"
-last_updated: "2026-04-22T20:52:30Z"
-last_activity: 2026-04-22 -- Phase 7 Plan 07-01 (episodic memory substrate) complete
+current_plan: 4 of 6
+status: unknown
+stopped_at: "Completed 07-02 (belief memory substrate: Belief + CritiqueEvent + load_belief + write_belief MEM-03 chokepoint); next: 07-03"
+last_updated: "2026-04-22T21:06:54.125Z"
+last_activity: 2026-04-22 -- Phase 7 Plan 07-02 (belief memory substrate + MEM-03 chokepoint) complete
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 28
-  completed_plans: 24
-  percent: 86
+  completed_plans: 25
+  percent: 89
 ---
 
 # Project State
@@ -28,13 +27,13 @@ See: .planning/PROJECT.md (updated 2026-04-11)
 ## Current Position
 
 Phase: 7 (Memory and Learning) — EXECUTING
-Current Plan: 3 of 6
+Current Plan: 4 of 6
 Total Plans: 6
-Completed Plans: 2 (07-00, 07-01)
-Next: Plan 07-02 (belief memory storage)
-Last activity: 2026-04-22 -- Phase 7 Plan 07-01 (episodic memory substrate) complete
+Completed Plans: 3 (07-00, 07-01, 07-02)
+Next: Plan 07-03 (pipeline integration — memory_recall_node + episodic_store_node wiring)
+Last activity: 2026-04-22 -- Phase 7 Plan 07-02 (belief memory substrate + MEM-03 chokepoint) complete
 
-Progress: [█████████░] 86%
+Progress: [█████████░] 89%
 
 ## Performance Metrics
 
@@ -82,6 +81,9 @@ Recent decisions affecting current work:
 - Phase 7 EpisodicMemory intentionally has NO UniqueConstraint (contrast PortfolioPosition) — duplicates (same ticker + same as_of_date) are allowed by design. Composite indexes on (ticker, as_of_date) and (sector, as_of_date) support both recall paths.
 - Phase 7 query_episodic uses OR composition on ticker/sector (not AND) so a single DB round trip returns ticker-specific priors AND sector context; at least one MUST be supplied (Pitfall-8 DoS guard raises ValueError).
 - Phase 7 retention is a SWEEP (delete), not a read-time filter — keeps retention semantics out of every consumer per 07-RESEARCH.md Anti-Pattern.
+- Phase 7 Belief schema is NOT frozen (writer rewrites YAML via ruamel round-trip raw); CritiqueEvent IS frozen (audit record immutability, matches Phase 6 Violation)
+- Phase 7 write_belief is the SOLE belief mutation entry point with three structured skip-reason codes (writer_never_touches_override_meta, field_locked_by_human, human_edited_global_flag_set) — MEM-03 chokepoint contract
+- Phase 7 beliefs.py renames local yaml -> parser to satisfy grep -c 'yaml.load(' == 0 T-07-10 RCE defense-in-depth acceptance criterion
 
 ### Pending Todos
 
@@ -96,8 +98,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-22T20:52:30Z
-Stopped at: Completed 07-01 (episodic memory substrate: EpisodicMemory model + Alembic 003 + query_episodic + purge_expired; 20 tests green); next: 07-02 (belief memory storage)
+Last session: 2026-04-22T21:03:26Z
+Stopped at: Completed 07-02 (belief memory substrate: Belief + CritiqueEvent + load_belief + write_belief MEM-03 chokepoint); next: 07-03
 Resume file: None
 
 **Planned Phase:** 7 (Memory and Learning) — 6 plans — 2026-04-22T20:33:50.033Z

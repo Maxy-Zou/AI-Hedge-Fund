@@ -56,7 +56,8 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Memory and Learning
 
 - [ ] **MEM-01**: Episodic memory in PostgreSQL -- stores recent analyses and trade outcomes with 90-day active retention
-- [ ] **MEM-02**: Belief memory as structured human-readable documents (YAML/JSON) -- investment theses, sector models, learned patterns
+- [x] **MEM-02
+**: Belief memory as structured human-readable documents (YAML/JSON) -- investment theses, sector models, learned patterns
 - [ ] **MEM-03**: Belief memory is editable by humans (transparency for investors, safety mechanism for corrections)
 - [ ] **MEM-04**: Cross-session learning -- belief memory updated via self-critique after trade outcomes are known
 
