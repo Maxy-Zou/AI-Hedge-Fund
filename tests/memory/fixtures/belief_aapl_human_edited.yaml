@@ -1,0 +1,22 @@
+# Human-edited variant: confidence pinned to 20, human_edited=true.
+# Plan 07-02's write_belief MUST NOT overwrite confidence or thesis here.
+ticker: AAPL
+sector: Technology
+version: 5
+thesis: |
+  I disagree with the machine view. AAPL hardware margins
+  are compressing faster than services growth can offset.
+confidence: 20
+human_edited: true
+edited_at: 2026-04-18
+critique_history:
+  - as_of_date: 2026-03-15
+    outcome_pct: 4.2
+    old_confidence: 70
+    new_confidence: 72
+    rationale: "Long thesis correct -- iPhone upgrade cycle beat consensus"
+    source: self_critique
+field_locks:
+  thesis: false
+  confidence: false
+  sector: true

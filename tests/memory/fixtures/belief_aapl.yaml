@@ -1,0 +1,30 @@
+# Golden belief fixture for Phase 7 tests.
+# The two leading comment lines and the inline `# flagged` marker below
+# MUST survive a ruamel.yaml round-trip (MEM-03 comment-preservation).
+ticker: AAPL
+sector: Technology
+version: 3
+thesis: |
+  AAPL is a high-margin hardware + services hybrid.
+  Services gross margin >70% provides downside protection
+  in hardware cycles.
+confidence: 72
+human_edited: false
+edited_at: null
+critique_history:
+  - as_of_date: 2026-03-15
+    outcome_pct: 4.2
+    old_confidence: 70
+    new_confidence: 72  # flagged 2026-03-15 by Max: reconsider after Q2 earnings
+    rationale: "Long thesis correct -- iPhone upgrade cycle beat consensus"
+    source: self_critique
+  - as_of_date: 2026-01-10
+    outcome_pct: -1.8
+    old_confidence: 74
+    new_confidence: 70
+    rationale: "Mild services deceleration"
+    source: self_critique
+field_locks:
+  thesis: false
+  confidence: false
+  sector: true

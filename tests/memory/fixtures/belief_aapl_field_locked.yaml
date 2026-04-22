@@ -1,0 +1,16 @@
+# Field-locked variant: global human_edited=false but confidence is locked.
+# Plan 07-02's write_belief MUST skip writes to `confidence` but accept
+# writes to `thesis` and `critique_history`.
+ticker: AAPL
+sector: Technology
+version: 2
+thesis: |
+  AAPL thesis open to machine refinement; only confidence is pinned.
+confidence: 55
+human_edited: false
+edited_at: null
+critique_history: []
+field_locks:
+  thesis: false
+  confidence: true
+  sector: true
