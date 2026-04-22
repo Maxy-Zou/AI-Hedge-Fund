@@ -33,6 +33,16 @@ from ai_hedge_fund.agents.base import (
     create_agent,
     get_usage_limits,
 )
+from ai_hedge_fund.agents.bear import (
+    bear_agent,
+    format_bull_case_for_bear,
+    get_bear_limits,
+)
+from ai_hedge_fund.agents.bull import (
+    bull_agent,
+    format_analyst_evidence,
+    get_bull_limits,
+)
 from ai_hedge_fund.agents.extraction import extraction_agent, get_extraction_limits
 from ai_hedge_fund.agents.fundamental import fundamental_agent, get_fundamental_limits
 from ai_hedge_fund.agents.manager import (
@@ -55,11 +65,17 @@ __all__ = [
     "PipelineBudgetTracker",
     "ResearchDeps",
     "analysis_agent",
+    "bear_agent",
+    "bull_agent",
     "create_agent",
     "extraction_agent",
+    "format_analyst_evidence",
     "format_analyst_reports",
+    "format_bull_case_for_bear",
     "fundamental_agent",
     "get_analysis_limits",
+    "get_bear_limits",
+    "get_bull_limits",
     "get_extraction_limits",
     "get_fundamental_limits",
     "get_manager_limits",
