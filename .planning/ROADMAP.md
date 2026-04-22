@@ -98,12 +98,12 @@ Plans:
   2. The Bear Advocate constructs a negative investment case with counter-evidence -- it directly addresses and rebuts at least 2 specific bull claims rather than presenting an independent negative thesis
   3. The debate follows the 5-act protocol (thesis, counter-thesis, rebuttal, final arguments, synthesis) with each act producing a structured output -- skipping an act or producing an empty act causes a validation error
   4. The final synthesis includes a thesis quality score based on evidence strength, logical consistency, and risk coverage -- and the post-debate confidence score differs from the pre-debate score in at least 30% of runs (demonstrating the debate actually changes the assessment)
-**Plans**: TBD
+**Plans:** 3 plans
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
-- [ ] 05-03: TBD
+- [x] 05-01-PLAN.md -- Debate schemas (BullCase, BearCase, RebuttalAct, FinalArguments, DebateSynthesis) + Bull and Bear agents with wiring tests
+- [x] 05-02-PLAN.md -- Rebuttal/Final/Synthesis agents + compute_quality_score (pure Python weighted mean) + DebatePipelineState TypedDict
+- [ ] 05-03-PLAN.md -- 5 debate nodes + build_debate_pipeline + TestModel-driven integration tests (end-to-end 10-agent flow)
 
 ### Phase 6: Risk Management
 **Goal**: A Risk Manager agent enforces hard portfolio constraints that cannot be overridden by research agents -- so no signal reaches the human reviewer without passing quantitative risk checks
@@ -162,7 +162,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 2. Data Ingestion | 0/4 | Planned | - |
 | 3. Single-Agent Research | 0/3 | Not started | - |
 | 4. Multi-Agent Specialization | 3/3 | Complete | 2026-04-21 |
-| 5. Adversarial Critique | 0/3 | Not started | - |
+| 5. Adversarial Critique | 2/3 | In progress | - |
 | 6. Risk Management | 0/2 | Not started | - |
 | 7. Memory and Learning | 0/3 | Not started | - |
 | 8. Signal and Output | 0/3 | Not started | - |
