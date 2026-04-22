@@ -137,9 +137,7 @@ class NewsArticle(Base, DualTimestampMixin):
     """
 
     __tablename__ = "news_articles"
-    __table_args__ = (
-        UniqueConstraint("ticker", "url", name="uq_news_articles_ticker_url"),
-    )
+    __table_args__ = (UniqueConstraint("ticker", "url", name="uq_news_articles_ticker_url"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     ticker: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
@@ -166,3 +164,27 @@ class MacroIndicator(Base, DualTimestampMixin):
     series_name: Mapped[str] = mapped_column(String(200), nullable=False)
     value: Mapped[float] = mapped_column(Float, nullable=False)
     observation_date: Mapped[str] = mapped_column(Date, nullable=False)
+
+
+class PortfolioPosition(Base, DualTimestampMixin):
+    """Paper-portfolio position snapshot for risk checks (Phase 6 RISK-03).
+
+    Append-only per CLAUDE.md financial-time-series convention: closing or
+    resizing a position writes a NEW row with a new ``as_of_date``; the
+    ``(ticker, as_of_date)`` UniqueConstraint prevents duplicate snapshots
+    within the same business date. ``sector`` is user-supplied on insert
+    (A3 in 06-RESEARCH.md) -- no external lookup needed for v1.
+    """
+
+    __tablename__ = "portfolio_positions"
+    __table_args__ = (
+        UniqueConstraint("ticker", "as_of_date", name="uq_portfolio_positions_ticker_asof"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    ticker: Mapped[str] = mapped_column(String(10), nullable=False, index=True)
+    sector: Mapped[str] = mapped_column(String(50), nullable=False)
+    quantity: Mapped[float] = mapped_column(Float, nullable=False)
+    cost_basis_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    current_value_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    instrument_type: Mapped[str] = mapped_column(String(20), nullable=False, default="equity")

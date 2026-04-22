@@ -1,0 +1,6 @@
+ticker,sector,quantity,cost_basis_cents,current_value_cents,instrument_type
+AAPL,Technology,50,800000,900000,equity
+MSFT,Technology,30,1200000,1400000,equity
+JNJ,Healthcare,40,650000,700000,equity
+JPM,Financials,25,450000,500000,equity
+PG,Consumer Staples,60,850000,900000,equity
