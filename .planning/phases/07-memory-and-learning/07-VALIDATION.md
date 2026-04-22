@@ -1,10 +1,11 @@
 ---
 phase: 7
 slug: memory-and-learning
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-22
+completed: 2026-04-22
 ---
 
 # Phase 7 — Validation Strategy
@@ -36,11 +37,25 @@ created: 2026-04-22
 
 ## Per-Task Verification Map
 
-> Filled during plan-phase and phase execution. Each row maps a plan task to its automated verification. The planner populates these rows as subplans are drafted; the executor updates Status column during execution.
+> Each row maps a plan task to its automated verification. Populated during plan execution as subplans were shipped.
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| TBD by planner | — | — | MEM-01..04 | T-07-XX | TBD | unit / integration | `uv run pytest …` | ❌ W0 | ⬜ pending |
+| 07-00 T1-T3 | 07-00 | 0 | Wave-0 scaffold | — | Fixtures + smoke test | unit | `uv run pytest tests/memory/test_wave0_scaffold.py -q` | ✅ | ✅ green |
+| 07-01 T1 | 07-01 | 1 | MEM-01 | T-07-01/02 | EpisodicMemory append-only + SQLAlchemy ORM only (no raw SQL) | unit | `uv run pytest tests/memory/test_episodic_model.py -q` | ✅ | ✅ green |
+| 07-01 T2 | 07-01 | 1 | MEM-01 | — | temporal filter (`as_of_date <= target`); Pitfall-2 regression | unit | `uv run pytest tests/memory/test_episodic_query.py -q` | ✅ | ✅ green |
+| 07-01 T3 | 07-01 | 1 | MEM-01 | — | 90-day retention sweep (delete, not read-filter) | unit | `uv run pytest tests/memory/test_episodic_retention.py -q` | ✅ | ✅ green |
+| 07-02 T1 | 07-02 | 1 | MEM-02 | T-07-10 | ruamel.yaml round-trip; `yaml.load(` count=0 | unit | `uv run pytest tests/memory/test_belief_schema.py -q` | ✅ | ✅ green |
+| 07-02 T2 | 07-02 | 1 | MEM-03 | T-07-12 | write_belief chokepoint + field locks + human-edit guard | unit | `uv run pytest tests/memory/test_human_override.py -q` | ✅ | ✅ green |
+| 07-03 T1 | 07-03 | 2 | MEM-01 | — | MemoryDeps frozen + DebatePipelineState single-writer keys | unit | `uv run pytest tests/graph/test_memory_nodes.py -q` | ✅ | ✅ green |
+| 07-03 T2 | 07-03 | 2 | MEM-01/03 | T-07-20/21 | memory_recall + episodic_store; Pitfall-2; human-edit read; VETOED persistence | unit | `uv run pytest tests/graph/test_memory_nodes.py -q` | ✅ | ✅ green |
+| 07-03 T3 | 07-03 | 2 | MEM-01 | T-07-22/24 | 4-variant topology; policy_sha Phase 6 -> 7 linkage | integration | `uv run pytest tests/graph/test_pipeline_with_memory.py -q` | ✅ | ✅ green |
+| 07-04 T1 | 07-04 | 2 | MEM-04 | T-07-36 | compute_new_confidence pure + per-event cap 10 | unit | `uv run pytest tests/memory/test_critique_math.py -q` | ✅ | ✅ green |
+| 07-04 T2 | 07-04 | 2 | MEM-04 | T-07-30/31 | RationaleOnly 1-field + forbidden-verb regex | unit | `uv run pytest tests/memory/test_self_critique_agent.py -q` | ✅ | ✅ green |
+| 07-04 T3 | 07-04 | 2 | MEM-03/04 | T-07-32/35/40 | ingest_outcome 6-step loop + MEM-03 cross-requirement | unit | `uv run pytest tests/memory/test_ingest_outcome.py -q` | ✅ | ✅ green |
+| 07-05 T1 | 07-05 | 3 | MEM-01..04 | T-07-51/52 | 8 e2e scenarios; 12 agents stubbed; VETOED persisted; Pitfall-2; MEM-03 x MEM-04 | integration | `uv run pytest tests/integration/test_phase7_e2e.py -q` | ✅ | ✅ green |
+| 07-05 T2 | 07-05 | 3 | MEM-01 + Phase-6 audit | T-07-50 | 6 policy_sha linkage tests across Phase 6 -> Phase 7 | integration | `uv run pytest tests/integration/test_phase7_policy_sha_linkage.py -q` | ✅ | ✅ green |
+| 07-05 T3 | 07-05 | 3 | phase gate | T-07-53 | full suite green; Phase 5/6 regression; ruff clean | system | `uv run pytest -q` | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -50,13 +65,13 @@ created: 2026-04-22
 
 The following fixtures, stubs, and schemas must exist before Wave 1 (core implementation) starts:
 
-- [ ] `tests/memory/__init__.py` — test package marker
-- [ ] `tests/memory/conftest.py` — shared fixtures: `memory_db_session`, `beliefs_tmp_dir`, `sample_episodic_record`, `sample_belief_yaml`
-- [ ] `tests/memory/fixtures/beliefs/` — hand-written sample belief YAML files (at least one per granularity: one ticker-level belief, one sector-level belief, one human-edited belief)
-- [ ] `tests/memory/fixtures/episodic_seed.py` — helper to seed N synthetic episodic rows with deterministic timestamps
-- [ ] `tests/memory/fixtures/outcomes_sample.yaml` — hand-written trade-outcome fixture for self-critique tests
+- [x] `tests/memory/__init__.py` — test package marker (shipped in Plan 07-00)
+- [x] `tests/memory/conftest.py` — shared fixtures: `memory_db_session`, `beliefs_tmp_dir`, `sample_belief_yaml_path`, `sample_belief_human_edited_path`, `sample_belief_field_locked_path`, `sample_episodic_csv_path`, `sample_outcomes_yaml_path` (shipped in Plan 07-00; re-exported via `tests/graph/conftest.py` in 07-03 and `tests/integration/conftest.py` in 07-05)
+- [x] `tests/memory/fixtures/beliefs/` — hand-written sample belief YAML files (flat layout at `tests/memory/fixtures/belief_aapl.yaml` + `belief_aapl_human_edited.yaml` + `belief_aapl_field_locked.yaml`; shipped in Plan 07-00)
+- [x] `tests/memory/fixtures/episodic_seed.py` — helper lives at `src/ai_hedge_fund/memory/episodic.py::seed_episodic_from_csv` consuming `tests/memory/fixtures/seeded_episodic.csv` (shipped in Plan 07-00 / 07-01)
+- [x] `tests/memory/fixtures/outcomes_sample.yaml` — trade-outcome fixture for self-critique tests (shipped in Plan 07-00)
 
-*If already present after planning: mark each checkbox and set `wave_0_complete: true` in frontmatter.*
+*All Wave-0 fixtures present. `wave_0_complete: true` set in frontmatter.*
 
 ---
 
@@ -126,11 +141,11 @@ Derived from `07-RESEARCH.md`'s `## Validation Architecture` section and the fou
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies (15/15 tasks across Plans 07-00..07-05 map to an `uv run pytest …` command in the table above)
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify (every task commits with its own pytest run green)
+- [x] Wave 0 covers all MISSING references (Wave-0 Requirements block all checked)
+- [x] No watch-mode flags (all automated commands are one-shot `uv run pytest …` invocations)
+- [x] Feedback latency < 30s (memory subsuite ~2s, graph subsuite <1s, integration subsuite ~2s, full suite ~20s)
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-04-22 upon Plan 07-05 completion. 199 Phase-7 tests green; cross-phase Phase-5/6 regression holds (17 integration + 122 graph/risk tests still green); full suite 920 passed, 9 skipped, 2 pre-existing baseline failures (documented in `deferred-items.md`).

@@ -72,3 +72,20 @@ the plugin entirely -- all 5 Task-3 tests pass without pytest-asyncio.
 **Fix (out of scope):** Either add `pytest-asyncio>=0.23` to dev
 dependencies, or convert the two failing tests to call `asyncio.run(...)`
 inside synchronous test bodies like Plan 07-04 does.
+
+## 07-05: pre-existing ruff I001 in tests/memory/test_episodic_model.py
+
+**Found during:** Plan 07-05 Task 3 ruff sweep across Phase-7 files.
+
+**Symptom:** `uv run ruff check tests/memory/test_episodic_model.py` flags
+an import-block order issue (`I001 [*] Import block is un-sorted or
+un-formatted`) caused by the `from __future__ import annotations` statement
+being separated from the rest of the imports by a blank line.
+
+**Why deferred:** Pre-existing; last touched by commit `4f45518 feat(07-01):
+add EpisodicMemory model + Alembic 003`. Unrelated to Plan 07-05 scope
+(integration tests only). Verified via `git stash` + re-run: the error
+persists without this plan's changes. Auto-fixable with
+`ruff check --fix tests/memory/test_episodic_model.py` in a future cleanup
+chore. Not a correctness issue — Phase 7 tests remain green with the I001
+warning present.
