@@ -100,23 +100,28 @@ class RiskPolicy(BaseModel):
         description="Full sector names that cannot enter the portfolio",
     )
 
-    # Conviction -> candidate position size multipliers (applied to max_single_position_pct)
+    # Conviction -> candidate position size multipliers (applied to max_single_position_pct).
+    # Upper bound is 2.0 so operators can opt-in to over-sizing for high-conviction
+    # signals; values above 1.0 intentionally allow the derived size to exceed
+    # max_single_position_pct so check_position_size can veto (RISK-02 regression
+    # test). Default multipliers (1.0 / 0.5 / 0.25) keep the derived size at or
+    # below the cap.
     size_high_conviction_multiplier: float = Field(
         default=1.0,
         ge=0.0,
-        le=1.0,
+        le=2.0,
         description="Multiplier on max_single_position_pct for high-conviction signals",
     )
     size_medium_conviction_multiplier: float = Field(
         default=0.5,
         ge=0.0,
-        le=1.0,
+        le=2.0,
         description="Multiplier on max_single_position_pct for medium-conviction signals",
     )
     size_low_conviction_multiplier: float = Field(
         default=0.25,
         ge=0.0,
-        le=1.0,
+        le=2.0,
         description="Multiplier on max_single_position_pct for low-conviction signals",
     )
 

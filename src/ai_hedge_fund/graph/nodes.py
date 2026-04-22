@@ -37,6 +37,7 @@ Nodes:
 from __future__ import annotations
 
 from datetime import date
+from typing import Literal
 
 import structlog
 from pydantic_ai.exceptions import UsageLimitExceeded
@@ -80,9 +81,26 @@ from ai_hedge_fund.agents.research import (
     get_research_limits,
     research_agent,
 )
+from ai_hedge_fund.agents.risk_manager import (
+    format_risk_context_for_rationale,
+    get_risk_manager_limits,
+    risk_manager_agent,
+)
 from ai_hedge_fund.agents.sentiment import get_sentiment_limits, sentiment_agent
 from ai_hedge_fund.agents.signal import get_signal_limits, signal_agent
 from ai_hedge_fund.agents.technical import get_technical_limits, technical_agent
+from ai_hedge_fund.graph.risk_deps import RiskDeps
+from ai_hedge_fund.risk.checks import (
+    check_exclusions,
+    check_position_size,
+    check_sector_concentration,
+)
+from ai_hedge_fund.risk.correlation import check_correlation
+from ai_hedge_fund.risk.drawdown import check_drawdown
+from ai_hedge_fund.risk.policy import compute_policy_sha, load_policy
+from ai_hedge_fund.risk.portfolio import load_portfolio
+from ai_hedge_fund.risk.sizing import derive_candidate_size_pct
+from ai_hedge_fund.schemas.risk import RiskAssessment, Violation
 from ai_hedge_fund.schemas.state import (
     DebatePipelineState,
     MultiAgentPipelineState,
@@ -811,3 +829,166 @@ async def debate_synthesis_node(state: DebatePipelineState) -> dict:
         "debate_synthesis": synthesis.model_dump(),
         "thesis": synthesis.revised_thesis.model_dump(),
     }
+
+
+# ---------------------------------------------------------------------------
+# Phase-6 risk manager node: deterministic-first veto with LLM advisory
+# rationale. Pattern 2 from 06-RESEARCH.md; RationaleOnly supersession
+# (the agent's schema lacks a status field, so the LLM CANNOT author the
+# decision). First-violation-wins ordering:
+#     exclusions -> position_size -> sector -> correlation -> drawdown
+# The LLM is still called on violations so the audit trail has a
+# human-readable rationale, but status / constraint / observed / limit
+# are set by Python via a fresh ``RiskAssessment(...)`` construction --
+# ``result.output.model_copy`` would widen the LLM attack surface and is
+# explicitly NOT used (negative grep in 06-05-PLAN.md acceptance).
+# ---------------------------------------------------------------------------
+
+
+def _conviction_from_confidence(confidence: int) -> Literal["low", "medium", "high"]:
+    """Bucket ThesisOutput.confidence (0-100) into low/medium/high."""
+    if confidence >= 75:
+        return "high"
+    if confidence >= 50:
+        return "medium"
+    return "low"
+
+
+async def risk_manager_node(state: DebatePipelineState, deps: RiskDeps) -> dict:
+    """Phase-6 Risk Manager node -- deterministic checks + advisory rationale.
+
+    Threat mitigations:
+        T-06-02  (veto bypass): ``status`` is set via ``RiskAssessment(...,
+                 status=status, ...)`` AFTER the agent runs; the agent's
+                 output schema (:class:`RationaleOnly`) has no status
+                 field, so the LLM cannot even emit one.
+        T-06-04  (policy drift): ``policy_sha`` is persisted on every
+                 emitted :class:`RiskAssessment` and logged in the
+                 structlog event.
+        T-06-05  (div-by-zero): ``risk/drawdown.py`` guards handle NaN
+                 and all-zero return series without raising.
+        Pitfall 1: LLM rationale is advisory; deterministic result wins.
+        Pitfall 2: policy + portfolio loaded INSIDE the node, keyed on
+                   ``state['as_of_date']`` for temporal correctness.
+        Pitfall 3: empty portfolio + candidate evaluates candidate-only
+                   drawdown (``check_drawdown`` handles this branch).
+        Pitfall 4: insufficient price history short-circuits with a named
+                   ``insufficient_price_history`` violation.
+        Pitfall 7: router fails closed on missing assessment (see
+                   :func:`route_after_risk`).
+
+    Args:
+        state: DebatePipelineState carrying ``thesis`` (post-debate),
+            ``candidate_metadata`` (optional sector + instrument_type),
+            ``ticker``, and ``as_of_date``.
+        deps: Bound :class:`RiskDeps` (db_session, returns DataFrame, and
+            either a pre-built policy or a policy path).
+
+    Returns:
+        ``{"risk_assessment": RiskAssessment.model_dump()}`` on success,
+        ``{"error": ...}`` when the thesis is missing / malformed or the
+        LLM budget is exceeded, or ``{}`` when an upstream error has
+        already short-circuited the pipeline.
+    """
+    if state.get("error"):
+        return {}
+    thesis = state.get("thesis")
+    if thesis is None:
+        logger.error("risk_no_thesis", ticker=state.get("ticker"))
+        return {"error": "No thesis available for risk check"}
+
+    # ThesisOutput (src/ai_hedge_fund/schemas/agents.py::ThesisOutput) has
+    # ticker, bull_case, bear_case, confidence: int (0-100), risk_factors.
+    # Explicitly NO sector / instrument_type -- those arrive via
+    # state["candidate_metadata"]. Missing confidence is a schema bug
+    # upstream; do not default to 0.
+    confidence = thesis.get("confidence")
+    if confidence is None:
+        logger.error("risk_thesis_missing_confidence", ticker=state.get("ticker"))
+        return {"error": "Thesis missing 'confidence' field"}
+    conviction = _conviction_from_confidence(int(confidence))
+
+    # Policy + portfolio load INSIDE the node (Pitfall 2).
+    policy = deps.policy if deps.policy is not None else load_policy(deps.policy_path)
+    policy_sha = compute_policy_sha(policy)
+    portfolio = load_portfolio(deps.db_session, state["as_of_date"])
+
+    candidate_ticker = thesis.get("ticker") or state["ticker"]
+    # Candidate sector + instrument_type come from state (NOT ThesisOutput).
+    candidate_meta = state.get("candidate_metadata") or {}
+    candidate_sector = candidate_meta.get("sector") or "Unknown"
+    candidate_instrument_type = candidate_meta.get("instrument_type") or "equity"
+    candidate_size_pct = derive_candidate_size_pct(conviction, policy)
+
+    # 5 deterministic checks in fixed order; first violation wins.
+    violation: Violation | None = (
+        check_exclusions(candidate_sector, candidate_instrument_type, policy)
+        or check_position_size(candidate_size_pct, policy)
+        or check_sector_concentration(candidate_sector, candidate_size_pct, portfolio, policy)
+        or check_correlation(candidate_ticker, portfolio, deps.returns, policy)
+        or check_drawdown(candidate_ticker, candidate_size_pct, portfolio, deps.returns, policy)
+    )
+    status: Literal["APPROVED", "VETOED"] = "VETOED" if violation else "APPROVED"
+
+    # Call LLM for rationale (advisory) -- even on veto, for audit trail.
+    prompt = format_risk_context_for_rationale(
+        thesis=thesis,
+        status=status,
+        violation=violation,
+        portfolio=portfolio,
+        policy=policy,
+    )
+    try:
+        limits = get_risk_manager_limits()
+        result = await risk_manager_agent.run(prompt, usage_limits=limits)
+    except UsageLimitExceeded as e:
+        logger.error(
+            "risk_manager_budget_exceeded",
+            ticker=state["ticker"],
+            error=str(e),
+        )
+        return {"error": f"Risk manager budget exceeded: {e}"}
+
+    # DETERMINISTIC OVERWRITE -- LLM status value is DISCARDED. The agent's
+    # RationaleOnly schema has no status field, so this is belt-and-braces:
+    # even if the agent were replaced with a wider schema, the node's
+    # Python-authored ``status`` is what ships.
+    assessment = RiskAssessment(
+        ticker=candidate_ticker,
+        status=status,
+        constraint_violated=violation.name if violation else None,
+        observed=violation.observed if violation else None,
+        limit=violation.limit if violation else None,
+        rationale=result.output.rationale,
+        policy_sha=policy_sha,
+    )
+
+    usage = result.usage()
+    event_name = "risk_manager_complete" if status == "APPROVED" else "risk_manager_veto"
+    logger.info(
+        event_name,
+        ticker=state["ticker"],
+        status=status,
+        constraint_violated=assessment.constraint_violated,
+        observed=assessment.observed,
+        limit=assessment.limit,
+        policy_sha=policy_sha,
+        input_tokens=usage.input_tokens,
+        output_tokens=usage.output_tokens,
+        total_tokens=usage.total_tokens,
+    )
+    return {"risk_assessment": assessment.model_dump()}
+
+
+def route_after_risk(state: DebatePipelineState) -> Literal["signal", "__end__"]:
+    """Fail-closed router: APPROVED -> signal; VETOED or missing -> __end__.
+
+    Pitfall 7 mitigation: any state where ``risk_assessment`` is absent,
+    ``None``, or lacks a ``status`` key routes to ``__end__``. A router
+    that defaulted to ``signal`` would silently approve a broken
+    upstream, bypassing the veto entirely.
+    """
+    assessment = state.get("risk_assessment")
+    if assessment is None:
+        return "__end__"
+    return "signal" if assessment.get("status") == "APPROVED" else "__end__"

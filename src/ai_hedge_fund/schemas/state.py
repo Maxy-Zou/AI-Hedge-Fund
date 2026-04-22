@@ -32,6 +32,41 @@ from __future__ import annotations
 import operator
 from typing import Annotated, Required, TypedDict
 
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class CandidateMetadata(BaseModel):
+    """Sector + instrument type injected into ``DebatePipelineState``.
+
+    ``ThesisOutput`` (Phase-3 immutable schema) carries ``ticker``,
+    ``bull_case``, ``bear_case``, ``confidence``, and ``risk_factors``; it
+    does NOT carry a ``sector`` or ``instrument_type`` field. Phase 6's
+    ``risk_manager_node`` needs both to run the exclusion + sector-
+    concentration checks, so upstream callers (pipeline entry point or
+    research manager) set this explicit state key BEFORE the risk node
+    executes.
+
+    When the candidate_metadata field is absent or None, the node treats
+    ``sector`` as ``"Unknown"`` and ``instrument_type`` as ``"equity"``.
+    "Unknown" never matches ``excluded_sectors`` and never matches a
+    sector-concentration threshold, so the safe default degrades to
+    position-size / correlation / drawdown enforcement only.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    sector: str = Field(
+        min_length=1,
+        description="Sector the candidate belongs to (e.g., 'Technology').",
+    )
+    instrument_type: str = Field(
+        default="equity",
+        description=(
+            "Instrument type for exclusion checks. Default is 'equity'; "
+            "pass 'SPAC' / 'OTC' / 'ETF' when applicable."
+        ),
+    )
+
 
 class PipelineState(TypedDict, total=False):
     """State flowing through the legacy LangGraph research pipeline.
@@ -142,6 +177,16 @@ class DebatePipelineState(TypedDict, total=False):
             debate_synthesis_node.
         signal: ``SignalOutput.model_dump()`` -- written by signal adapter
             node (debate_signal_node in Plan 05-03, reuses signal_agent).
+        risk_assessment: Optional ``RiskAssessment.model_dump()`` written by
+            Phase-6 ``risk_manager_node``. On VETOED the conditional router
+            ``route_after_risk`` ends the graph without calling ``signal``.
+        candidate_metadata: Optional ``CandidateMetadata.model_dump()``
+            -- sector + instrument_type injected by the pipeline caller
+            BEFORE the risk node runs. NOT extracted from ``ThesisOutput``,
+            which is a Phase-3 immutable schema that carries no sector
+            field. If absent, ``risk_manager_node`` treats sector as
+            ``"Unknown"`` (safe default -- never matches excluded_sectors
+            and never matches a sector-concentration threshold).
         error: Propagates upstream error; debate nodes short-circuit when set.
     """
 
@@ -155,4 +200,6 @@ class DebatePipelineState(TypedDict, total=False):
     final_arguments: dict | None
     debate_synthesis: dict | None
     signal: dict | None
+    risk_assessment: dict | None
+    candidate_metadata: dict | None
     error: str | None

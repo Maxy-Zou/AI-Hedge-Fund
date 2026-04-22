@@ -49,10 +49,13 @@ def compute_max_correlation_with_portfolio(
         value (so both strongly positive and strongly negative pairs bubble
         up -- downstream ``check_correlation`` takes the absolute value).
     """
-    if not portfolio_tickers:
+    # Deduplicate: when the candidate is already in the portfolio, we still
+    # want to compare it against OTHER holdings, never against itself.
+    other_tickers = [t for t in portfolio_tickers if t != candidate_ticker]
+    if not other_tickers:
         return ("", 0.0)
 
-    missing = [t for t in [candidate_ticker, *portfolio_tickers] if t not in returns.columns]
+    missing = [t for t in [candidate_ticker, *other_tickers] if t not in returns.columns]
     if missing:
         logger.warning(
             "correlation_ticker_missing",
@@ -61,7 +64,7 @@ def compute_max_correlation_with_portfolio(
         )
         return ("", 0.0)
 
-    aligned = returns[[candidate_ticker, *portfolio_tickers]].dropna()
+    aligned = returns[[candidate_ticker, *other_tickers]].dropna()
     if len(aligned) < min_window:
         logger.warning(
             "correlation_insufficient_data",
