@@ -28,6 +28,7 @@ from ai_hedge_fund.schemas.debate import (
     RebuttalPoint,
 )
 from ai_hedge_fund.schemas.state import (
+    DebatePipelineState,
     MultiAgentPipelineState,
     PipelineState,
     ResearchPipelineState,
@@ -40,6 +41,7 @@ __all__ = [
     "BearClaim",
     "BullCase",
     "BullClaim",
+    "DebatePipelineState",
     "DebateSynthesis",
     "ExtractionOutput",
     "FilingCitation",

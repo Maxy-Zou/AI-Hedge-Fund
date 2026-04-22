@@ -16,6 +16,15 @@ the specialist analysts + research manager pipeline. It uses an
 ``operator.add`` reducer on ``analyst_reports`` so each parallel analyst
 can append its report without overwriting peers -- LangGraph merges the
 lists returned from each node.
+
+DebatePipelineState (Phase-5) extends MultiAgentPipelineState with five
+single-writer debate-act fields: ``bull_case``, ``bear_case``,
+``rebuttal``, ``final_arguments``, ``debate_synthesis``. Each is written
+exactly once by its owning node with overwrite semantics -- NO ``operator.add``
+reducer so silent accumulation is impossible. The ``thesis`` field is written
+by manager_node and OVERWRITTEN by debate_synthesis_node with the
+post-debate ``revised_thesis`` so the downstream signal_node consumes the
+debated version without knowing the debate happened.
 """
 
 from __future__ import annotations
@@ -103,5 +112,47 @@ class MultiAgentPipelineState(TypedDict, total=False):
     as_of_date: Required[str]
     analyst_reports: Annotated[list[dict], operator.add]
     thesis: dict | None
+    signal: dict | None
+    error: str | None
+
+
+class DebatePipelineState(TypedDict, total=False):
+    """State flowing through the Phase-5 debate pipeline.
+
+    Extends MultiAgentPipelineState by adding five single-writer debate-act
+    fields. TypedDict multiple-inheritance with Annotated reducer fields is
+    fragile, so the MultiAgentPipelineState fields are duplicated here
+    rather than inherited (per RESEARCH.md Pattern 5).
+
+    Required fields:
+        ticker: Stock ticker symbol being analyzed.
+        as_of_date: Temporal cutoff as an ISO-format date string.
+
+    Optional fields:
+        analyst_reports: Accumulated analyst outputs via ``operator.add``
+            reducer (fan-in from parallel analysts -- same as Phase 4).
+        thesis: ``ThesisOutput.model_dump()`` -- written by manager_node,
+            OVERWRITTEN by debate_synthesis_node with the revised thesis.
+        bull_case: ``BullCase.model_dump()`` -- single-writer bull_node.
+        bear_case: ``BearCase.model_dump()`` -- single-writer bear_node.
+        rebuttal: ``RebuttalAct.model_dump()`` -- single-writer rebuttal_node.
+        final_arguments: ``FinalArguments.model_dump()`` -- single-writer
+            final_arguments_node.
+        debate_synthesis: ``DebateSynthesis.model_dump()`` -- single-writer
+            debate_synthesis_node.
+        signal: ``SignalOutput.model_dump()`` -- written by signal adapter
+            node (debate_signal_node in Plan 05-03, reuses signal_agent).
+        error: Propagates upstream error; debate nodes short-circuit when set.
+    """
+
+    ticker: Required[str]
+    as_of_date: Required[str]
+    analyst_reports: Annotated[list[dict], operator.add]
+    thesis: dict | None
+    bull_case: dict | None
+    bear_case: dict | None
+    rebuttal: dict | None
+    final_arguments: dict | None
+    debate_synthesis: dict | None
     signal: dict | None
     error: str | None
