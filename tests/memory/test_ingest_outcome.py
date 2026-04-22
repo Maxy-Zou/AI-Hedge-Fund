@@ -29,6 +29,7 @@ os.environ.setdefault("ANTHROPIC_API_KEY", "test-key-for-unit-tests")
 import pytest
 from pydantic_ai.models.test import TestModel
 from sqlalchemy.orm import Session
+from structlog.testing import capture_logs
 
 from ai_hedge_fund.agents.self_critique import self_critique_agent
 from ai_hedge_fund.db.models import EpisodicMemory
@@ -207,12 +208,17 @@ def test_ingest_outcome_missing_belief_file(
     memory_db_session: Session,
     tmp_path: Path,
 ) -> None:
-    """No belief file -> FileNotFoundError, but outcome row IS still appended."""
+    """No belief file -> FileNotFoundError, but outcome row IS still appended.
+
+    WR-02: Before re-raising, the function emits a structured
+    ``self_critique_missing_belief`` warning so the orphan outcome row is
+    recoverable via log grep.
+    """
     beliefs_dir = tmp_path / "beliefs"
     (beliefs_dir / "tickers").mkdir(parents=True)
     _seed_analysis(memory_db_session, "AAPL", date(2026, 1, 10))
 
-    with self_critique_agent.override(
+    with capture_logs() as logs, self_critique_agent.override(
         model=TestModel(custom_output_args={"rationale": STUB_RATIONALE})
     ), pytest.raises(FileNotFoundError, match="AAPL"):
         asyncio.run(
@@ -226,12 +232,27 @@ def test_ingest_outcome_missing_belief_file(
         )
 
     # Outcome row WAS appended before the FileNotFoundError propagated.
-    assert (
+    outcome_rows = (
         memory_db_session.query(EpisodicMemory)
         .filter_by(ticker="AAPL", record_type="outcome")
-        .count()
-        == 1
+        .all()
     )
+    assert len(outcome_rows) == 1
+
+    # WR-02: structured warning log was emitted BEFORE re-raising. Operators
+    # can grep for this event to recover orphan outcome rows.
+    warning_events = [
+        entry
+        for entry in logs
+        if entry.get("event") == "self_critique_missing_belief"
+    ]
+    assert len(warning_events) == 1
+    warning = warning_events[0]
+    assert warning["log_level"] == "warning"
+    assert warning["ticker"] == "AAPL"
+    assert warning["outcome_row_id"] == outcome_rows[0].id
+    assert warning["as_of_date"] == "2026-04-20"
+    assert str(beliefs_dir / "tickers" / "AAPL.yaml") == warning["belief_path"]
 
 
 # ---------- Test 5: no prior analysis row ----------

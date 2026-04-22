@@ -149,7 +149,21 @@ async def ingest_outcome(
     # 3. Load the belief. FileNotFoundError here propagates AFTER the
     #    outcome row has been committed -- that is the documented
     #    "bootstrap case" behaviour (see test_ingest_outcome_missing_belief_file).
+    #
+    #    Emit a structured ``self_critique_missing_belief`` warning BEFORE
+    #    re-raising so the orphan outcome row is recoverable via log grep
+    #    (WR-02). Without this log, a reader of the episodic table cannot
+    #    distinguish "operator ingested an outcome for a ticker with no
+    #    belief yet" from "operator ingested and the belief update silently
+    #    failed".
     if not belief_path.is_file():
+        logger.warning(
+            "self_critique_missing_belief",
+            ticker=ticker,
+            as_of_date=as_of_date.isoformat(),
+            outcome_row_id=outcome_row.id,
+            belief_path=str(belief_path),
+        )
         raise FileNotFoundError(
             f"Belief file not found for {ticker}; run the analysis "
             f"pipeline first to auto-create {belief_path}"
