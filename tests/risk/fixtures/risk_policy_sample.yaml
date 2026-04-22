@@ -1,0 +1,27 @@
+# tests/risk/fixtures/risk_policy_sample.yaml
+# Tighter-than-default risk policy for deterministic test fixtures.
+# Thresholds are set so that sample_portfolio_sample.csv can both pass
+# (when signal is well within limits) and veto (when signal exceeds).
+
+# Hard caps (tighter than production defaults)
+max_single_position_pct: 8.0
+max_sector_pct: 25.0
+max_total_exposure_pct: 100.0
+
+# Correlation
+max_correlation_with_portfolio: 0.70
+correlation_window_days: 60
+
+# Drawdown
+max_projected_drawdown_pct: 20.0
+drawdown_window_days: 252
+min_history_days: 60
+
+# Exclusions
+excluded_instrument_types: ["OTC", "SPAC"]
+excluded_sectors: []
+
+# Conviction -> position-size multipliers (A4)
+size_high_conviction_multiplier: 1.0
+size_medium_conviction_multiplier: 0.5
+size_low_conviction_multiplier: 0.25

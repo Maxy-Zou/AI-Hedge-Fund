@@ -1,0 +1,27 @@
+# config/risk_policy.yaml -- human-editable risk limits for the paper portfolio.
+# Change any value here and restart the pipeline; Pydantic validates on load.
+# Unknown keys raise ValidationError (T-06-01 mitigation).
+
+# Hard caps
+max_single_position_pct: 10.0        # no one position > 10% of portfolio
+max_sector_pct: 30.0                 # no one sector > 30% of portfolio
+max_total_exposure_pct: 100.0        # sum of long positions; paper-portfolio v1 is long-only
+
+# Correlation
+max_correlation_with_portfolio: 0.80 # reject if new position correlates > 0.80 with any existing
+correlation_window_days: 60
+
+# Drawdown
+max_projected_drawdown_pct: 25.0     # reject if historical-simulation drawdown > 25%
+drawdown_window_days: 252
+min_history_days: 60                 # tickers with less history cannot be evaluated
+
+# Exclusions
+excluded_instrument_types: ["OTC", "SPAC"]
+excluded_sectors: []                 # list full sector names from portfolio_positions.sector
+
+# Conviction -> candidate position size multipliers (applied to max_single_position_pct).
+# high: take the full cap; medium: half; low: quarter. (Assumption A4.)
+size_high_conviction_multiplier: 1.0
+size_medium_conviction_multiplier: 0.5
+size_low_conviction_multiplier: 0.25
