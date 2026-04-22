@@ -174,9 +174,7 @@ def test_rationale_max_length_dos_guard() -> None:
 def test_thesis_max_length_dos_guard() -> None:
     """Bonus: thesis > 10_000 chars rejected."""
     with pytest.raises(ValidationError):
-        Belief.model_validate(
-            {**_valid_belief_kwargs(), "thesis": "a" * 10_001}
-        )
+        Belief.model_validate({**_valid_belief_kwargs(), "thesis": "a" * 10_001})
 
 
 def test_ticker_length_bounds() -> None:
@@ -184,9 +182,7 @@ def test_ticker_length_bounds() -> None:
     with pytest.raises(ValidationError):
         Belief.model_validate({**_valid_belief_kwargs(), "ticker": ""})
     with pytest.raises(ValidationError):
-        Belief.model_validate(
-            {**_valid_belief_kwargs(), "ticker": "A" * 11}
-        )
+        Belief.model_validate({**_valid_belief_kwargs(), "ticker": "A" * 11})
 
 
 def test_version_minimum() -> None:
