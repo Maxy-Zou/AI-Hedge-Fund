@@ -44,7 +44,6 @@ from ai_hedge_fund.graph.nodes import (  # noqa: E402
     rebuttal_node,
 )
 
-
 # ---------------------------------------------------------------------------
 # Seed helpers — minimal valid dicts matching the Phase-5 schemas.
 # ---------------------------------------------------------------------------

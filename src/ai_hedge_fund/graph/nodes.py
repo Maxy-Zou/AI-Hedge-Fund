@@ -22,6 +22,16 @@ Nodes:
     multi_agent_signal_node: Phase-4 signal adapter that consumes
         ``MultiAgentPipelineState`` (same thesis/signal/error keys as the
         Phase-3 state) and calls the existing signal_agent.
+    bull_node / bear_node / rebuttal_node / final_arguments_node /
+        debate_synthesis_node: Phase-5 5-act debate nodes. Sequential chain
+        producing BullCase -> BearCase -> RebuttalAct -> FinalArguments ->
+        DebateSynthesis. ``debate_synthesis_node`` OVERWRITES the LLM-
+        produced ``quality_score`` with ``compute_quality_score()`` (tool-
+        first per CLAUDE.md) and overwrites ``pre_debate_confidence`` with
+        ``state['thesis']['confidence']`` read BEFORE the agent runs
+        (Pitfall-3 mitigation). Returns BOTH ``debate_synthesis`` AND
+        ``thesis`` keys so the downstream signal node consumes the debated
+        thesis without code changes.
 """
 
 from __future__ import annotations
@@ -32,12 +42,38 @@ import structlog
 from pydantic_ai.exceptions import UsageLimitExceeded
 
 from ai_hedge_fund.agents.analysis import analysis_agent, get_analysis_limits
+from ai_hedge_fund.agents.bear import (
+    bear_agent,
+    format_bull_case_for_bear,
+    get_bear_limits,
+)
+from ai_hedge_fund.agents.bull import (
+    bull_agent,
+    format_analyst_evidence,
+    get_bull_limits,
+)
+from ai_hedge_fund.agents.debate_synthesis import (
+    compute_quality_score,
+    debate_synthesis_agent,
+    format_debate_for_synthesis,
+    get_debate_synthesis_limits,
+)
 from ai_hedge_fund.agents.extraction import extraction_agent, get_extraction_limits
+from ai_hedge_fund.agents.final_arguments import (
+    final_arguments_agent,
+    format_debate_for_final,
+    get_final_arguments_limits,
+)
 from ai_hedge_fund.agents.fundamental import fundamental_agent, get_fundamental_limits
 from ai_hedge_fund.agents.manager import (
     format_analyst_reports,
     get_manager_limits,
     manager_agent,
+)
+from ai_hedge_fund.agents.rebuttal import (
+    format_debate_for_rebuttal,
+    get_rebuttal_limits,
+    rebuttal_agent,
 )
 from ai_hedge_fund.agents.research import (
     ResearchDeps,
@@ -48,6 +84,7 @@ from ai_hedge_fund.agents.sentiment import get_sentiment_limits, sentiment_agent
 from ai_hedge_fund.agents.signal import get_signal_limits, signal_agent
 from ai_hedge_fund.agents.technical import get_technical_limits, technical_agent
 from ai_hedge_fund.schemas.state import (
+    DebatePipelineState,
     MultiAgentPipelineState,
     PipelineState,
     ResearchPipelineState,
@@ -478,3 +515,280 @@ async def multi_agent_signal_node(state: MultiAgentPipelineState) -> dict:
             error=str(e),
         )
         return {"error": f"Signal budget exceeded: {e}"}
+
+
+# ---------------------------------------------------------------------------
+# Phase 5 debate nodes: bull -> bear -> rebuttal -> final_arguments ->
+# debate_synthesis. Each follows the manager_node template: short-circuit on
+# upstream error, run zero-tool REASONING-tier agent under UsageLimits, catch
+# UsageLimitExceeded and propagate into state['error']. debate_synthesis_node
+# additionally overwrites two LLM-authored fields with pipeline-authoritative
+# values (compute_quality_score output + pre_debate_confidence from state).
+# ---------------------------------------------------------------------------
+
+
+async def bull_node(state: DebatePipelineState) -> dict:
+    """Phase-5 Bull Advocate node -- produces BullCase from thesis + analyst reports.
+
+    Short-circuits on upstream error. Requires ``state['thesis']`` to exist
+    (written by manager_node). Does not call any external tool -- bull_agent
+    is zero-tools and reads evidence from state via
+    ``format_analyst_evidence``.
+
+    Args:
+        state: DebatePipelineState carrying ``analyst_reports`` and ``thesis``.
+
+    Returns:
+        Dict with ``bull_case`` on success, ``error`` when budget exceeded or
+        precondition missing, or empty dict when skipped due to upstream error.
+    """
+    if state.get("error"):
+        return {}
+    thesis = state.get("thesis")
+    if thesis is None:
+        logger.error("bull_no_thesis", ticker=state.get("ticker"))
+        return {"error": "No thesis available for bull debate"}
+    reports = state.get("analyst_reports", [])
+    prompt = format_analyst_evidence(reports, thesis)
+    try:
+        limits = get_bull_limits()
+        result = await bull_agent.run(prompt, usage_limits=limits)
+        usage = result.usage()
+        logger.info(
+            "bull_complete",
+            ticker=state["ticker"],
+            input_tokens=usage.input_tokens,
+            output_tokens=usage.output_tokens,
+            total_tokens=usage.total_tokens,
+        )
+        return {"bull_case": result.output.model_dump()}
+    except UsageLimitExceeded as e:
+        logger.error("bull_budget_exceeded", ticker=state["ticker"], error=str(e))
+        return {"error": f"Bull budget exceeded: {e}"}
+
+
+async def bear_node(state: DebatePipelineState) -> dict:
+    """Phase-5 Bear Advocate node -- produces BearCase that rebuts bull claims.
+
+    Short-circuits on upstream error. Requires ``state['thesis']`` AND
+    ``state['bull_case']`` -- the bear agent must see what it is rebutting.
+    Builds the prompt by concatenating ``format_analyst_evidence(reports,
+    thesis)`` and ``format_bull_case_for_bear(bull_case)`` with a
+    ``"\\n\\n---\\n\\n"`` separator.
+
+    Args:
+        state: DebatePipelineState carrying ``analyst_reports``, ``thesis``,
+            and ``bull_case``.
+
+    Returns:
+        Dict with ``bear_case`` on success, ``error`` when budget exceeded or
+        precondition missing, or empty dict when skipped due to upstream error.
+    """
+    if state.get("error"):
+        return {}
+    bull_case = state.get("bull_case")
+    if bull_case is None:
+        logger.error("bear_no_bull_case", ticker=state.get("ticker"))
+        return {"error": "No bull case available for bear debate"}
+    thesis = state.get("thesis")
+    reports = state.get("analyst_reports", [])
+    evidence_section = format_analyst_evidence(reports, thesis)
+    bull_section = format_bull_case_for_bear(bull_case)
+    prompt = f"{evidence_section}\n\n---\n\n{bull_section}"
+    try:
+        limits = get_bear_limits()
+        result = await bear_agent.run(prompt, usage_limits=limits)
+        usage = result.usage()
+        logger.info(
+            "bear_complete",
+            ticker=state["ticker"],
+            input_tokens=usage.input_tokens,
+            output_tokens=usage.output_tokens,
+            total_tokens=usage.total_tokens,
+        )
+        return {"bear_case": result.output.model_dump()}
+    except UsageLimitExceeded as e:
+        logger.error("bear_budget_exceeded", ticker=state["ticker"], error=str(e))
+        return {"error": f"Bear budget exceeded: {e}"}
+
+
+async def rebuttal_node(state: DebatePipelineState) -> dict:
+    """Phase-5 Rebuttal node -- Act 3 of the 5-act debate.
+
+    Short-circuits on upstream error. Requires both ``state['bull_case']``
+    and ``state['bear_case']``. Runs ``rebuttal_agent`` with
+    ``format_debate_for_rebuttal(bull_case, bear_case)`` as the prompt under
+    the REASONING-tier ``output_override=8_000`` cap (Pitfall-6 cost
+    guardrail).
+
+    Args:
+        state: DebatePipelineState carrying ``bull_case`` and ``bear_case``.
+
+    Returns:
+        Dict with ``rebuttal`` on success, ``error`` when budget exceeded or
+        precondition missing, or empty dict when skipped due to upstream error.
+    """
+    if state.get("error"):
+        return {}
+    bull_case = state.get("bull_case")
+    bear_case = state.get("bear_case")
+    if bull_case is None or bear_case is None:
+        logger.error(
+            "rebuttal_missing_prereq",
+            ticker=state.get("ticker"),
+            has_bull=bull_case is not None,
+            has_bear=bear_case is not None,
+        )
+        return {"error": "No bull/bear case available for rebuttal"}
+    prompt = format_debate_for_rebuttal(bull_case, bear_case)
+    try:
+        limits = get_rebuttal_limits()
+        result = await rebuttal_agent.run(prompt, usage_limits=limits)
+        usage = result.usage()
+        logger.info(
+            "rebuttal_complete",
+            ticker=state["ticker"],
+            input_tokens=usage.input_tokens,
+            output_tokens=usage.output_tokens,
+            total_tokens=usage.total_tokens,
+        )
+        return {"rebuttal": result.output.model_dump()}
+    except UsageLimitExceeded as e:
+        logger.error("rebuttal_budget_exceeded", ticker=state["ticker"], error=str(e))
+        return {"error": f"Rebuttal budget exceeded: {e}"}
+
+
+async def final_arguments_node(state: DebatePipelineState) -> dict:
+    """Phase-5 Final Arguments node -- Act 4 of the 5-act debate.
+
+    Short-circuits on upstream error. Requires ``state['bull_case']``,
+    ``state['bear_case']``, AND ``state['rebuttal']`` -- closings reflect
+    what survived the rebuttal. Runs ``final_arguments_agent`` under the
+    REASONING-tier ``output_override=8_000`` cap.
+
+    Args:
+        state: DebatePipelineState carrying ``bull_case``, ``bear_case``,
+            and ``rebuttal``.
+
+    Returns:
+        Dict with ``final_arguments`` on success, ``error`` when budget
+        exceeded or precondition missing, or empty dict when skipped due
+        to upstream error.
+    """
+    if state.get("error"):
+        return {}
+    rebuttal = state.get("rebuttal")
+    bull_case = state.get("bull_case")
+    bear_case = state.get("bear_case")
+    if rebuttal is None or bull_case is None or bear_case is None:
+        logger.error(
+            "final_arguments_missing_prereq",
+            ticker=state.get("ticker"),
+            has_bull=bull_case is not None,
+            has_bear=bear_case is not None,
+            has_rebuttal=rebuttal is not None,
+        )
+        return {"error": "No rebuttal/bull/bear available for final arguments"}
+    prompt = format_debate_for_final(bull_case, bear_case, rebuttal)
+    try:
+        limits = get_final_arguments_limits()
+        result = await final_arguments_agent.run(prompt, usage_limits=limits)
+        usage = result.usage()
+        logger.info(
+            "final_arguments_complete",
+            ticker=state["ticker"],
+            input_tokens=usage.input_tokens,
+            output_tokens=usage.output_tokens,
+            total_tokens=usage.total_tokens,
+        )
+        return {"final_arguments": result.output.model_dump()}
+    except UsageLimitExceeded as e:
+        logger.error(
+            "final_arguments_budget_exceeded",
+            ticker=state["ticker"],
+            error=str(e),
+        )
+        return {"error": f"Final arguments budget exceeded: {e}"}
+
+
+async def debate_synthesis_node(state: DebatePipelineState) -> dict:
+    """Phase-5 Debate Synthesis node -- Act 5 + tool-first quality-score enforcement.
+
+    Reads ``pre_debate_confidence`` from ``state['thesis']['confidence']``
+    BEFORE running the agent (Pitfall-3 / T-05-18 mitigation -- do not trust
+    the LLM to remember this). Runs ``debate_synthesis_agent``, then:
+
+    1. Overwrites the LLM-produced ``quality_score`` with the output of
+       ``compute_quality_score(evidence_strength, logical_consistency,
+       risk_coverage)`` per CLAUDE.md's "LLMs NEVER compute financial ratios"
+       rule (DEBATE-04 / T-05-17 mitigation).
+    2. Overwrites ``pre_debate_confidence`` with the authoritative value
+       read from state before the agent ran.
+    3. Returns BOTH ``debate_synthesis`` (for observability / Langfuse) AND
+       ``thesis`` keys; ``thesis`` is replaced with
+       ``synthesis.revised_thesis.model_dump()`` so the downstream
+       ``multi_agent_signal_node`` consumes the post-debate thesis
+       without any code changes (RESEARCH.md Q3 resolution).
+
+    Immutable update via ``model_copy(update={...})`` -- never mutate the
+    agent's output object in place.
+
+    Args:
+        state: DebatePipelineState carrying ``thesis``, ``bull_case``,
+            ``bear_case``, ``rebuttal``, and ``final_arguments``.
+
+    Returns:
+        Dict with ``debate_synthesis`` and ``thesis`` on success, ``error``
+        when budget exceeded or required upstream act missing, or empty
+        dict when skipped due to upstream error.
+    """
+    if state.get("error"):
+        return {}
+    if state.get("final_arguments") is None:
+        logger.error("debate_synthesis_no_final", ticker=state.get("ticker"))
+        return {"error": "No final_arguments available for synthesis"}
+
+    # Source-of-truth for pre_debate_confidence is state -- NOT LLM output.
+    pre_debate_confidence = state.get("thesis", {}).get("confidence", 0)
+    prompt = format_debate_for_synthesis(state, pre_debate_confidence)
+
+    try:
+        limits = get_debate_synthesis_limits()
+        result = await debate_synthesis_agent.run(prompt, usage_limits=limits)
+    except UsageLimitExceeded as e:
+        logger.error(
+            "debate_synthesis_budget_exceeded",
+            ticker=state["ticker"],
+            error=str(e),
+        )
+        return {"error": f"Debate synthesis budget exceeded: {e}"}
+
+    synthesis = result.output
+    # Overwrite LLM values with deterministic / authoritative ones. Immutable
+    # update pattern per CLAUDE.md (return a new object; never mutate).
+    quality_score = compute_quality_score(
+        synthesis.evidence_strength,
+        synthesis.logical_consistency,
+        synthesis.risk_coverage,
+    )
+    synthesis = synthesis.model_copy(
+        update={
+            "quality_score": quality_score,
+            "pre_debate_confidence": pre_debate_confidence,
+        }
+    )
+    usage = result.usage()
+    logger.info(
+        "debate_synthesis_complete",
+        ticker=state["ticker"],
+        pre_conf=pre_debate_confidence,
+        post_conf=synthesis.post_debate_confidence,
+        quality=quality_score,
+        input_tokens=usage.input_tokens,
+        output_tokens=usage.output_tokens,
+        total_tokens=usage.total_tokens,
+    )
+    return {
+        "debate_synthesis": synthesis.model_dump(),
+        "thesis": synthesis.revised_thesis.model_dump(),
+    }
