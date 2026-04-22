@@ -17,8 +17,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Single-Agent Research** - One agent that reads filings, uses tool-augmented calculations, and produces structured thesis + signal (completed 2026-04-12)
 - [x] **Phase 4: Multi-Agent Specialization** - Fundamental, Sentiment, and Technical analysts coordinated by a Research Manager (completed 2026-04-21)
 - [x] **Phase 5: Adversarial Critique** - Bull/Bear advocates argue structured 5-act debate, thesis quality scored (completed 2026-04-22)
-- [ ] **Phase 6: Risk Management** - Risk Manager agent with veto power, position sizing constraints, portfolio-level checks
-- [ ] **Phase 7: Memory and Learning** - Episodic memory in PostgreSQL, human-readable belief memory, cross-session learning
+- [x] **Phase 6: Risk Management** - Risk Manager agent with veto power, position sizing constraints, portfolio-level checks (completed 2026-04-22)
+- [x] **Phase 7: Memory and Learning** - Episodic memory in PostgreSQL, human-readable belief memory, cross-session learning (completed 2026-04-22)
 - [ ] **Phase 8: Signal and Output** - Quantitative signal output, portfolio ranking, human-in-the-loop review, decision audit trail
 
 ## Phase Details
@@ -138,9 +138,9 @@ Plans:
 - [x] 07-00-PLAN.md -- Wave 0 scaffold: ruamel.yaml dep, tests/memory package + conftest, belief fixtures (plain + human-edited + field-locked), episodic CSV seed, outcomes YAML, Wave-0 smoke test
 - [x] 07-01-PLAN.md -- Episodic memory substrate: EpisodicMemory SQLAlchemy model + Alembic 003 (JSONB + composite indexes, no UniqueConstraint), query_episodic with temporal filter + OR ticker/sector, purge_expired 90-day sweep
 - [x] 07-02-PLAN.md -- Belief memory substrate: Belief + CritiqueEvent schemas (extra=forbid), load_belief/write_belief via ruamel.yaml with human-edit guard + field_locks + atomic tmp+rename + path-traversal regex
-- [ ] 07-03-PLAN.md -- Graph integration: MemoryDeps frozen dataclass, DebatePipelineState extended (episodic_hits/beliefs_consulted/episodic_stored_id single-writer keys), memory_recall_node + episodic_store_node (VETOED rows stored), build_debate_pipeline with_memory switch composing with_risk
-- [ ] 07-04-PLAN.md -- Self-critique substrate: compute_new_confidence (deterministic, Pitfall-5 capped at +/-10), self_critique_agent (RationaleOnly, REASONING tier, forbidden-verb invariant), scripts/ingest_outcome.py CLI (full 5-step offline loop)
-- [ ] 07-05-PLAN.md -- Integration + phase gate: Phase 7 end-to-end scenarios (with_memory + composition + VETOED persist + MEM-03 + MEM-04 + MEM-03xMEM-04 + temporal), policy_sha linkage (Phase 6 -> Phase 7 audit), full-suite regression, validation sign-off
+- [x] 07-03-PLAN.md -- Graph integration: MemoryDeps frozen dataclass, DebatePipelineState extended (episodic_hits/beliefs_consulted/episodic_stored_id single-writer keys), memory_recall_node + episodic_store_node (VETOED rows stored), build_debate_pipeline with_memory switch composing with_risk
+- [x] 07-04-PLAN.md -- Self-critique substrate: compute_new_confidence (deterministic, Pitfall-5 capped at +/-10), self_critique_agent (RationaleOnly, REASONING tier, forbidden-verb invariant), scripts/ingest_outcome.py CLI (full 5-step offline loop)
+- [x] 07-05-PLAN.md -- Integration + phase gate: Phase 7 end-to-end scenarios (with_memory + composition + VETOED persist + MEM-03 + MEM-04 + MEM-03xMEM-04 + temporal), policy_sha linkage (Phase 6 -> Phase 7 audit), full-suite regression, validation sign-off
 
 ### Phase 8: Signal and Output
 **Goal**: The pipeline produces investor-ready output with full audit trail and human review gate -- so every signal that reaches a trading decision has been researched, debated, risk-checked, and approved by a human
@@ -170,6 +170,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 3. Single-Agent Research | 0/3 | Not started | - |
 | 4. Multi-Agent Specialization | 3/3 | Complete | 2026-04-21 |
 | 5. Adversarial Critique | 3/3 | Complete    | 2026-04-22 |
-| 6. Risk Management | 0/6 | Planned     | - |
-| 7. Memory and Learning | 2/6 | In progress | - |
+| 6. Risk Management | 6/6 | Complete | 2026-04-22 |
+| 7. Memory and Learning | 6/6 | Complete | 2026-04-22 |
 | 8. Signal and Output | 0/3 | Not started | - |

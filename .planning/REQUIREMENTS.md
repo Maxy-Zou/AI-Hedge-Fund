@@ -141,13 +141,13 @@ Deferred to future release. Tracked but not in current roadmap.
 | DEBATE-02 | Phase 5 | Complete |
 | DEBATE-03 | Phase 5 | Partial (schemas + agents in 05-01/02; graph in 05-03) |
 | DEBATE-04 | Phase 5 | Complete (compute_quality_score + sub-score schema, 05-02) |
-| RISK-01 | Phase 6 | Pending |
-| RISK-02 | Phase 6 | Pending |
-| RISK-03 | Phase 6 | Pending |
-| MEM-01 | Phase 7 | Pending |
-| MEM-02 | Phase 7 | Pending |
-| MEM-03 | Phase 7 | Pending |
-| MEM-04 | Phase 7 | Pending |
+| RISK-01 | Phase 6 | Complete (Phase 6 shipped 2026-04-22) |
+| RISK-02 | Phase 6 | Complete (Phase 6 shipped 2026-04-22) |
+| RISK-03 | Phase 6 | Complete (Phase 6 shipped 2026-04-22) |
+| MEM-01 | Phase 7 | Complete (07-01 substrate + 07-03 graph wiring + 07-05 e2e; shipped 2026-04-22) |
+| MEM-02 | Phase 7 | Complete (07-02 Belief schema + 07-03 memory_recall_node reads beliefs_consulted + 07-05 e2e; shipped 2026-04-22) |
+| MEM-03 | Phase 7 | Complete (07-02 write_belief chokepoint + 07-03 read path + 07-04 ingest_outcome cross-req + 07-05 e2e MEM-03 x MEM-04; shipped 2026-04-22) |
+| MEM-04 | Phase 7 | Complete (07-04 compute_new_confidence + RationaleOnly + ingest_outcome; 07-05 e2e write loop 72->82; shipped 2026-04-22) |
 | SIG-01 | Phase 8 | Pending |
 | SIG-02 | Phase 8 | Pending |
 | SIG-03 | Phase 8 | Pending |
