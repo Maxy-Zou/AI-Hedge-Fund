@@ -286,6 +286,8 @@ async def risk_manager_node(state: DebatePipelineState) -> dict:
     return {"risk_assessment": assessment.model_dump()}
 ```
 
+> **Implementation supersession (2026-04-22):** The Phase 6 plans narrow the agent's output schema to `RationaleOnly` (a single `rationale: str` field). This is schema-level proof that the LLM cannot author the veto status, superseding runtime `model_copy` overwrite. The node constructs a fresh `RiskAssessment` with Python-authored fields and an `rationale` populated from `result.output.rationale`. See 06-04-PLAN.md Task 1 and 06-05-PLAN.md Task 1.
+
 ### Pattern 3: YAML-loaded Pydantic policy
 
 **What:** Policy defined as a `BaseModel` subclass. Load with `yaml.safe_load` then `RiskPolicy.model_validate(data)`. Validation at load-time surfaces bad configs as `ValidationError` before the pipeline runs.
@@ -698,37 +700,43 @@ class PortfolioPosition(Base, DualTimestampMixin):
 
 **Action for planner / discuss-phase:** assumptions A3, A4, A6 (sector source, conviction→size rule, policy file path) are the three highest-value decisions to surface to the user before coding begins. A1, A7 (window sizes, min_history) are tunable post-ship without code changes — acceptable as defaults.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Conviction → candidate position size mapping (A4)**
    - What we know: thesis produces `confidence: int` (0-100); signal produces `position_size_pct: float`. Phase 6 runs BEFORE signal, so the risk node must derive a candidate size from confidence+policy alone.
    - What's unclear: fixed step function? Linear? Kelly-criterion-inspired? User preference unknown.
    - Recommendation: fixed step function for v1 (high→policy.max_single_position_pct, medium→0.5×, low→0.25×). Pure function in `risk/checks.py::derive_candidate_size_pct` — easy to swap later.
+   - **RESOLVED:** fixed step function with `size_high_conviction_multiplier` on `RiskPolicy` — implemented in 06-03-PLAN.md Task 1 (`src/ai_hedge_fund/risk/sizing.py::derive_candidate_size_pct`).
 
 2. **Additive vs in-place builder (A5)**
    - What we know: Phase-5 used additive (`build_debate_pipeline` alongside unchanged `build_multi_agent_pipeline`) to avoid diamond. No diamond risk in Phase 6.
    - What's unclear: user preference for pipeline evolution — "one production pipeline that keeps growing" vs "one frozen pipeline per phase."
    - Recommendation: extend in place. Phase-5 summary already anticipates this. Freezing each phase's builder creates test-maintenance burden without benefit once the phases are sequential.
+   - **RESOLVED:** extend-in-place with backcompat `with_risk: bool = True` flag — implemented in 06-05-PLAN.md Task 2 (`build_debate_pipeline`).
 
 3. **Sector data source (A3)**
    - What we know: No existing sector lookup; `DailyPrice` table has no sector.
    - What's unclear: Finnhub auto-enrich vs. user-supplied CSV on position insert.
    - Recommendation: user-supplied CSV for v1 paper portfolio (small universe). Finnhub `/stock/profile2` wrapper is a separate task for v2 when universe grows.
+   - **RESOLVED:** user-supplied CSV with `sector` column on `portfolio_positions` table — implemented in 06-02-PLAN.md Task 1 (`PortfolioPosition.sector`) + `tests/risk/fixtures/portfolio_sample.csv`.
 
 4. **Policy file path and location (A6)**
    - What we know: CONTEXT.md says "human-editable YAML/JSON policy file (belief-memory-adjacent)" — matching MEM-02.
    - What's unclear: `config/risk_policy.yaml` vs `.planning/policy/...` vs env-var.
    - Recommendation: `config/risk_policy.yaml` (repo-relative, new `config/` directory). Consistent with future `config/belief_memory.yaml` in Phase 7.
+   - **RESOLVED:** `config/risk_policy.yaml` with `load_policy(path)` default — implemented in 06-01-PLAN.md Task 1 (`src/ai_hedge_fund/risk/policy.py`).
 
 5. **When should `risk_manager_node` run — before or after a notional `signal_draft`?**
    - What we know: Pipeline currently goes `debate_synthesis → signal → END`; Phase 6 makes it `debate_synthesis → risk_manager → {signal, END}`. Risk runs BEFORE signal.
    - What's unclear: Would risk-after-signal catch more issues? (e.g., signal might reduce size itself.)
    - Recommendation: risk-before-signal. This matches CONTEXT.md success criterion 2 ("rejected, NOT silently capped") — if signal runs first and sizes down to compliance, the signal looks approved when it was actually oversized.
+   - **RESOLVED:** `debate_synthesis → risk_manager → {signal, END}` topology — implemented in 06-05-PLAN.md Task 2 (`build_debate_pipeline` with `add_conditional_edges`).
 
 6. **Policy versioning / audit**
    - What we know: CLAUDE.md emphasizes audit trail (SIG-04 eventually).
    - What's unclear: Should the SHA of the loaded policy be persisted with the RiskAssessment for later compliance review?
    - Recommendation: YES — include `policy_sha: str` field on `RiskAssessment` (already in Example 2). Cheap, load-time hash compute. Phase 8 SIG-04 will thank us.
+   - **RESOLVED:** `policy_sha` field on every `RiskAssessment`, `compute_policy_sha` helper, audit tests — implemented in 06-01-PLAN.md Task 1 (schema + helper) + 06-05-PLAN.md Task 1 (node populates) + 06-06-PLAN.md Task 2 (audit integration tests).
 
 ## Environment Availability
 

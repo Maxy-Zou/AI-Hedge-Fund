@@ -30,6 +30,10 @@ Grounding guardrails (project-wide):
 - Hard limits come from a human-editable YAML/JSON policy file (belief-memory-adjacent) — not hardcoded constants.
 - Portfolio state is loaded from PostgreSQL; append-only history preserved.
 
+### Locked Decisions (added 2026-04-22 during revision)
+
+- **D-06-M01: Candidate metadata injection via explicit state key.** Candidate metadata (sector, instrument_type) is injected via an explicit `candidate_metadata: dict | None` state key on `DebatePipelineState` — NOT extracted from `ThesisOutput`. Rationale: `ThesisOutput` (defined in `src/ai_hedge_fund/schemas/agents.py:82`) is a Phase-3 immutable schema with no sector/instrument_type fields; adding them would break Phase 3 compatibility. Upstream callers (pipeline entry or research manager) set this field; when absent, `risk_manager_node` treats sector as "Unknown" (safe default: never matches excluded_sectors, never matches a sector-concentration threshold). See 06-05-PLAN.md Task 1 and 06-06-PLAN.md Task 1 Scenario 3 for implementation and integration-test usage.
+
 </decisions>
 
 <code_context>
