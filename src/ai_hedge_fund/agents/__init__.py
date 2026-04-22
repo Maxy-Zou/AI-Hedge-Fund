@@ -44,11 +44,21 @@ from ai_hedge_fund.agents.bull import (
     get_bull_limits,
 )
 from ai_hedge_fund.agents.extraction import extraction_agent, get_extraction_limits
+from ai_hedge_fund.agents.final_arguments import (
+    final_arguments_agent,
+    format_debate_for_final,
+    get_final_arguments_limits,
+)
 from ai_hedge_fund.agents.fundamental import fundamental_agent, get_fundamental_limits
 from ai_hedge_fund.agents.manager import (
     format_analyst_reports,
     get_manager_limits,
     manager_agent,
+)
+from ai_hedge_fund.agents.rebuttal import (
+    format_debate_for_rebuttal,
+    get_rebuttal_limits,
+    rebuttal_agent,
 )
 from ai_hedge_fund.agents.research import (
     ResearchDeps,
@@ -69,22 +79,28 @@ __all__ = [
     "bull_agent",
     "create_agent",
     "extraction_agent",
+    "final_arguments_agent",
     "format_analyst_evidence",
     "format_analyst_reports",
     "format_bull_case_for_bear",
+    "format_debate_for_final",
+    "format_debate_for_rebuttal",
     "fundamental_agent",
     "get_analysis_limits",
     "get_bear_limits",
     "get_bull_limits",
     "get_extraction_limits",
+    "get_final_arguments_limits",
     "get_fundamental_limits",
     "get_manager_limits",
+    "get_rebuttal_limits",
     "get_research_limits",
     "get_sentiment_limits",
     "get_signal_limits",
     "get_technical_limits",
     "get_usage_limits",
     "manager_agent",
+    "rebuttal_agent",
     "research_agent",
     "sentiment_agent",
     "signal_agent",
