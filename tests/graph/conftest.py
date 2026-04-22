@@ -18,6 +18,11 @@ Provides three primary fixtures consumed by ``test_risk_node.py``,
 
     ``risk_deps`` -- a :class:`RiskDeps` bundling the seeded session, the
     golden returns DataFrame, and ``safe_policy``.
+
+Phase 7 adds re-exports of the memory fixtures so graph-level tests
+(``test_memory_nodes.py``, ``test_pipeline_with_memory.py``) can consume
+the same ``memory_db_session`` / ``beliefs_tmp_dir`` / seeded paths that
+the memory unit tests do, without duplicating the fixture work.
 """
 
 from __future__ import annotations
@@ -34,6 +39,20 @@ from sqlalchemy.orm import Session
 from ai_hedge_fund.graph.risk_deps import RiskDeps
 from ai_hedge_fund.risk.policy import RiskPolicy
 from ai_hedge_fund.risk.portfolio import seed_portfolio_from_csv
+
+# Phase-7 memory fixtures — re-exported so tests/graph/* can consume them
+# without duplicating fixture code.  The noqa: F401 suppresses the unused
+# import warning while the name is still picked up by pytest's fixture
+# discovery.
+from tests.memory.conftest import (  # noqa: F401 -- re-export
+    beliefs_tmp_dir,
+    memory_db_session,
+    sample_belief_field_locked_path,
+    sample_belief_human_edited_path,
+    sample_belief_yaml_path,
+    sample_episodic_csv_path,
+    sample_outcomes_yaml_path,
+)
 
 RISK_FIXTURES_DIR = Path(__file__).parent.parent / "risk" / "fixtures"
 
