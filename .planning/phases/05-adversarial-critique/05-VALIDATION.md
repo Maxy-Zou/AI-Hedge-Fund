@@ -42,7 +42,7 @@ created: 2026-04-21
 | 5-01-02 | 01 | 1 | DEBATE-01 | — | Bull agent: REASONING tier, zero tools, ≥2 retries, source_analyst citations required | unit | `uv run pytest tests/unit/test_bull_agent.py` | ❌ W0 | ⬜ pending |
 | 5-01-03 | 01 | 1 | DEBATE-02 | — | Bear agent: REASONING tier, zero tools, addressed_bull_claims min_length=2 | unit | `uv run pytest tests/unit/test_bear_agent.py` | ❌ W0 | ⬜ pending |
 | 5-02-01 | 02 | 2 | DEBATE-03 | — | DebatePipelineState extends MultiAgentPipelineState; act fields have appropriate reducers | unit | `uv run pytest tests/unit/test_debate_state.py` | ❌ W0 | ⬜ pending |
-| 5-02-02 | 02 | 2 | DEBATE-03, DEBATE-04 | — | Rebuttal, final, synthesis agents — REASONING tier, zero tools, sequential state reads | unit | `uv run pytest tests/unit/test_debate_agents.py` | ❌ W0 | ⬜ pending |
+| 5-02-02 | 02 | 2 | DEBATE-03, DEBATE-04 | — | Rebuttal, final, synthesis agents — REASONING tier, zero tools, sequential state reads | unit | `uv run pytest tests/unit/test_rebuttal_agent.py tests/unit/test_final_arguments_agent.py tests/unit/test_debate_synthesis_agent.py` | ❌ W0 | ⬜ pending |
 | 5-02-03 | 02 | 2 | DEBATE-04 | — | compute_quality_score deterministic weighted mean of evidence/logic/risk | unit | `uv run pytest tests/unit/test_quality_score.py` | ❌ W0 | ⬜ pending |
 | 5-03-01 | 03 | 3 | DEBATE-03 | — | 5 debate nodes follow Phase 4 error-propagation idiom | unit | `uv run pytest tests/unit/test_debate_nodes.py` | ❌ W0 | ⬜ pending |
 | 5-03-02 | 03 | 3 | DEBATE-03 | — | build_debate_pipeline: sequential bull→bear→rebuttal→final→synthesis | unit | `uv run pytest tests/unit/test_debate_pipeline_builder.py` | ❌ W0 | ⬜ pending |
@@ -58,7 +58,9 @@ created: 2026-04-21
 - [ ] `tests/unit/test_bull_agent.py` — agent wiring stubs (tier, tools=[], retries, system prompt)
 - [ ] `tests/unit/test_bear_agent.py` — agent wiring stubs + addressed_bull_claims constraint
 - [ ] `tests/unit/test_debate_state.py` — DebatePipelineState reducer stubs
-- [ ] `tests/unit/test_debate_agents.py` — rebuttal/final/synthesis agent stubs
+- [ ] `tests/unit/test_rebuttal_agent.py` — rebuttal agent wiring stubs (clone of test_bull_agent.py with REBUTTAL role)
+- [ ] `tests/unit/test_final_arguments_agent.py` — final_arguments agent wiring stubs
+- [ ] `tests/unit/test_debate_synthesis_agent.py` — synthesis agent wiring stubs (REASONING tier, output_tokens_limit inherits default)
 - [ ] `tests/unit/test_quality_score.py` — compute_quality_score pure-function stubs
 - [ ] `tests/unit/test_debate_nodes.py` — node wrapper stubs (happy path + error propagation)
 - [ ] `tests/unit/test_debate_pipeline_builder.py` — builder-level wiring assertions

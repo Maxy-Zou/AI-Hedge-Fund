@@ -726,12 +726,12 @@ def test_full_debate_pipeline_with_test_model() -> None:
 
 **Risk summary:** No `[ASSUMED]` claim above is load-bearing for a success criterion. All assumptions concern implementation taste (file organization, weighting constants, option A vs B) — the criteria themselves are supported by verified facts about the stack.
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Quality-score weights** — Evidence-weighted (0.4/0.3/0.3) is my default. User may prefer equal weights (0.33) or a risk-first weighting (0.25/0.25/0.5). *Recommendation: default per A1, expose as named constants, planner flags for user sign-off.*
-2. **How strict should "addressed_bull_claims must be verbatim" be?** Schema can only enforce `len >= 2` and non-empty strings. Verbatim-ness is system-prompt-only. *Recommendation: at UAT, sample a debate run and eyeball the `addressed_bull_claims` strings against the bull case. If drift is consistent, add a Pydantic `@field_validator` that fails if none of the addressed strings appear as substrings in any bull claim. Deferred to phase UAT.*
-3. **Should `debate_synthesis` or a separate `debate_signal_node` read `revised_thesis`?** If `debate_synthesis_node` overwrites `state["thesis"]` with `revised_thesis`, the existing `multi_agent_signal_node` can be reused (rename pending). If we want both the original and revised stored, we need a new field name. *Recommendation: overwrite `state["thesis"]` and add an `original_thesis` field that `manager_node` writes alongside. Planner to decide.*
-4. **Batch API for cost reduction** — 50% cost savings with 24-hour batching. Worth it once daily research cycle (PAPER-03) is in place; premature for Phase 5. *Deferred to Phase 8+.*
+1. **Quality-score weights** — Evidence-weighted (0.4/0.3/0.3) is my default. User may prefer equal weights (0.33) or a risk-first weighting (0.25/0.25/0.5). *Recommendation: default per A1, expose as named constants, planner flags for user sign-off.* **RESOLVED:** adopt 0.4/0.3/0.3 (A1). Plan 05-02 Task 2 exposes `EVIDENCE_WEIGHT=0.4`, `LOGIC_WEIGHT=0.3`, `RISK_WEIGHT=0.3` as module constants in `src/ai_hedge_fund/tools/quality_score.py` so they can be tuned without code search.
+2. **How strict should "addressed_bull_claims must be verbatim" be?** Schema can only enforce `len >= 2` and non-empty strings. Verbatim-ness is system-prompt-only. *Recommendation: at UAT, sample a debate run and eyeball the `addressed_bull_claims` strings against the bull case.* **RESOLVED:** schema enforces count (`min_length=2`); semantic-alignment check deferred to UAT per `05-VALIDATION.md` Manual-Only Verifications row 2. No `@field_validator` added in Phase 5; revisit after UAT sampling.
+3. **Should `debate_synthesis` or a separate `debate_signal_node` read `revised_thesis`?** *Recommendation: overwrite `state["thesis"]` and add an `original_thesis` field that `manager_node` writes alongside. Planner to decide.* **RESOLVED:** `debate_synthesis_node` overwrites `state["thesis"]` with `revised_thesis.model_dump()` (Plan 05-03 Task 1) so the unchanged `multi_agent_signal_node` consumes the post-debate thesis unchanged. `pre_debate_confidence` captures the pre-debate value from `state["thesis"]["confidence"]` before overwrite; no separate `original_thesis` field introduced in v1.
+4. **Batch API for cost reduction** — 50% cost savings with 24-hour batching. Worth it once daily research cycle (PAPER-03) is in place; premature for Phase 5. **DEFERRED** to Phase 8+ once a daily research cadence exists.
 
 ## Environment Availability
 
