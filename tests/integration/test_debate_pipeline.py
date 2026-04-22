@@ -67,7 +67,6 @@ from ai_hedge_fund.graph.pipeline import (  # noqa: E402
     build_multi_agent_pipeline,
 )
 
-
 # ---------------------------------------------------------------------------
 # A. Compilation
 # ---------------------------------------------------------------------------
@@ -117,9 +116,7 @@ class TestDebatePipelineEndToEnd:
         final_state = asyncio.run(_invoke())
 
         # No pipeline-level error.
-        assert final_state.get("error") is None, (
-            f"Pipeline errored: {final_state.get('error')}"
-        )
+        assert final_state.get("error") is None, f"Pipeline errored: {final_state.get('error')}"
 
         # All 3 analyst reports via the operator.add reducer.
         reports = final_state.get("analyst_reports", [])

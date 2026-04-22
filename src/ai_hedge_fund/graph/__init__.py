@@ -5,6 +5,10 @@ Re-exports key components for convenient import:
     build_research_pipeline: Phase-3 StateGraph (research -> signal).
     build_multi_agent_pipeline: Phase-4 StateGraph (parallel analysts
         -> manager -> signal).
+    build_debate_pipeline: Phase-5 StateGraph (parallel analysts ->
+        manager -> bull -> bear -> rebuttal -> final_arguments ->
+        debate_synthesis -> signal). Added alongside (not replacing)
+        build_multi_agent_pipeline -- Option B per 05-RESEARCH.md.
     extract_node: LangGraph node wrapping the extraction agent (Haiku).
     analyze_node: LangGraph node wrapping the analysis agent (Sonnet).
     research_node: LangGraph node wrapping the research agent (Sonnet+tools).
@@ -14,6 +18,11 @@ Re-exports key components for convenient import:
     manager_node: Phase-4 research-manager synthesis node (Opus).
     multi_agent_signal_node: Phase-4 signal adapter that consumes
         MultiAgentPipelineState instead of ResearchPipelineState.
+    bull_node / bear_node / rebuttal_node / final_arguments_node /
+        debate_synthesis_node: Phase-5 5-act debate nodes.
+        debate_synthesis_node overwrites state['thesis'] with the
+        post-debate revised_thesis so the signal adapter consumes the
+        debated version unchanged.
     create_checkpointer: Sync PostgresSaver context manager.
     create_async_checkpointer: Async PostgresSaver context manager.
 """
@@ -39,6 +48,7 @@ from ai_hedge_fund.graph.nodes import (
     technical_node,
 )
 from ai_hedge_fund.graph.pipeline import (
+    build_debate_pipeline,
     build_multi_agent_pipeline,
     build_pipeline,
     build_research_pipeline,
@@ -47,6 +57,7 @@ from ai_hedge_fund.graph.pipeline import (
 __all__ = [
     "analyze_node",
     "bear_node",
+    "build_debate_pipeline",
     "build_multi_agent_pipeline",
     "build_pipeline",
     "build_research_pipeline",

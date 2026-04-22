@@ -140,6 +140,5 @@ class TestPhase4PipelineStillWorks:
             "debate_synthesis",
         ):
             assert debate_node not in nodes, (
-                f"Phase-4 pipeline must NOT contain {debate_node}; "
-                "that is Phase-5 only."
+                f"Phase-4 pipeline must NOT contain {debate_node}; that is Phase-5 only."
             )
