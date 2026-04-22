@@ -89,7 +89,12 @@ from ai_hedge_fund.agents.risk_manager import (
 from ai_hedge_fund.agents.sentiment import get_sentiment_limits, sentiment_agent
 from ai_hedge_fund.agents.signal import get_signal_limits, signal_agent
 from ai_hedge_fund.agents.technical import get_technical_limits, technical_agent
+from ai_hedge_fund.db.models import EpisodicMemory
+from ai_hedge_fund.graph.memory_deps import MemoryDeps
 from ai_hedge_fund.graph.risk_deps import RiskDeps
+from ai_hedge_fund.memory.beliefs import belief_path_for_ticker, load_belief
+from ai_hedge_fund.memory.episodic import _normalise_as_of
+from ai_hedge_fund.memory.recall import query_episodic
 from ai_hedge_fund.risk.checks import (
     check_exclusions,
     check_position_size,
@@ -994,3 +999,167 @@ def route_after_risk(state: DebatePipelineState) -> Literal["signal", "__end__"]
     if assessment is None:
         return "__end__"
     return "signal" if assessment.get("status") == "APPROVED" else "__end__"
+
+
+async def memory_recall_node(state: DebatePipelineState, deps: MemoryDeps) -> dict:
+    """Phase-7 pre-fan-out recall: load episodic_hits + beliefs_consulted.
+
+    Called BEFORE the three parallel analysts so every downstream agent
+    sees the same deterministic prior-work set in state.
+
+    Threat mitigations / contract:
+        T-07-20 (temporal leakage): delegates to :func:`query_episodic`
+                 which enforces ``as_of_date <= target``. A future-dated
+                 row (e.g., 2099-01-01) MUST NOT be returned when
+                 ``state['as_of_date']`` is earlier.
+        T-07-21 (silent human-edit override): uses :func:`load_belief`
+                 unchanged. The ``human_edited`` flag and the human-edited
+                 ``confidence`` value are preserved verbatim into
+                 ``state['beliefs_consulted']`` so the downstream analyst
+                 prompts reflect the human override (MEM-03 read path).
+        Short-circuit: returns ``{}`` when ``state['error']`` is set.
+        Missing belief files are tolerated: returns
+        ``beliefs_consulted=[]`` rather than raising.
+
+    Args:
+        state: DebatePipelineState carrying ``ticker``, ``as_of_date``,
+            and (optionally) ``candidate_metadata.sector``.
+        deps: Bound :class:`MemoryDeps` (db_session, beliefs_path, recall_limit).
+
+    Returns:
+        ``{"episodic_hits": [...], "beliefs_consulted": [...]}`` on success,
+        ``{}`` on upstream error.
+    """
+    if state.get("error"):
+        return {}
+
+    ticker = state["ticker"]
+    as_of_date = state["as_of_date"]
+    meta = state.get("candidate_metadata") or {}
+    sector = meta.get("sector") or "Unknown"
+
+    # query_episodic raises ValueError when neither ticker nor sector is
+    # supplied; we always pass ticker, so the guard is purely defensive.
+    sector_filter = sector if sector != "Unknown" else None
+    hits = query_episodic(
+        deps.db_session,
+        as_of_date=as_of_date,
+        ticker=ticker,
+        sector=sector_filter,
+        limit=deps.recall_limit,
+    )
+    episodic_hits = [hit.model_dump(mode="json") for hit in hits]
+
+    beliefs_consulted: list[dict] = []
+    # Ticker-level belief (optional -- missing file is fine).
+    try:
+        ticker_path = belief_path_for_ticker(deps.beliefs_path, ticker)
+    except ValueError:
+        # Invalid ticker format for the belief path regex; recall still
+        # works because query_episodic accepts arbitrary strings.
+        ticker_path = None
+
+    if ticker_path is not None and ticker_path.is_file():
+        belief, _raw = load_belief(ticker_path)
+        beliefs_consulted.append(belief.model_dump(mode="json"))
+
+    # Sector-level belief (optional). Layout: beliefs_path/sectors/<Sector>.yaml
+    if sector != "Unknown":
+        sector_path = deps.beliefs_path / "sectors" / f"{sector}.yaml"
+        if sector_path.is_file():
+            sector_belief, _raw = load_belief(sector_path)
+            beliefs_consulted.append(sector_belief.model_dump(mode="json"))
+
+    logger.info(
+        "memory_recall_complete",
+        ticker=ticker,
+        as_of_date=as_of_date,
+        sector=sector,
+        episodic_hits=len(episodic_hits),
+        beliefs_consulted=len(beliefs_consulted),
+    )
+    return {
+        "episodic_hits": episodic_hits,
+        "beliefs_consulted": beliefs_consulted,
+    }
+
+
+async def episodic_store_node(state: DebatePipelineState, deps: MemoryDeps) -> dict:
+    """Phase-7 pipeline-end recorder: append an EpisodicMemory row (MEM-01 write).
+
+    Fires on BOTH APPROVED and VETOED paths -- vetoes are the richest
+    learning signal (07-RESEARCH.md Open Question 1 recommendation). The
+    stored row links Phase 6's ``policy_sha`` for cross-phase audit (Phase
+    6 plan 06-06).
+
+    policy_sha authoritative copy:
+        ``row.policy_sha`` (the dedicated column) is the AUTHORITATIVE
+        audit SHA. ``row.payload["risk_assessment"]["policy_sha"]`` is a
+        convenience snapshot for offline inspection. Consumers MUST read
+        the column, not the payload. The two are equal on every write
+        (tested by ``test_episodic_store_policy_sha_authoritative_column_matches_payload``).
+
+    Contract:
+        - Short-circuits on upstream error (returns ``{}`` -- no DB write).
+        - Always commits; never raises unless the DB layer raises.
+        - payload includes thesis, signal (may be ``None`` on veto),
+          risk_assessment (may be empty), plus counts of prior hits and
+          beliefs consulted (for future retrospective analysis).
+
+    Args:
+        state: Post-debate DebatePipelineState with ``thesis``,
+            ``signal`` (may be None), ``risk_assessment``,
+            ``candidate_metadata`` (optional), ``ticker``, and ``as_of_date``.
+        deps: Bound :class:`MemoryDeps` (db_session used for the INSERT).
+
+    Returns:
+        ``{"episodic_stored_id": <int>}`` on success, ``{}`` on upstream error.
+    """
+    if state.get("error"):
+        return {}
+
+    thesis = state.get("thesis") or {}
+    signal = state.get("signal")
+    risk = state.get("risk_assessment") or {}
+    meta = state.get("candidate_metadata") or {}
+
+    # state["as_of_date"] is an ISO-8601 string (DebatePipelineState
+    # contract -- JSON-serialisable for LangGraph checkpoints). The
+    # EpisodicMemory.as_of_date column is DateTime(timezone=True) (from
+    # DualTimestampMixin); SQLite's DateTime binder rejects strings.
+    # _normalise_as_of is the same helper the episodic CSV seeder uses
+    # (ai_hedge_fund.memory.episodic) and converts str|date|datetime to
+    # a tz-aware UTC datetime.
+    as_of_dt = _normalise_as_of(state["as_of_date"])
+    row = EpisodicMemory(
+        ticker=state["ticker"],
+        sector=meta.get("sector") or "Unknown",
+        record_type="analysis",
+        signal_direction=(signal or {}).get("direction"),
+        confidence=thesis.get("confidence"),
+        outcome_pct=None,
+        linked_analysis_id=None,
+        policy_sha=risk.get("policy_sha"),
+        as_of_date=as_of_dt,
+        payload={
+            "schema_version": 1,
+            "thesis": thesis,
+            "signal": signal,
+            "risk_assessment": risk,
+            "episodic_hits_count": len(state.get("episodic_hits") or []),
+            "beliefs_consulted_count": len(state.get("beliefs_consulted") or []),
+        },
+    )
+    deps.db_session.add(row)
+    deps.db_session.commit()
+
+    logger.info(
+        "episodic_store_complete",
+        ticker=state["ticker"],
+        as_of_date=state["as_of_date"],
+        episodic_stored_id=row.id,
+        policy_sha=risk.get("policy_sha"),
+        signal_direction=(signal or {}).get("direction"),
+        risk_status=risk.get("status"),
+    )
+    return {"episodic_stored_id": row.id}

@@ -29,7 +29,6 @@ from ai_hedge_fund.graph.nodes import episodic_store_node, memory_recall_node  #
 from ai_hedge_fund.memory.episodic import seed_episodic_from_csv  # noqa: E402
 from ai_hedge_fund.schemas.state import DebatePipelineState  # noqa: E402
 
-
 # ---------------------------------------------------------------------------
 # Helpers (Task 2+)
 # ---------------------------------------------------------------------------
@@ -97,6 +96,7 @@ def _post_debate_state(
             "policy_sha": policy_sha,
         }
     return state
+
 
 # ---------------------------------------------------------------------------
 # Task 1 — MemoryDeps + DebatePipelineState schema
@@ -296,9 +296,7 @@ def test_episodic_store_inserts_row_with_policy_sha_link(
     assert row.signal_direction == "long"
     assert row.confidence == 70
     assert row.outcome_pct is None
-    assert row.policy_sha == (
-        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-    )
+    assert row.policy_sha == ("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
     assert row.payload["thesis"]["confidence"] == 70
     assert row.payload["signal"]["direction"] == "long"
     assert row.payload["risk_assessment"]["status"] == "APPROVED"
