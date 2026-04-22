@@ -135,7 +135,7 @@ Plans:
 **Plans:** 6 plans
 
 Plans:
-- [ ] 07-00-PLAN.md -- Wave 0 scaffold: ruamel.yaml dep, tests/memory package + conftest, belief fixtures (plain + human-edited + field-locked), episodic CSV seed, outcomes YAML, Wave-0 smoke test
+- [x] 07-00-PLAN.md -- Wave 0 scaffold: ruamel.yaml dep, tests/memory package + conftest, belief fixtures (plain + human-edited + field-locked), episodic CSV seed, outcomes YAML, Wave-0 smoke test
 - [ ] 07-01-PLAN.md -- Episodic memory substrate: EpisodicMemory SQLAlchemy model + Alembic 003 (JSONB + composite indexes, no UniqueConstraint), query_episodic with temporal filter + OR ticker/sector, purge_expired 90-day sweep
 - [ ] 07-02-PLAN.md -- Belief memory substrate: Belief + CritiqueEvent schemas (extra=forbid), load_belief/write_belief via ruamel.yaml with human-edit guard + field_locks + atomic tmp+rename + path-traversal regex
 - [ ] 07-03-PLAN.md -- Graph integration: MemoryDeps frozen dataclass, DebatePipelineState extended (episodic_hits/beliefs_consulted/episodic_stored_id single-writer keys), memory_recall_node + episodic_store_node (VETOED rows stored), build_debate_pipeline with_memory switch composing with_risk
@@ -171,5 +171,5 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 4. Multi-Agent Specialization | 3/3 | Complete | 2026-04-21 |
 | 5. Adversarial Critique | 3/3 | Complete    | 2026-04-22 |
 | 6. Risk Management | 0/6 | Planned     | - |
-| 7. Memory and Learning | 0/3 | Not started | - |
+| 7. Memory and Learning | 1/6 | In progress | - |
 | 8. Signal and Output | 0/3 | Not started | - |

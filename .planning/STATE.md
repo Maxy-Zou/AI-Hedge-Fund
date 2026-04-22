@@ -2,16 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-stopped_at: "Completed 05-02 (rebuttal/final/synthesis agents + compute_quality_score + DebatePipelineState); next: 05-03 (graph wiring)"
-last_updated: "2026-04-22T06:53:37.974Z"
-last_activity: 2026-04-22
+current_plan: 2
+total_plans: 6
+status: in-progress
+stopped_at: "Completed 07-00 (Wave-0 test scaffold: tests/memory/ package + 5 fixtures + 6-assertion smoke test + ruamel.yaml dep); next: 07-01 (episodic memory storage)"
+last_updated: "2026-04-22T20:43:27.025Z"
+last_activity: 2026-04-22 -- Phase 7 Plan 07-00 (Wave-0 test scaffold) complete
 progress:
   total_phases: 8
-  completed_phases: 5
-  total_plans: 22
-  completed_plans: 16
-  percent: 73
+  completed_phases: 6
+  total_plans: 28
+  completed_plans: 23
+  percent: 82
 ---
 
 # Project State
@@ -21,14 +23,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-11)
 
 **Core value:** Produce institutional-quality investment research at scale -- structured theses with quantitative signals that are rigorous enough to trade on and transparent enough to show investors.
-**Current focus:** Phase --phase — 5
+**Current focus:** Phase 7 (Memory and Learning)
 
 ## Current Position
 
-Phase: 6
-Plan: Not started
-Next: Plan 05-03 (5 debate nodes + build_debate_pipeline + integration tests)
-Last activity: 2026-04-22
+Phase: 7 (Memory and Learning) — EXECUTING
+Current Plan: 2 of 6
+Total Plans: 6
+Completed Plans: 1 (07-00)
+Next: Plan 07-01 (episodic memory storage)
+Last activity: 2026-04-22 -- Phase 7 Plan 07-00 (Wave-0 test scaffold) complete
 
 Progress: [██████████] 100%
 
@@ -72,6 +76,9 @@ Recent decisions affecting current work:
 - compute_quality_score is pure Python (tool-first per CLAUDE.md); LLM-produced quality_score is overwritten by the pipeline
 - Rebuttal + final_arguments use output_override=8_000 (Pitfall-6 cost guardrail); debate_synthesis uses default REASONING cap (needs full output budget)
 - DebatePipelineState duplicates (not inherits) MultiAgentPipelineState fields per RESEARCH.md Pattern 5; 5 debate fields are single-writer (NO operator.add reducer)
+- Phase 7 adopts ruamel.yaml>=0.19.0 for round-trip (comment-preserving) belief YAML — required by MEM-03 human-override protection (human comments must survive machine rewrites)
+- Phase 7 Wave-0 scaffold pattern: ship fixtures + 6-assertion smoke test first so Wave-1 plans (07-01, 07-02) can run in parallel without duplicating fixture work
+- Phase 7 episodic fixtures embed one FUTURE-dated row (2099-01-01, FUTUREX) as the temporal-leakage regression seed (MEM-01 cutoff filter proof)
 
 ### Pending Todos
 
@@ -82,11 +89,12 @@ None yet.
 - Token cost is #1 operational risk -- naive multi-agent costs $2-5/analysis vs $0.30-0.80 optimized
 - yfinance fragility -- must cache aggressively, Tiingo fallback required
 - No earnings call transcripts on free tier -- FMP Ultimate ($56/mo) needed eventually
+- uv/macOS UF_HIDDEN bug on .pth files when project path contains a space — workaround is `chflags nohidden .venv/lib/python3.13/site-packages/*.pth && uv run --no-sync pytest ...`; see .planning/phases/07-memory-and-learning/deferred-items.md (environment-level, not a Phase 7 blocker)
 
 ## Session Continuity
 
-Last session: 2026-04-22
-Stopped at: Completed 05-02 (rebuttal/final/synthesis agents + compute_quality_score + DebatePipelineState); next: 05-03 (graph wiring)
+Last session: 2026-04-22T20:41:42Z
+Stopped at: Completed 07-00 (Wave-0 test scaffold: tests/memory/ + 5 fixtures + 6-assertion smoke test + ruamel.yaml dep); next: 07-01 (episodic memory storage)
 Resume file: None
 
-**Planned Phase:** 6 (Risk Management) — 6 plans — 2026-04-22T06:53:37.962Z
+**Planned Phase:** 7 (Memory and Learning) — 6 plans — 2026-04-22T20:33:50.033Z
