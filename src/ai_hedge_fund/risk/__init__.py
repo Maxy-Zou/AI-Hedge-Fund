@@ -14,6 +14,11 @@ Threat mitigations (see ``06-01-PLAN.md::threat_model``):
 
 from __future__ import annotations
 
+from ai_hedge_fund.risk.checks import (
+    check_exclusions,
+    check_position_size,
+    check_sector_concentration,
+)
 from ai_hedge_fund.risk.policy import RiskPolicy, compute_policy_sha, load_policy
 from ai_hedge_fund.risk.portfolio import (
     PortfolioSnapshot,
@@ -21,12 +26,17 @@ from ai_hedge_fund.risk.portfolio import (
     load_portfolio,
     seed_portfolio_from_csv,
 )
+from ai_hedge_fund.risk.sizing import derive_candidate_size_pct
 
 __all__ = [
     "PortfolioSnapshot",
     "PortfolioSnapshotPosition",
     "RiskPolicy",
+    "check_exclusions",
+    "check_position_size",
+    "check_sector_concentration",
     "compute_policy_sha",
+    "derive_candidate_size_pct",
     "load_policy",
     "load_portfolio",
     "seed_portfolio_from_csv",
