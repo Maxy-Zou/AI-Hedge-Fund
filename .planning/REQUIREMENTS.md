@@ -61,7 +61,8 @@ Requirements for initial release. Each maps to roadmap phases.
 **: Belief memory as structured human-readable documents (YAML/JSON) -- investment theses, sector models, learned patterns
 - [x] **MEM-03
 **: Belief memory is editable by humans (transparency for investors, safety mechanism for corrections)
-- [ ] **MEM-04**: Cross-session learning -- belief memory updated via self-critique after trade outcomes are known
+- [x] **MEM-04
+**: Cross-session learning -- belief memory updated via self-critique after trade outcomes are known
 
 ### Signal and Output
 

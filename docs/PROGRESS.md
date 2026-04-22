@@ -1,5 +1,14 @@
 # Progress
 
+## 2026-04-22 — Phase 7 Plan 04: Offline Self-Critique Loop (MEM-04)
+
+- **compute_new_confidence** (`src/ai_hedge_fund/memory/critique.py`): pure deterministic math. Returns int in `[0, 100]`; agreement (long+pos, short+neg) raises confidence, disagreement and neutral+big-move lower it; per-event |delta| capped at 10 (Pitfall 5 drift guard); `ValueError` on unknown signal_direction.
+- **format_critique_context** (`src/ai_hedge_fund/memory/critique.py`): deterministic 5-section prompt (BELIEF / OUTCOME / OLD_CONFIDENCE / NEW_CONFIDENCE (DETERMINISTIC) / LINKED_ANALYSIS) for audit-reproducible LLM input.
+- **self_critique_agent** (`src/ai_hedge_fund/agents/self_critique.py`): PydanticAI `Agent[None, RationaleOnly]` on REASONING tier with `retries=2`; system prompt uses EXPLAIN exclusively; forbidden verbs (decide/judge/determine/rule/verdict + plurals) absent via word-boundary regex (T-07-31 analog of T-06-02b). `RationaleOnly` has EXACTLY ONE field (T-07-30).
+- **ingest_outcome CLI** (`src/ai_hedge_fund/scripts/ingest_outcome.py`): 6-step offline loop — regex-guard → append outcome row → load belief → compute new confidence → LLM rationale → write_belief (MEM-03 chokepoint).
+- **MEM-03 × MEM-04 cross-requirement proven:** human-edited belief survives outcome ingest (confidence unchanged, critique_history updated, skipped audit visible to operator).
+- **Tests added:** +111 (93 critique math + 13 self-critique agent + 5 ingest_outcome). Full cross-phase regression (phases 5/6/7): 291 passing.
+
 ## 2026-04-22 — Phase 6 Plan 02: Portfolio Data Layer
 
 - **PortfolioPosition** (`src/ai_hedge_fund/db/models.py`): append-only SQLAlchemy model on `Base + DualTimestampMixin` with `UniqueConstraint(ticker, as_of_date)`; mirrors the DailyPrice pattern for financial-time-series persistence

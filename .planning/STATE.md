@@ -4,15 +4,15 @@ milestone: v1.0
 milestone_name: milestone
 current_plan: 5 of 6
 status: unknown
-stopped_at: "Completed 07-03 (pipeline integration: MemoryDeps + memory_recall_node + episodic_store_node + build_debate_pipeline with_memory); next: 07-04"
-last_updated: "2026-04-22T21:22:20.358Z"
-last_activity: 2026-04-22 -- Phase 7 Plan 07-03 (memory-substrate graph integration: MEM-01 read+write, MEM-03 read path) complete
+stopped_at: Completed 07-04-PLAN.md
+last_updated: "2026-04-22T21:36:46.244Z"
+last_activity: "2026-04-22 -- Phase 7 Plan 07-03 (memory-substrate graph integration: MEM-01 read+write, MEM-03 read path) complete"
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 28
-  completed_plans: 26
-  percent: 93
+  completed_plans: 27
+  percent: 96
 ---
 
 # Project State
@@ -33,7 +33,7 @@ Completed Plans: 4 (07-00, 07-01, 07-02, 07-03)
 Next: Plan 07-04 (offline self-critique loop — ingest_outcome.py + CritiqueEvent append via write_belief)
 Last activity: 2026-04-22 -- Phase 7 Plan 07-03 (memory-substrate graph integration: MEM-01 read+write, MEM-03 read path) complete
 
-Progress: [█████████░] 93%
+Progress: [██████████] 96%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [█████████░] 93%
 
 *Updated after each plan completion*
 | Phase 07 P03 | 10m | 3 tasks | 7 files |
+| Phase 07 P04 | 9m | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -86,6 +87,7 @@ Recent decisions affecting current work:
 - Phase 7 write_belief is the SOLE belief mutation entry point with three structured skip-reason codes (writer_never_touches_override_meta, field_locked_by_human, human_edited_global_flag_set) — MEM-03 chokepoint contract
 - Phase 7 beliefs.py renames local yaml -> parser to satisfy grep -c 'yaml.load(' == 0 T-07-10 RCE defense-in-depth acceptance criterion
 - Phase 7 Plan 07-03 — memory_recall_node + episodic_store_node wired into build_debate_pipeline; 4-variant topology (memory × risk); VETOED rows persisted per research Open Question 1; policy_sha Phase 6 -> Phase 7 audit linkage verified end-to-end
+- MEM-04 offline self-critique loop shipped: compute_new_confidence pure function (per-event cap of 10 for Pitfall 5 drift guard) + RationaleOnly (LLM cannot author the number, T-07-30) + ingest_outcome CLI (6-step loop with MEM-03 human-edit guard at write_belief)
 
 ### Pending Todos
 
@@ -100,8 +102,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-22T21:22:15.086Z
-Stopped at: Completed 07-03 (pipeline integration: MemoryDeps + memory_recall_node + episodic_store_node + build_debate_pipeline with_memory); next: 07-04
+Last session: 2026-04-22T21:36:46.239Z
+Stopped at: Completed 07-04-PLAN.md
 Resume file: None
 
 **Planned Phase:** 7 (Memory and Learning) — 6 plans — 2026-04-22T20:33:50.033Z
