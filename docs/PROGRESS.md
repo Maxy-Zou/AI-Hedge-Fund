@@ -1,5 +1,13 @@
 # Progress
 
+## 2026-04-22 — Phase 6 Plan 02: Portfolio Data Layer
+
+- **PortfolioPosition** (`src/ai_hedge_fund/db/models.py`): append-only SQLAlchemy model on `Base + DualTimestampMixin` with `UniqueConstraint(ticker, as_of_date)`; mirrors the DailyPrice pattern for financial-time-series persistence
+- **Alembic 002** (`alembic/versions/002_create_portfolio_positions.py`): creates `portfolio_positions` table with index on ticker and the unique constraint; `down_revision = "001"`
+- **PortfolioSnapshot + loader** (`src/ai_hedge_fund/risk/portfolio.py`): frozen Pydantic models (`PortfolioSnapshot`, `PortfolioSnapshotPosition`); `load_portfolio(db_session, as_of_date)` filters by `as_of_date <= target` (Pitfall 2 temporal correctness) and collapses to latest row per ticker; `seed_portfolio_from_csv` writes one row per CSV record with a shared as_of_date
+- **CSV fixture** (`tests/risk/fixtures/portfolio_sample.csv`): 5 positions across 4 sectors (Technology x2, Healthcare, Financials, Consumer Staples) for concentration-test variation
+- **Tests added:** 12 (4 model + 8 loader); test count now 30 in `tests/risk/` alongside 06-01's schema tests
+
 ## 2026-04-22 — Phase 5 Complete: Adversarial Critique
 
 - **Debate schemas** (`src/ai_hedge_fund/schemas/debate.py`): 8 Pydantic models (BullClaim, BullCase, BearClaim, BearCase, RebuttalPoint, RebuttalAct, FinalArguments, DebateSynthesis) with `min_length`/`ge/le`/`Literal` constraints enforcing the 5-act protocol; `BearCase` model_validator enforces addressed_bull_claims ↔ BearClaim.addresses_bull_claim cross-link
