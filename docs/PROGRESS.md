@@ -1,5 +1,24 @@
 # Progress
 
+## 2026-04-22 — Phase 7 Complete: Memory and Learning
+
+Plan 07-05 ships the integration test suite and closes the phase:
+
+- **14 new integration tests** across `tests/integration/test_phase7_e2e.py` (8 e2e scenarios) and `tests/integration/test_phase7_policy_sha_linkage.py` (6 policy_sha audit linkage tests).
+- **All 12 agents stubbed via TestModel** in every scenario (fundamental, sentiment, technical, manager, bull, bear, rebuttal, final_arguments, debate_synthesis, risk_manager, signal, self_critique). Zero real LLM calls.
+- **MEM-01..04 + MEM-03 x MEM-04 interaction + Pitfall-2 temporal correctness + Phase-5 backcompat** all proven end-to-end via composed `build_debate_pipeline(with_memory=True, with_risk=True)` runs on seeded fixtures.
+- **Phase 6 -> Phase 7 policy_sha audit chain** proven by 6 dedicated tests: deterministic (same policy), change-sensitive (different policy), idempotent (revert), well-formed (64-hex APPROVED + VETOED), three-way equal (state / column / payload all agree).
+- **VETOED persistence ratified** (research Open Question 1): a vetoed run produces a stored EpisodicMemory row with `payload['risk_assessment']['status'] == 'VETOED'` AND `signal_direction is None` AND a well-formed policy_sha.
+- **tests/integration/conftest.py** added: re-exports 7 memory fixtures from `tests/memory/conftest.py` so integration tests consume them via pytest's sibling-conftest discovery (avoids F811 ruff false-positive from direct module imports). Mirrors the pattern already in `tests/graph/conftest.py`.
+- **199 Phase-7 tests green** across `tests/memory` (162) + `tests/graph/test_memory_nodes.py` + `tests/graph/test_pipeline_with_memory.py` (23) + `tests/integration/test_phase7_*.py` (14).
+- **Full suite:** 920 passed, 9 skipped, 2 pre-existing baseline failures (`test_research_pipeline.py` async tests missing `pytest-asyncio`, documented in `deferred-items.md`).
+- **Cross-phase regression clean:** Phase 5 (17 integration) + Phase 6 (122 graph/risk + 17 integration) + earlier Phase 7 (185 memory + graph) all still green byte-for-byte.
+- **07-VALIDATION.md:** `nyquist_compliant: true`, `wave_0_complete: true`, Per-Task Verification Map populated with 15 rows (all green), Validation Sign-Off approved.
+- **REQUIREMENTS.md:** MEM-01, MEM-02, MEM-03, MEM-04 all marked Complete with phase-7 attribution.
+- **Milestone v1.0 progress: 7/8 phases complete** (ready for Phase 8 — Signal and Output).
+
+Files: `07-05-PLAN.md`, `07-05-SUMMARY.md`, `test_phase7_e2e.py`, `test_phase7_policy_sha_linkage.py`, `tests/integration/conftest.py`, `07-VALIDATION.md` (sign-off), `deferred-items.md` (ruff I001 deferral), `STATE.md`, `ROADMAP.md`, `REQUIREMENTS.md`.
+
 ## 2026-04-22 — Phase 7 Plan 04: Offline Self-Critique Loop (MEM-04)
 
 - **compute_new_confidence** (`src/ai_hedge_fund/memory/critique.py`): pure deterministic math. Returns int in `[0, 100]`; agreement (long+pos, short+neg) raises confidence, disagreement and neutral+big-move lower it; per-event |delta| capped at 10 (Pitfall 5 drift guard); `ValueError` on unknown signal_direction.
