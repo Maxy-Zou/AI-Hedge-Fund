@@ -214,17 +214,16 @@ def test_ingest_outcome_missing_belief_file(
 
     with self_critique_agent.override(
         model=TestModel(custom_output_args={"rationale": STUB_RATIONALE})
-    ):
-        with pytest.raises(FileNotFoundError, match="AAPL"):
-            asyncio.run(
-                ingest_outcome(
-                    session=memory_db_session,
-                    beliefs_dir=beliefs_dir,
-                    ticker="AAPL",
-                    outcome_pct=+4.2,
-                    as_of_date=date(2026, 4, 20),
-                )
+    ), pytest.raises(FileNotFoundError, match="AAPL"):
+        asyncio.run(
+            ingest_outcome(
+                session=memory_db_session,
+                beliefs_dir=beliefs_dir,
+                ticker="AAPL",
+                outcome_pct=+4.2,
+                as_of_date=date(2026, 4, 20),
             )
+        )
 
     # Outcome row WAS appended before the FileNotFoundError propagated.
     assert (

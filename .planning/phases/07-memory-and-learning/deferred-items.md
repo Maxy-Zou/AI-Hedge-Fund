@@ -50,3 +50,25 @@ Phase 7 memory-and-learning.
 
 **Impact on 07-00 verification:** 6/6 smoke tests pass under the
 workaround; acceptance criteria satisfied.
+
+## 07-04: pytest-asyncio missing for two pre-existing integration tests
+
+**Found during:** Plan 07-04 Task 3 cross-phase regression
+(`pytest tests/graph tests/integration tests/memory tests/risk -q`).
+
+**Symptom:** `tests/integration/test_research_pipeline.py::test_research_agent_with_test_model`
+and `::test_signal_agent_with_test_model` fail with "async def functions
+are not natively supported. You need to install a suitable plugin for
+your async framework". `pyproject.toml` references `asyncio_mode` (hence
+the `PytestConfigWarning: Unknown config option: asyncio_mode` warning)
+but `pytest-asyncio` is not installed in the venv.
+
+**Why deferred:** Pre-existing failure on main (verified via `git stash` +
+run without plan changes -- both tests fail). Unrelated to Phase-7
+memory-and-learning scope. The Phase-7 tests written in this plan use
+`asyncio.run(...)` directly on synchronous test functions, which sidesteps
+the plugin entirely -- all 5 Task-3 tests pass without pytest-asyncio.
+
+**Fix (out of scope):** Either add `pytest-asyncio>=0.23` to dev
+dependencies, or convert the two failing tests to call `asyncio.run(...)`
+inside synchronous test bodies like Plan 07-04 does.
