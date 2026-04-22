@@ -1,5 +1,19 @@
 # Progress
 
+## 2026-04-22 — Phase 5 Complete: Adversarial Critique
+
+- **Debate schemas** (`src/ai_hedge_fund/schemas/debate.py`): 8 Pydantic models (BullClaim, BullCase, BearClaim, BearCase, RebuttalPoint, RebuttalAct, FinalArguments, DebateSynthesis) with `min_length`/`ge/le`/`Literal` constraints enforcing the 5-act protocol; `BearCase` model_validator enforces addressed_bull_claims ↔ BearClaim.addresses_bull_claim cross-link
+- **5 adversarial agents** (`src/ai_hedge_fund/agents/{bull,bear,rebuttal,final_arguments,debate_synthesis}.py`): all REASONING tier (Opus), zero tools, retries=2; rebuttal + final_arguments use `output_override=8_000` cost guardrail; synthesis uses default REASONING cap
+- **Pure-function quality score** (`src/ai_hedge_fund/agents/debate_synthesis.py::compute_quality_score`): weighted mean over evidence/logic/risk (0.4/0.3/0.3 module constants); CLAUDE.md tool-first enforcement
+- **5 async debate nodes + pipeline** (`src/ai_hedge_fund/graph/{nodes.py,pipeline.py}`): `build_debate_pipeline` sequential chain (manager→bull→bear→rebuttal→final→synthesis→signal); no manager→signal diamond (Pitfall 4 avoided); `debate_synthesis_node` overwrites LLM quality_score + pre_debate_confidence via `model_copy(update=...)`
+- **DebatePipelineState** TypedDict (single-writer debate fields, NO operator.add reducer, contract-tested)
+- **Phase 4 pipeline unchanged** (byte-for-byte guarantee, `TestPhase4PipelineStillWorks` enforces)
+- **Test count: +107 new tests** (472 → 578 unit tests passing, 0 regressions). 4 new integration tests for the 10-agent end-to-end debate flow.
+- **Code review**: 0 critical, 3 warnings auto-fixed (BearCase cross-link validator, NonEmptyStr element constraint, explicit thesis precondition in debate_synthesis_node), 5 info items deferred as tech debt
+- **Human UAT deferred**: 5 items requiring real Anthropic API + Langfuse (30%-of-runs confidence delta, semantic rebuttal alignment, sycophancy audit, per-debate token cost, Langfuse trace audit) persisted to `05-HUMAN-UAT.md`
+- Files: `05-CONTEXT.md`, `05-RESEARCH.md`, `05-PATTERNS.md`, `05-VALIDATION.md`, `05-01/02/03-PLAN.md`, `05-01/02/03-SUMMARY.md`, `05-REVIEW.md`, `05-REVIEW-FIX.md`, `05-VERIFICATION.md`, `05-HUMAN-UAT.md`
+- Milestone v1.0 progress: 5/8 phases complete
+
 ## 2026-03-27 — Project Setup
 
 - Initialized git repo
