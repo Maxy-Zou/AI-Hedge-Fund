@@ -17,6 +17,16 @@ from ai_hedge_fund.schemas.agents import (
     ThesisPoint,
     ValuationMetric,
 )
+from ai_hedge_fund.schemas.debate import (
+    BearCase,
+    BearClaim,
+    BullCase,
+    BullClaim,
+    DebateSynthesis,
+    FinalArguments,
+    RebuttalAct,
+    RebuttalPoint,
+)
 from ai_hedge_fund.schemas.state import (
     MultiAgentPipelineState,
     PipelineState,
@@ -26,11 +36,19 @@ from ai_hedge_fund.schemas.state import (
 __all__ = [
     "AnalysisOutput",
     "AnalystReport",
+    "BearCase",
+    "BearClaim",
+    "BullCase",
+    "BullClaim",
+    "DebateSynthesis",
     "ExtractionOutput",
     "FilingCitation",
+    "FinalArguments",
     "FundamentalAnalysis",
     "MultiAgentPipelineState",
     "PipelineState",
+    "RebuttalAct",
+    "RebuttalPoint",
     "ResearchPipelineState",
     "SentimentAnalysis",
     "SentimentComponent",
