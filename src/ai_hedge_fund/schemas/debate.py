@@ -31,7 +31,7 @@ from __future__ import annotations
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field, StringConstraints
+from pydantic import BaseModel, Field, StringConstraints, model_validator
 
 from ai_hedge_fund.schemas.agents import ThesisOutput
 
@@ -128,6 +128,32 @@ class BearCase(BaseModel):
         ),
     )
     headline: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def each_addressed_claim_has_rebutter(self) -> BearCase:
+        """WR-01: every `addressed_bull_claims` entry must be referenced by at
+        least one ``BearClaim.addresses_bull_claim``.
+
+        DEBATE-02's spirit ("bear directly addresses at least 2 specific bull
+        claims") is not met if a bear can list two bull-claim strings in
+        ``addressed_bull_claims`` while every ``BearClaim.addresses_bull_claim``
+        is ``None``. Enforce the cross-link at validation time so ``retries=2``
+        on the bear agent can self-correct an offending LLM output (T-05-05
+        threat-model intent).
+        """
+        rebutters = {
+            c.addresses_bull_claim
+            for c in self.claims
+            if c.addresses_bull_claim is not None
+        }
+        missing = [text for text in self.addressed_bull_claims if text not in rebutters]
+        if missing:
+            raise ValueError(
+                "addressed_bull_claims must each be rebutted by at least one "
+                "BearClaim.addresses_bull_claim; missing rebutters for: "
+                f"{missing}"
+            )
+        return self
 
 
 class RebuttalPoint(BaseModel):

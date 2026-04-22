@@ -178,15 +178,36 @@ class TestBearClaim:
 class TestBearCase:
     """Tests for BearCase top-level act schema (DEBATE-02 enforcement site)."""
 
-    def _valid_claims(self, count: int = 3) -> list[dict]:
-        return [
-            {
+    def _valid_claims(
+        self,
+        count: int = 3,
+        addresses: list[str | None] | None = None,
+    ) -> list[dict]:
+        """Build claims with optional per-claim `addresses_bull_claim` values.
+
+        Default (``addresses=None``): first two claims rebut the two default
+        addressed_bull_claims used in the happy-path test, satisfying WR-01's
+        cross-link validator. Pass a custom ``addresses`` list (length ==
+        ``count``) when a test needs to exercise the cross-link specifically.
+        """
+        if addresses is None:
+            defaults = [
+                "Revenue grew 20% YoY",
+                "Services margin expanding",
+                None,
+            ]
+            addresses = defaults[:count] + [None] * max(0, count - len(defaults))
+        claims = []
+        for i in range(count):
+            entry = {
                 "claim": f"Bear claim {i}",
                 "evidence": f"Evidence {i}",
                 "source_analyst": "fundamental",
             }
-            for i in range(count)
-        ]
+            if addresses[i] is not None:
+                entry["addresses_bull_claim"] = addresses[i]
+            claims.append(entry)
+        return claims
 
     def test_valid_happy_path(self) -> None:
         """BearCase validates with 3 claims and 2 addressed_bull_claims."""
@@ -272,18 +293,77 @@ class TestBearCase:
         with pytest.raises(ValidationError):
             BearCase(
                 ticker="AAPL",
-                claims=[
-                    {
-                        "claim": f"Bear claim {i}",
-                        "evidence": f"Evidence {i}",
-                        "source_analyst": "fundamental",
-                        "addresses_bull_claim": "Revenue grew 20% YoY",
-                    }
-                    for i in range(3)
-                ],
+                claims=self._valid_claims(
+                    3, addresses=["Revenue grew 20% YoY", None, None]
+                ),
                 addressed_bull_claims=["Revenue grew 20% YoY", ""],
                 headline="h",
             )
+
+    def test_rejects_addressed_bull_claim_with_no_rebutter(self) -> None:
+        """WR-01 regression: each `addressed_bull_claims` entry must be
+        referenced by at least one ``BearClaim.addresses_bull_claim``.
+
+        This is the schema-level enforcement of DEBATE-02's spirit: a bear
+        that lists two bull-claim strings in ``addressed_bull_claims`` but
+        leaves every ``BearClaim.addresses_bull_claim`` as ``None`` is
+        hollow -- the list passes length / element checks but no bear claim
+        actually rebuts those bull claims.
+        """
+        from ai_hedge_fund.schemas.debate import BearCase
+
+        # All claims have addresses_bull_claim=None: cross-link validator fires.
+        with pytest.raises(ValidationError) as exc_info:
+            BearCase(
+                ticker="AAPL",
+                claims=self._valid_claims(3, addresses=[None, None, None]),
+                addressed_bull_claims=[
+                    "Revenue grew 20% YoY",
+                    "Services margin expanding",
+                ],
+                headline="h",
+            )
+        assert "addressed_bull_claims" in str(exc_info.value)
+
+        # Partial coverage: only 1 of 2 addressed claims is rebutted.
+        with pytest.raises(ValidationError) as exc_info:
+            BearCase(
+                ticker="AAPL",
+                claims=self._valid_claims(
+                    3, addresses=["Revenue grew 20% YoY", None, None]
+                ),
+                addressed_bull_claims=[
+                    "Revenue grew 20% YoY",
+                    "Services margin expanding",
+                ],
+                headline="h",
+            )
+        assert "Services margin expanding" in str(exc_info.value)
+
+    def test_accepts_addressed_bull_claims_with_matching_rebutters(self) -> None:
+        """WR-01 regression happy-path: cross-link validator passes when every
+        ``addressed_bull_claims`` entry has at least one ``BearClaim``
+        referencing it. Ordering / extra unreferenced claims are allowed.
+        """
+        from ai_hedge_fund.schemas.debate import BearCase
+
+        case = BearCase(
+            ticker="AAPL",
+            claims=self._valid_claims(
+                3,
+                addresses=[
+                    "Services margin expanding",
+                    "Revenue grew 20% YoY",
+                    None,
+                ],
+            ),
+            addressed_bull_claims=[
+                "Revenue grew 20% YoY",
+                "Services margin expanding",
+            ],
+            headline="h",
+        )
+        assert len(case.claims) == 3
 
 
 class TestRebuttalPoint:

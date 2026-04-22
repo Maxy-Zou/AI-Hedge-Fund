@@ -271,10 +271,26 @@ class TestBearNodeHappyPath:
             "thesis": _seed_thesis(),
             "bull_case": _seed_bull_case(),
         }
-        with bear_agent.override(model=TestModel()):
+        # WR-01: BearCase now requires each `addressed_bull_claims` entry be
+        # rebutted by at least one BearClaim.addresses_bull_claim. TestModel()
+        # default output fills addresses_bull_claim with None, so we supply
+        # a custom schema-valid BearCase via custom_output_args.
+        with bear_agent.override(model=TestModel(custom_output_args=_seed_bear_case())):
             result = asyncio.run(bear_node(state))
         assert "bear_case" in result
         assert isinstance(result["bear_case"], dict)
+        # Sanity: cross-link satisfied.
+        bear = result["bear_case"]
+        rebutters = {
+            c["addresses_bull_claim"]
+            for c in bear["claims"]
+            if c.get("addresses_bull_claim") is not None
+        }
+        for addressed in bear["addressed_bull_claims"]:
+            assert addressed in rebutters, (
+                "BearCase passed validation, so each addressed_bull_claims "
+                "entry must be rebutted by at least one BearClaim (WR-01)."
+            )
 
 
 class TestBearNodeMissingBullCase:

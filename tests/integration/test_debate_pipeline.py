@@ -98,6 +98,36 @@ class TestDebatePipelineEndToEnd:
         graph = build_debate_pipeline()
         initial_state = {"ticker": "AAPL", "as_of_date": "2024-01-02"}
 
+        # WR-01: BearCase now requires each `addressed_bull_claims` entry
+        # be rebutted by at least one BearClaim.addresses_bull_claim.
+        # TestModel() default fills addresses_bull_claim=None, so we supply
+        # a schema-valid BearCase via custom_output_args.
+        valid_bear_case = {
+            "ticker": "a",
+            "claims": [
+                {
+                    "claim": "a",
+                    "evidence": "a",
+                    "source_analyst": "fundamental",
+                    "addresses_bull_claim": "a",
+                },
+                {
+                    "claim": "a",
+                    "evidence": "a",
+                    "source_analyst": "fundamental",
+                    "addresses_bull_claim": "a",
+                },
+                {
+                    "claim": "a",
+                    "evidence": "a",
+                    "source_analyst": "fundamental",
+                    "addresses_bull_claim": None,
+                },
+            ],
+            "addressed_bull_claims": ["a", "a"],
+            "headline": "a",
+        }
+
         async def _invoke() -> dict:
             with (
                 fundamental_agent.override(model=TestModel(call_tools=[])),
@@ -105,7 +135,7 @@ class TestDebatePipelineEndToEnd:
                 technical_agent.override(model=TestModel(call_tools=[])),
                 manager_agent.override(model=TestModel()),
                 bull_agent.override(model=TestModel()),
-                bear_agent.override(model=TestModel()),
+                bear_agent.override(model=TestModel(custom_output_args=valid_bear_case)),
                 rebuttal_agent.override(model=TestModel()),
                 final_arguments_agent.override(model=TestModel()),
                 debate_synthesis_agent.override(model=TestModel()),
