@@ -2,18 +2,18 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_plan: 2
+current_plan: 3
 total_plans: 6
 status: in-progress
-stopped_at: "Completed 07-00 (Wave-0 test scaffold: tests/memory/ package + 5 fixtures + 6-assertion smoke test + ruamel.yaml dep); next: 07-01 (episodic memory storage)"
-last_updated: "2026-04-22T20:43:27.025Z"
-last_activity: 2026-04-22 -- Phase 7 Plan 07-00 (Wave-0 test scaffold) complete
+stopped_at: "Completed 07-01 (episodic memory substrate: EpisodicMemory model + Alembic 003 + query_episodic + purge_expired; 20 tests green); next: 07-02 (belief memory)"
+last_updated: "2026-04-22T20:52:30Z"
+last_activity: 2026-04-22 -- Phase 7 Plan 07-01 (episodic memory substrate) complete
 progress:
   total_phases: 8
   completed_phases: 6
   total_plans: 28
-  completed_plans: 23
-  percent: 82
+  completed_plans: 24
+  percent: 86
 ---
 
 # Project State
@@ -28,13 +28,13 @@ See: .planning/PROJECT.md (updated 2026-04-11)
 ## Current Position
 
 Phase: 7 (Memory and Learning) — EXECUTING
-Current Plan: 2 of 6
+Current Plan: 3 of 6
 Total Plans: 6
-Completed Plans: 1 (07-00)
-Next: Plan 07-01 (episodic memory storage)
-Last activity: 2026-04-22 -- Phase 7 Plan 07-00 (Wave-0 test scaffold) complete
+Completed Plans: 2 (07-00, 07-01)
+Next: Plan 07-02 (belief memory storage)
+Last activity: 2026-04-22 -- Phase 7 Plan 07-01 (episodic memory substrate) complete
 
-Progress: [██████████] 100%
+Progress: [█████████░] 86%
 
 ## Performance Metrics
 
@@ -79,6 +79,9 @@ Recent decisions affecting current work:
 - Phase 7 adopts ruamel.yaml>=0.19.0 for round-trip (comment-preserving) belief YAML — required by MEM-03 human-override protection (human comments must survive machine rewrites)
 - Phase 7 Wave-0 scaffold pattern: ship fixtures + 6-assertion smoke test first so Wave-1 plans (07-01, 07-02) can run in parallel without duplicating fixture work
 - Phase 7 episodic fixtures embed one FUTURE-dated row (2099-01-01, FUTUREX) as the temporal-leakage regression seed (MEM-01 cutoff filter proof)
+- Phase 7 EpisodicMemory intentionally has NO UniqueConstraint (contrast PortfolioPosition) — duplicates (same ticker + same as_of_date) are allowed by design. Composite indexes on (ticker, as_of_date) and (sector, as_of_date) support both recall paths.
+- Phase 7 query_episodic uses OR composition on ticker/sector (not AND) so a single DB round trip returns ticker-specific priors AND sector context; at least one MUST be supplied (Pitfall-8 DoS guard raises ValueError).
+- Phase 7 retention is a SWEEP (delete), not a read-time filter — keeps retention semantics out of every consumer per 07-RESEARCH.md Anti-Pattern.
 
 ### Pending Todos
 
@@ -93,8 +96,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-22T20:41:42Z
-Stopped at: Completed 07-00 (Wave-0 test scaffold: tests/memory/ + 5 fixtures + 6-assertion smoke test + ruamel.yaml dep); next: 07-01 (episodic memory storage)
+Last session: 2026-04-22T20:52:30Z
+Stopped at: Completed 07-01 (episodic memory substrate: EpisodicMemory model + Alembic 003 + query_episodic + purge_expired; 20 tests green); next: 07-02 (belief memory storage)
 Resume file: None
 
 **Planned Phase:** 7 (Memory and Learning) — 6 plans — 2026-04-22T20:33:50.033Z
