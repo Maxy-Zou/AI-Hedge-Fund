@@ -113,11 +113,15 @@ Plans:
   1. The Risk Manager can veto a high-conviction recommendation and the veto is final -- the pipeline produces a "blocked by risk" output with the specific constraint violated, not a modified recommendation
   2. Position sizing constraints are enforced as hard limits: a signal suggesting >X% allocation to a single position is rejected (not silently capped), and the rejection reason references the specific limit
   3. Portfolio-level checks run against the current portfolio state: sector concentration exceeding threshold, correlation above threshold with existing positions, or projected max drawdown breaching limits each trigger a named constraint violation
-**Plans**: TBD
+**Plans:** 6 plans
 
 Plans:
-- [ ] 06-01: TBD
-- [ ] 06-02: TBD
+- [ ] 06-01-PLAN.md -- Scaffold: risk/ subpackage, RiskPolicy schema + YAML loader + policy_sha, RiskAssessment output schema, shared test conftest
+- [ ] 06-02-PLAN.md -- DB layer: PortfolioPosition model + Alembic 002 migration + PortfolioSnapshot loader + CSV seed fixture
+- [ ] 06-03-PLAN.md -- Pure-Python risk math: position-size, sector concentration, exclusions, correlation (pandas), drawdown (numpy), conviction->size mapping
+- [ ] 06-04-PLAN.md -- risk_manager_agent (REASONING tier, rationale-only, zero tools) + RationaleOnly schema + format helper
+- [ ] 06-05-PLAN.md -- risk_manager_node + route_after_risk + DebatePipelineState extension + build_debate_pipeline wiring (with_risk flag + conditional edges)
+- [ ] 06-06-PLAN.md -- Integration tests: 5 end-to-end scenarios (approved + 4 veto paths) + insufficient-history + policy_sha audit
 
 ### Phase 7: Memory and Learning
 **Goal**: The system remembers past analyses and learns from outcomes -- so research quality improves over time instead of starting from zero every session
@@ -128,12 +132,15 @@ Plans:
   2. Belief memory is stored as structured YAML/JSON documents containing investment theses, sector models, and learned patterns -- a human can open the file, read the beliefs in plain language, and understand why the system holds each belief
   3. A human can edit a belief memory entry (change confidence, add a note, mark a belief as incorrect) and the next analysis for that ticker/sector reflects the human edit -- the system does not silently overwrite human corrections
   4. After a trade outcome is known (profit or loss), the system's self-critique process updates relevant beliefs with the outcome and adjusts confidence -- the updated belief document shows the outcome, the critique reasoning, and the new confidence level
-**Plans**: TBD
+**Plans:** 6 plans
 
 Plans:
-- [ ] 07-01: TBD
-- [ ] 07-02: TBD
-- [ ] 07-03: TBD
+- [ ] 07-00-PLAN.md -- Wave 0 scaffold: ruamel.yaml dep, tests/memory package + conftest, belief fixtures (plain + human-edited + field-locked), episodic CSV seed, outcomes YAML, Wave-0 smoke test
+- [ ] 07-01-PLAN.md -- Episodic memory substrate: EpisodicMemory SQLAlchemy model + Alembic 003 (JSONB + composite indexes, no UniqueConstraint), query_episodic with temporal filter + OR ticker/sector, purge_expired 90-day sweep
+- [ ] 07-02-PLAN.md -- Belief memory substrate: Belief + CritiqueEvent schemas (extra=forbid), load_belief/write_belief via ruamel.yaml with human-edit guard + field_locks + atomic tmp+rename + path-traversal regex
+- [ ] 07-03-PLAN.md -- Graph integration: MemoryDeps frozen dataclass, DebatePipelineState extended (episodic_hits/beliefs_consulted/episodic_stored_id single-writer keys), memory_recall_node + episodic_store_node (VETOED rows stored), build_debate_pipeline with_memory switch composing with_risk
+- [ ] 07-04-PLAN.md -- Self-critique substrate: compute_new_confidence (deterministic, Pitfall-5 capped at +/-10), self_critique_agent (RationaleOnly, REASONING tier, forbidden-verb invariant), scripts/ingest_outcome.py CLI (full 5-step offline loop)
+- [ ] 07-05-PLAN.md -- Integration + phase gate: Phase 7 end-to-end scenarios (with_memory + composition + VETOED persist + MEM-03 + MEM-04 + MEM-03xMEM-04 + temporal), policy_sha linkage (Phase 6 -> Phase 7 audit), full-suite regression, validation sign-off
 
 ### Phase 8: Signal and Output
 **Goal**: The pipeline produces investor-ready output with full audit trail and human review gate -- so every signal that reaches a trading decision has been researched, debated, risk-checked, and approved by a human
@@ -163,6 +170,6 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 3. Single-Agent Research | 0/3 | Not started | - |
 | 4. Multi-Agent Specialization | 3/3 | Complete | 2026-04-21 |
 | 5. Adversarial Critique | 3/3 | Complete    | 2026-04-22 |
-| 6. Risk Management | 0/2 | Not started | - |
+| 6. Risk Management | 0/6 | Planned     | - |
 | 7. Memory and Learning | 0/3 | Not started | - |
 | 8. Signal and Output | 0/3 | Not started | - |
