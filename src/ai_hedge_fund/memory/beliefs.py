@@ -10,9 +10,12 @@ Threat mitigations:
             (does NOT instantiate arbitrary Python classes). The unsafe
             PyYAML full-loader call is forbidden; this module imports
             ruamel only. ASVS V10.
-    T-07-11 (Path traversal): :func:`belief_path_for_ticker` enforces
-            a regex guard (``[A-Z0-9.\\-]{1,10}``) BEFORE joining a
-            ticker into a filesystem path. ASVS V5.
+    T-07-11 (Path traversal): :func:`belief_path_for_ticker` and
+            :func:`belief_path_for_sector` enforce regex guards
+            (``[A-Z0-9.\\-]{1,10}`` for tickers;
+            ``[A-Za-z][A-Za-z0-9 \\-_]{0,49}`` for sectors) BEFORE
+            joining user-supplied strings into a filesystem path.
+            ASVS V5.
     T-07-12 (Silent human-edit overwrite): :func:`write_belief` is the
             single writer; skip-if-human-edited + per-field locks +
             override-meta blacklist audit every patched field. Every
@@ -39,6 +42,11 @@ logger = structlog.get_logger(__name__)
 # Ticker regex: uppercase alphanumerics plus dot and dash (for class-A/B
 # shares like BRK.B or RDS-A). Max 10 chars. ``fullmatch`` pins both ends.
 _TICKER_RE = re.compile(r"^[A-Z0-9.\-]{1,10}$")
+
+# Sector regex: GICS-like sector names. Must start with a letter, may contain
+# letters, digits, spaces, hyphens, and underscores. Max 50 chars (matches the
+# ``episodic_memory.sector`` column width). ``fullmatch`` pins both ends.
+_SECTOR_RE = re.compile(r"^[A-Za-z][A-Za-z0-9 \-_]{0,49}$")
 
 # These fields are human-authoritative; the writer NEVER touches them.
 # A patch targeting any of them is refused with a structured reason code.
@@ -88,6 +96,35 @@ def belief_path_for_ticker(beliefs_dir: Path, ticker: str) -> Path:
     if not _TICKER_RE.fullmatch(ticker):
         raise ValueError(f"Invalid ticker {ticker!r} (expected [A-Z0-9.\\-]{{1,10}})")
     return beliefs_dir / "tickers" / f"{ticker}.yaml"
+
+
+def belief_path_for_sector(beliefs_dir: Path, sector: str) -> Path:
+    """Return ``beliefs_dir/sectors/<sector>.yaml`` with a regex guard.
+
+    Defense-in-depth sibling of :func:`belief_path_for_ticker` (T-07-11
+    analogue for the sector subtree). Rejects path-traversal attempts
+    (``"../tickers/AAPL"``), empty strings, and anything longer than 50
+    chars or containing non-sector characters. The regex tolerates spaces
+    and hyphens to match GICS-like names (e.g., ``"Consumer Discretionary"``
+    or ``"Health-Care"``).
+
+    Args:
+        beliefs_dir: Root directory containing the ``sectors/`` subtree.
+        sector: Sector name (e.g., ``"Technology"`` or
+            ``"Consumer Discretionary"``).
+
+    Returns:
+        ``beliefs_dir / "sectors" / f"{sector}.yaml"``.
+
+    Raises:
+        ValueError: ``sector`` does not match
+            ``[A-Za-z][A-Za-z0-9 \\-_]{0,49}``.
+    """
+    if not _SECTOR_RE.fullmatch(sector):
+        raise ValueError(
+            f"Invalid sector {sector!r} (expected [A-Za-z][A-Za-z0-9 \\-_]{{0,49}})"
+        )
+    return beliefs_dir / "sectors" / f"{sector}.yaml"
 
 
 def load_belief(path: Path) -> tuple[Belief, Any]:

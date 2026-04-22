@@ -6,6 +6,7 @@ architecture map.
 """
 
 from ai_hedge_fund.memory.beliefs import (
+    belief_path_for_sector,
     belief_path_for_ticker,
     load_belief,
     write_belief,
@@ -22,6 +23,7 @@ from ai_hedge_fund.memory.recall import query_episodic
 
 __all__ = [
     "EpisodicHit",
+    "belief_path_for_sector",
     "belief_path_for_ticker",
     "compute_new_confidence",
     "format_critique_context",

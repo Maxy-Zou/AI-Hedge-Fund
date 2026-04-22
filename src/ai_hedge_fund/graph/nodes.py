@@ -92,7 +92,11 @@ from ai_hedge_fund.agents.technical import get_technical_limits, technical_agent
 from ai_hedge_fund.db.models import EpisodicMemory
 from ai_hedge_fund.graph.memory_deps import MemoryDeps
 from ai_hedge_fund.graph.risk_deps import RiskDeps
-from ai_hedge_fund.memory.beliefs import belief_path_for_ticker, load_belief
+from ai_hedge_fund.memory.beliefs import (
+    belief_path_for_sector,
+    belief_path_for_ticker,
+    load_belief,
+)
 from ai_hedge_fund.memory.episodic import _normalise_as_of
 from ai_hedge_fund.memory.recall import query_episodic
 from ai_hedge_fund.risk.checks import (
@@ -1063,10 +1067,19 @@ async def memory_recall_node(state: DebatePipelineState, deps: MemoryDeps) -> di
         belief, _raw = load_belief(ticker_path)
         beliefs_consulted.append(belief.model_dump(mode="json"))
 
-    # Sector-level belief (optional). Layout: beliefs_path/sectors/<Sector>.yaml
+    # Sector-level belief (optional). Layout: beliefs_path/sectors/<Sector>.yaml.
+    # The sector string flows from state -- a caller that bypasses the
+    # Pydantic validator and pushes a raw dict (LangGraph accepts dicts for
+    # TypedDict states) could set ``sector="../tickers/AAPL"`` and trick the
+    # path join. ``belief_path_for_sector`` applies the same defense-in-depth
+    # regex guard that ``belief_path_for_ticker`` uses for the ticker subtree
+    # (T-07-11 analogue).
     if sector != "Unknown":
-        sector_path = deps.beliefs_path / "sectors" / f"{sector}.yaml"
-        if sector_path.is_file():
+        try:
+            sector_path = belief_path_for_sector(deps.beliefs_path, sector)
+        except ValueError:
+            sector_path = None
+        if sector_path is not None and sector_path.is_file():
             sector_belief, _raw = load_belief(sector_path)
             beliefs_consulted.append(sector_belief.model_dump(mode="json"))
 

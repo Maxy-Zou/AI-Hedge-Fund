@@ -21,6 +21,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap
 
 from ai_hedge_fund.memory.beliefs import (
+    belief_path_for_sector,
     belief_path_for_ticker,
     load_belief,
     write_belief,
@@ -242,6 +243,52 @@ def test_path_traversal_guard(tmp_path: Path) -> None:
     # Valid edge: dot (class-A shares) and dash tickers allowed
     assert belief_path_for_ticker(beliefs_dir, "BRK.B") == (beliefs_dir / "tickers" / "BRK.B.yaml")
     assert belief_path_for_ticker(beliefs_dir, "RDS-A") == (beliefs_dir / "tickers" / "RDS-A.yaml")
+
+
+# --------------------------------------------------------------------------
+# Test 7b: sector path-traversal guard (defense-in-depth, T-07-11 analogue)
+# --------------------------------------------------------------------------
+
+
+def test_sector_path_traversal_rejected(tmp_path: Path) -> None:
+    """`belief_path_for_sector` regex-rejects traversal / invalid sectors."""
+    beliefs_dir = tmp_path / "beliefs"
+
+    # Happy paths: GICS-like sector names tolerate spaces, hyphens, underscores.
+    assert belief_path_for_sector(beliefs_dir, "Technology") == (
+        beliefs_dir / "sectors" / "Technology.yaml"
+    )
+    assert belief_path_for_sector(beliefs_dir, "Consumer Discretionary") == (
+        beliefs_dir / "sectors" / "Consumer Discretionary.yaml"
+    )
+    assert belief_path_for_sector(beliefs_dir, "Health-Care") == (
+        beliefs_dir / "sectors" / "Health-Care.yaml"
+    )
+
+    # Path-traversal attempt: reads an arbitrary subtree entry (the attack
+    # from WR-01 in the review). Must raise BEFORE path construction.
+    with pytest.raises(ValueError):
+        belief_path_for_sector(beliefs_dir, "../tickers/AAPL")
+
+    # Slash rejected (would escape the sectors subtree).
+    with pytest.raises(ValueError):
+        belief_path_for_sector(beliefs_dir, "Tech/BAD")
+
+    # Empty rejected.
+    with pytest.raises(ValueError):
+        belief_path_for_sector(beliefs_dir, "")
+
+    # Over-length rejected (> 50 chars -- matches DB column width).
+    with pytest.raises(ValueError):
+        belief_path_for_sector(beliefs_dir, "A" * 51)
+
+    # Leading digit rejected (regex pins the first character as a letter).
+    with pytest.raises(ValueError):
+        belief_path_for_sector(beliefs_dir, "1Tech")
+
+    # Control characters / shell meta rejected.
+    with pytest.raises(ValueError):
+        belief_path_for_sector(beliefs_dir, "Tech|rm")
 
 
 # --------------------------------------------------------------------------
