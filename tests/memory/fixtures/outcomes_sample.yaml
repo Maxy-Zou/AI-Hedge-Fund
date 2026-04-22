@@ -1,0 +1,15 @@
+# Outcome events consumed by Plan 07-04 self-critique tests.
+# Each entry is fed to compute_new_confidence + self_critique_agent.
+outcomes:
+  - ticker: AAPL
+    as_of_date: 2026-04-20
+    outcome_pct: 5.0
+    linked_signal_direction: long
+  - ticker: MSFT
+    as_of_date: 2026-04-20
+    outcome_pct: -2.5
+    linked_signal_direction: long
+  - ticker: JNJ
+    as_of_date: 2026-04-20
+    outcome_pct: 3.0
+    linked_signal_direction: neutral

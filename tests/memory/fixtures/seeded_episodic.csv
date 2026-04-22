@@ -1,0 +1,11 @@
+ticker,sector,record_type,as_of_date,signal_direction,confidence,outcome_pct,policy_sha
+AAPL,Technology,analysis,2026-01-10,long,70,,e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+AAPL,Technology,outcome,2026-03-15,long,70,4.2,e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+MSFT,Technology,analysis,2026-02-01,long,65,,a3f5c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852c011
+MSFT,Technology,outcome,2026-04-01,long,65,-1.8,a3f5c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852c011
+JNJ,Healthcare,analysis,2026-02-15,neutral,55,,b7d1c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852d022
+JNJ,Healthcare,outcome,2026-03-30,neutral,55,2.1,b7d1c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852d022
+JPM,Financials,analysis,2026-01-20,short,60,,c8e2c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852e033
+JPM,Financials,outcome,2026-03-05,short,60,-3.4,c8e2c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852e033
+PG,Consumer Staples,analysis,2026-03-01,long,45,,d9a3c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852f044
+FUTUREX,Technology,analysis,2099-01-01,long,90,,ffffc44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b785zzzzz
