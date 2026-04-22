@@ -187,6 +187,23 @@ class DebatePipelineState(TypedDict, total=False):
             field. If absent, ``risk_manager_node`` treats sector as
             ``"Unknown"`` (safe default -- never matches excluded_sectors
             and never matches a sector-concentration threshold).
+        episodic_hits: Phase-7 recall payload -- prior episodic records
+            loaded by ``memory_recall_node``. Each entry is an
+            :class:`ai_hedge_fund.memory.EpisodicHit.model_dump()` carrying
+            ticker, as_of_date, record_type, signal_direction, confidence,
+            outcome_pct, policy_sha, and a truncated payload. Single-writer
+            (memory_recall_node); NO ``operator.add`` reducer -- there are
+            no parallel writers for this key in the 07-03 topology.
+        beliefs_consulted: Phase-7 belief payload -- relevant belief
+            documents read-only-snapshotted via
+            :func:`ai_hedge_fund.memory.beliefs.load_belief` and dumped via
+            :meth:`Belief.model_dump`. Writes happen offline (Plan 07-04);
+            the live pipeline only READS beliefs through this field.
+            Single-writer (memory_recall_node); NO reducer.
+        episodic_stored_id: Phase-7 primary key of the
+            :class:`ai_hedge_fund.db.models.EpisodicMemory` row inserted by
+            ``episodic_store_node`` at pipeline end (MEM-01 write path).
+            Single-writer (episodic_store_node); NO reducer.
         error: Propagates upstream error; debate nodes short-circuit when set.
     """
 
@@ -202,4 +219,24 @@ class DebatePipelineState(TypedDict, total=False):
     signal: dict | None
     risk_assessment: dict | None
     candidate_metadata: dict | None
+    # --- Phase 7 additions: memory substrate ---
+    episodic_hits: list[dict] | None
+    """Prior episodic records loaded by ``memory_recall_node``. Each
+    dict is an :class:`ai_hedge_fund.memory.EpisodicHit.model_dump()`
+    carrying ticker, as_of_date, record_type, signal_direction,
+    confidence, outcome_pct, policy_sha, and a truncated payload.
+    Single-writer (memory_recall_node); NO operator.add reducer."""
+
+    beliefs_consulted: list[dict] | None
+    """Loaded belief documents relevant to this ticker/sector --
+    read-only snapshot dumped from :class:`Belief.model_dump()`.
+    Writes happen offline in Plan 07-04's self-critique loop; the
+    live pipeline only READS beliefs via this field. Single-writer
+    (memory_recall_node); NO operator.add reducer."""
+
+    episodic_stored_id: int | None
+    """Primary key of the EpisodicMemory row inserted by
+    ``episodic_store_node`` at pipeline end. Single-writer
+    (episodic_store_node); NO operator.add reducer."""
+
     error: str | None

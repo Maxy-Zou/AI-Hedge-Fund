@@ -11,7 +11,6 @@ re-export shim in ``tests/graph/conftest.py``.
 
 from __future__ import annotations
 
-import asyncio
 import os
 from dataclasses import FrozenInstanceError
 from pathlib import Path
@@ -19,12 +18,11 @@ from typing import get_type_hints
 
 os.environ.setdefault("ANTHROPIC_API_KEY", "test-key-for-unit-tests")
 
-import pytest
-from sqlalchemy.orm import Session
+import pytest  # noqa: E402
+from sqlalchemy.orm import Session  # noqa: E402
 
-from ai_hedge_fund.graph.memory_deps import MemoryDeps
-from ai_hedge_fund.schemas.state import DebatePipelineState
-
+from ai_hedge_fund.graph.memory_deps import MemoryDeps  # noqa: E402
+from ai_hedge_fund.schemas.state import DebatePipelineState  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Task 1 — MemoryDeps + DebatePipelineState schema
