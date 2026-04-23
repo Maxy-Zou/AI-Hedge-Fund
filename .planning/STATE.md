@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_plan: 6 of 6
-status: complete
-stopped_at: Completed 07-05-PLAN.md -- Phase 7 complete
-last_updated: "2026-04-22T21:47:10Z"
-last_activity: "2026-04-22 -- Phase 7 Plan 07-05 (integration test suite + phase gate) complete; Phase 7 DONE"
+current_plan: 1 of 6 (08-00 complete)
+status: unknown
+stopped_at: Completed 08-00-PLAN.md -- Phase 8 Wave-0 scaffold + A7 discharge
+last_updated: "2026-04-23T04:48:39.059Z"
+last_activity: 2026-04-23 -- Phase 8 Plan 08-00 (Wave-0 scaffold + Langfuse span coverage) complete; A7 discharged
 progress:
   total_phases: 8
   completed_phases: 7
-  total_plans: 28
-  completed_plans: 28
-  percent: 100
+  total_plans: 34
+  completed_plans: 29
+  percent: 85
 ---
 
 # Project State
@@ -22,18 +22,18 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-11)
 
 **Core value:** Produce institutional-quality investment research at scale -- structured theses with quantitative signals that are rigorous enough to trade on and transparent enough to show investors.
-**Current focus:** Phase 7 (Memory and Learning)
+**Current focus:** Phase 8 (Signal and Output)
 
 ## Current Position
 
-Phase: 7 (Memory and Learning) — COMPLETE
-Current Plan: 6 of 6 (all plans summarised)
+Phase: 8 (Signal and Output) — IN PROGRESS
+Current Plan: 1 of 6 (08-00 complete)
 Total Plans: 6
-Completed Plans: 6 (07-00, 07-01, 07-02, 07-03, 07-04, 07-05)
-Next: `/gsd-verify-work` on Phase 7 -> Phase 8 (deployment) planning
-Last activity: 2026-04-22 -- Phase 7 Plan 07-05 (integration test suite + phase gate) complete; Phase 7 DONE
+Completed Plans: 1 (08-00)
+Next: 08-01 (ReviewPolicy + SignalOutput schema) and 08-02 (portfolio_view) -- runnable in parallel as Wave 1
+Last activity: 2026-04-23 -- Phase 8 Plan 08-00 (Wave-0 scaffold + Langfuse span coverage) complete; A7 discharged
 
-Progress: [██████████] 100%
+Progress: [█████████░] 85%
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [██████████] 100%
 | Phase 07 P03 | 10m | 3 tasks | 7 files |
 | Phase 07 P04 | 9m | 3 tasks | 8 files |
 | Phase 07 P05 | 7m | 3 tasks | 3 files |
+| Phase 08 P00 | 9m | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -90,6 +91,10 @@ Recent decisions affecting current work:
 - Phase 7 Plan 07-03 — memory_recall_node + episodic_store_node wired into build_debate_pipeline; 4-variant topology (memory × risk); VETOED rows persisted per research Open Question 1; policy_sha Phase 6 -> Phase 7 audit linkage verified end-to-end
 - MEM-04 offline self-critique loop shipped: compute_new_confidence pure function (per-event cap of 10 for Pitfall 5 drift guard) + RationaleOnly (LLM cannot author the number, T-07-30) + ingest_outcome CLI (6-step loop with MEM-03 human-edit guard at write_belief)
 - Phase 7 Plan 07-05 — 14 integration tests (8 e2e + 6 policy_sha linkage) prove MEM-01..04 + MEM-03 × MEM-04 + Phase 6 -> Phase 7 audit chain end-to-end with all 12 agents stubbed via TestModel; 199 Phase-7 tests green; full suite 920 passed; Phase 7 COMPLETE (nyquist_compliant: true, wave_0_complete: true in 07-VALIDATION.md)
+- Phase 8 Wave-0 scaffold: fixture-first approach so Wave-1 (08-01 + 08-02) can run in parallel without duplicating fixture work
+- A7 assumption DISCHARGED empirically: all 13 Phase-1-7 pipeline events emit the SIG-04 audit fields (ticker + tokens + policy_sha where applicable) -- no production gap-fill needed
+- Phase 8 Plan 08-00 -- verify_langfuse_spans.py runs the composed pipeline TWICE (APPROVED via wide-open in-memory RiskPolicy + VETOED via OTC exclusion) so risk_manager_complete AND risk_manager_veto are both exercised in one smoke
+- Phase 8 Plan 08-00 -- multi_agent_signal_complete (not signal_complete) is the debate-pipeline signal-node event name per src/ai_hedge_fund/graph/pipeline.py line 300; REQUIRED_FIELDS_PER_AGENT uses the real name
 
 ### Pending Todos
 
@@ -104,8 +109,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-22T21:47:10Z
-Stopped at: Completed 07-05-PLAN.md -- Phase 7 complete, ready for `/gsd-verify-work`
+Last session: 2026-04-23T04:48:38.604Z
+Stopped at: Completed 08-00-PLAN.md -- Phase 8 Wave-0 scaffold + A7 discharge
 Resume file: None
 
-**Planned Phase:** 7 (Memory and Learning) — 6 plans — 2026-04-22T20:33:50.033Z — COMPLETE
+**Planned Phase:** 8 (Signal and Output) — 6 plans — 2026-04-23T04:34:51.629Z
