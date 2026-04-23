@@ -239,4 +239,31 @@ class DebatePipelineState(TypedDict, total=False):
     ``episodic_store_node`` at pipeline end. Single-writer
     (episodic_store_node); NO operator.add reducer."""
 
+    # --- Phase 8 additions: signal output + human review ---
+    final_signal: dict | None
+    """``FinalSignalOutput.model_dump()`` written by ``output_node``.
+    Contains the SIG-01 investor-facing contract (no nullable required
+    fields). Single-writer (output_node); NO operator.add reducer."""
+
+    review_decision: dict | None
+    """``ReviewDecision.model_dump()`` written by ``human_review_node``
+    when the conviction >= threshold review gate fires. Single-writer
+    (human_review_node); NO operator.add reducer. Absent on VETOED paths
+    (they end at the risk router) and on NOT_REQUIRED paths (review
+    skipped)."""
+
+    review_stored_id: int | None
+    """Primary key of the ``record_type='review'`` EpisodicMemory row
+    inserted by ``review_store_node``. Single-writer (review_store_node);
+    NO operator.add reducer. Present on both reviewed AND NOT_REQUIRED
+    paths -- review_store writes a row on every flow that passes through
+    output_node for audit uniformity (T-08-19 mitigation)."""
+
+    _review_threshold: int | None
+    """Conviction threshold read from ``ReviewPolicy`` at pipeline build.
+    Injected into the initial state by the CLI / test caller so
+    ``route_before_review`` can compare without needing deps access.
+    Single-writer (caller); ephemeral. Underscore prefix marks the field
+    as builder-internal and not user-facing."""
+
     error: str | None

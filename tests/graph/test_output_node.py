@@ -28,7 +28,6 @@ from ai_hedge_fund.graph.nodes import (
 from ai_hedge_fund.graph.review_deps import ReviewDeps
 from ai_hedge_fund.review.policy import ReviewPolicy, compute_review_policy_sha
 
-
 # ============================================================
 # ReviewDeps tests (Tests 1-5)
 # ============================================================
@@ -67,8 +66,10 @@ def test_review_deps_neither_raises(portfolio_db_session: Session) -> None:
 
 
 def test_review_deps_is_frozen(portfolio_db_session: Session) -> None:
+    from dataclasses import FrozenInstanceError
+
     deps = ReviewDeps(db_session=portfolio_db_session, policy=ReviewPolicy())
-    with pytest.raises(Exception):
+    with pytest.raises(FrozenInstanceError):
         deps.db_session = None  # type: ignore[misc]
 
 

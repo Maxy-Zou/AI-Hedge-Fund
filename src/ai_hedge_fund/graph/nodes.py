@@ -40,6 +40,7 @@ from datetime import date
 from typing import Literal
 
 import structlog
+from langgraph.types import interrupt  # Phase 8: HITL pause primitive
 from pydantic_ai.exceptions import UsageLimitExceeded
 
 from ai_hedge_fund.agents.analysis import analysis_agent, get_analysis_limits
@@ -91,6 +92,7 @@ from ai_hedge_fund.agents.signal import get_signal_limits, signal_agent
 from ai_hedge_fund.agents.technical import get_technical_limits, technical_agent
 from ai_hedge_fund.db.models import EpisodicMemory
 from ai_hedge_fund.graph.memory_deps import MemoryDeps
+from ai_hedge_fund.graph.review_deps import ReviewDeps
 from ai_hedge_fund.graph.risk_deps import RiskDeps
 from ai_hedge_fund.memory.beliefs import (
     belief_path_for_sector,
@@ -99,6 +101,9 @@ from ai_hedge_fund.memory.beliefs import (
 )
 from ai_hedge_fund.memory.episodic import _normalise_as_of
 from ai_hedge_fund.memory.recall import query_episodic
+from ai_hedge_fund.output.signal import assemble_final_signal
+from ai_hedge_fund.review.decision import ReviewDecision
+from ai_hedge_fund.review.policy import ReviewPolicy, compute_review_policy_sha
 from ai_hedge_fund.risk.checks import (
     check_exclusions,
     check_position_size,
@@ -1176,3 +1181,211 @@ async def episodic_store_node(state: DebatePipelineState, deps: MemoryDeps) -> d
         risk_status=risk.get("status"),
     )
     return {"episodic_stored_id": row.id}
+
+
+# =========================
+# Phase 8: output, review, store, router (SIG-01 / SIG-03 / SIG-04)
+# =========================
+
+
+async def output_node(state: DebatePipelineState, deps: ReviewDeps) -> dict:
+    """Assemble ``FinalSignalOutput`` from authoritative state (Phase 8 SIG-01).
+
+    Runs AFTER ``episodic_store_node`` so ``state['episodic_stored_id']`` is
+    available for ``thesis_link``. Pure Python; zero LLM. Short-circuits on
+    upstream error.
+
+    Writes: ``final_signal`` (``FinalSignalOutput.model_dump()``).
+
+    Threat mitigations:
+        T-08-12 (LLM-authored risk_score): the assembler is purely
+            deterministic via :func:`assemble_final_signal` +
+            :func:`derive_risk_score`; no PydanticAI ``Agent.run`` is
+            invoked here.
+    """
+    if state.get("error"):
+        return {}
+    if state.get("signal") is None:
+        logger.error("output_no_signal", ticker=state.get("ticker"))
+        return {"error": "No signal available for output assembly"}
+    if state.get("episodic_stored_id") is None:
+        logger.error("output_no_episodic_id", ticker=state.get("ticker"))
+        return {
+            "error": (
+                "No episodic_stored_id available; output_node requires "
+                "with_memory=True"
+            )
+        }
+
+    # Resolve review_policy from deps (policy takes precedence; policy_path
+    # is loaded by the pipeline builder, but we keep this fallback for the
+    # rare case the node is invoked outside build_debate_pipeline -- e.g.,
+    # unit tests that pass policy_path directly).
+    policy: ReviewPolicy
+    if deps.policy is not None:
+        policy = deps.policy
+    else:
+        # Lazy import to avoid pulling load_review_policy into the hot path.
+        from ai_hedge_fund.review.policy import load_review_policy
+
+        assert deps.policy_path is not None  # XOR enforced by ReviewDeps
+        policy = load_review_policy(deps.policy_path)
+
+    review_policy_sha = compute_review_policy_sha(policy)
+
+    final_signal = assemble_final_signal(
+        dict(state),
+        review_policy_sha=review_policy_sha,
+        episodic_id=state["episodic_stored_id"],
+        # review_status defaults to NOT_REQUIRED; the human_review_node
+        # writes a separate review_decision key when the gate fires.
+    )
+
+    logger.info(
+        "output_complete",
+        ticker=state["ticker"],
+        direction=final_signal.direction,
+        conviction=final_signal.conviction,
+        review_status=final_signal.review_status,
+        review_policy_sha=review_policy_sha,
+    )
+    return {"final_signal": final_signal.model_dump(mode="json")}
+
+
+async def human_review_node(state: DebatePipelineState) -> dict:
+    """Pause the pipeline until a human supplies a ``ReviewDecision`` (SIG-03).
+
+    Calls :func:`langgraph.types.interrupt` -- the LangGraph checkpointer
+    persists state; the caller resumes via ``Command(resume=decision_dict)``.
+    This node does NOT read stdin; stdin handling is the CLI's job
+    (``run_analysis.py`` in Plan 08-04).
+
+    Writes: ``review_decision`` (``ReviewDecision.model_dump()``).
+
+    Threat mitigations:
+        T-08-03 (silent bypass): this function calls ``interrupt(...)``
+            literally. Any refactor that removes the call breaks the
+            review gate; ``test_interrupt_primitive_is_invoked_in_source``
+            greps the source as a defense-in-depth check.
+        T-08-04 (malformed resume): the resumed value is validated via
+            ``ReviewDecision.model_validate``; bad payloads raise
+            ``pydantic.ValidationError`` instead of being silently
+            accepted.
+    """
+    if state.get("error"):
+        return {}
+    signal = state.get("final_signal")
+    if signal is None:
+        logger.error("human_review_no_final_signal", ticker=state.get("ticker"))
+        return {"error": "No final_signal available for review"}
+
+    review_request = {
+        "ticker": state["ticker"],
+        "as_of_date": state["as_of_date"],
+        "signal": signal,
+        "thesis": state.get("thesis"),
+        "debate": {
+            "bull_case": state.get("bull_case"),
+            "bear_case": state.get("bear_case"),
+            "rebuttal": state.get("rebuttal"),
+            "final_arguments": state.get("final_arguments"),
+            "synthesis": state.get("debate_synthesis"),
+        },
+        "risk_assessment": state.get("risk_assessment"),
+        "episodic_hits": state.get("episodic_hits") or [],
+        "beliefs_consulted": state.get("beliefs_consulted") or [],
+    }
+
+    # T-08-03: PAUSES the graph; LangGraph persists state via checkpointer.
+    decision_raw = interrupt(review_request)
+
+    # T-08-04: validate; malformed raises ValidationError.
+    decision = ReviewDecision.model_validate(decision_raw)
+
+    logger.info(
+        "human_review_decision_received",
+        ticker=state["ticker"],
+        status=decision.status,
+        reviewer_id=decision.reviewer_id,
+        review_policy_sha=decision.review_policy_sha,
+    )
+    return {"review_decision": decision.model_dump(mode="json")}
+
+
+async def review_store_node(state: DebatePipelineState, deps: ReviewDeps) -> dict:
+    """Append a ``record_type='review'`` row to ``episodic_memory`` (SIG-04).
+
+    Runs on BOTH the reviewed path (APPROVED / REJECTED) AND the
+    NOT_REQUIRED path (conviction below threshold -- no interrupt fired).
+    Writing a row on every output-bearing flow keeps the audit trail
+    uniform (Pitfall G).
+
+    Threat mitigations:
+        T-08-05 (history rewrite): NEVER mutates the analysis row -- the
+            review row is a brand-new ``EpisodicMemory`` insert with
+            ``linked_analysis_id`` referencing the analysis row's id.
+            The session is committed, never merged or updated.
+    """
+    if state.get("error"):
+        return {}
+
+    decision = state.get("review_decision")
+    linked_id = state.get("episodic_stored_id")
+    status = (decision or {}).get("status") or "NOT_REQUIRED"
+    as_of_dt = _normalise_as_of(state["as_of_date"])
+    final_signal_dict = state.get("final_signal") or {}
+
+    row = EpisodicMemory(
+        ticker=state["ticker"],
+        sector=(state.get("candidate_metadata") or {}).get("sector") or "Unknown",
+        record_type="review",
+        signal_direction=final_signal_dict.get("direction"),
+        confidence=final_signal_dict.get("conviction"),
+        outcome_pct=None,
+        linked_analysis_id=linked_id,
+        policy_sha=(state.get("risk_assessment") or {}).get("policy_sha"),
+        as_of_date=as_of_dt,
+        payload={
+            "schema_version": 1,
+            "review_status": status,
+            "review_decision": decision,
+            "review_policy_sha": (decision or {}).get("review_policy_sha")
+            or final_signal_dict.get("review_policy_sha"),
+            "linked_analysis_id": linked_id,
+            "final_signal": final_signal_dict,
+        },
+    )
+    deps.db_session.add(row)
+    deps.db_session.commit()
+
+    logger.info(
+        "review_store_complete",
+        ticker=state["ticker"],
+        review_status=status,
+        linked_analysis_id=linked_id,
+        review_row_id=row.id,
+        review_policy_sha=(decision or {}).get("review_policy_sha"),
+    )
+    return {"review_stored_id": row.id}
+
+
+def route_before_review(
+    state: DebatePipelineState,
+) -> Literal["human_review", "review_store"]:
+    """Fail-closed router: ``conviction >= threshold -> human_review``;
+    else ``review_store``.
+
+    Mirror of :func:`route_after_risk` (Phase 6). Fail-closed: missing
+    threshold or missing ``final_signal`` routes to ``human_review`` (the
+    stricter branch; never auto-approves with ambiguous state).
+
+    The ``_review_threshold`` key is injected into state by the pipeline
+    caller (CLI in Plan 08-04; tests inject directly) so the router can
+    compare without needing deps access.
+    """
+    signal = state.get("final_signal") or {}
+    threshold = state.get("_review_threshold")
+    conviction = signal.get("conviction")
+    if threshold is None or conviction is None:
+        return "human_review"
+    return "human_review" if conviction >= threshold else "review_store"
