@@ -126,6 +126,27 @@ Recent decisions affecting current work:
 
 None yet.
 
+## Deferred Items
+
+Items acknowledged and deferred at milestone v1.0 close on 2026-04-23:
+
+| Category | Phase | Artifact | Status | Note |
+|----------|-------|----------|--------|------|
+| uat_gap | 01 | 01-HUMAN-UAT.md | partial | 2 pending scenarios (live API + Langfuse) |
+| uat_gap | 02 | 02-HUMAN-UAT.md | partial | 3 pending scenarios (live API + PostgreSQL) |
+| uat_gap | 03 | 03-HUMAN-UAT.md | partial | 3 pending scenarios (live LLM) |
+| uat_gap | 05 | 05-HUMAN-UAT.md | partial | 5 pending scenarios (live LLM debate) |
+| uat_gap | 07 | 07-HUMAN-UAT.md | partial | 1 pending scenario (live Langfuse trace) |
+| uat_gap | 08 | 08-HUMAN-UAT.md | partial | 1 pending scenario (live reviewer + audit CLI) |
+| verification | 01 | 01-VERIFICATION.md | human_needed | Manual UAT deferred |
+| verification | 02 | 02-VERIFICATION.md | human_needed | Manual UAT deferred |
+| verification | 03 | 03-VERIFICATION.md | human_needed | Manual UAT deferred |
+| verification | 05 | 05-VERIFICATION.md | human_needed | Manual UAT deferred |
+| verification | 07 | 07-VERIFICATION.md | human_needed | Manual UAT deferred |
+| verification | 08 | 08-VERIFICATION.md | human_needed | Manual UAT deferred |
+
+Total: 12 deferred items (6 UAT gaps + 6 human-needed verifications). All require live API keys (Anthropic, Langfuse, PostgreSQL, FMP, FRED) and/or subjective human judgment. None are code defects. Tracked in audit `.planning/v1.0-MILESTONE-AUDIT.md` under `tech_debt:`.
+
 ### Blockers/Concerns
 
 - Token cost is #1 operational risk -- naive multi-agent costs $2-5/analysis vs $0.30-0.80 optimized

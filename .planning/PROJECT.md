@@ -1,5 +1,13 @@
 # AI-Native Hedge Fund — Multi-Agent Research System
 
+## Current State
+
+**Shipped:** v1.0 — Multi-Agent Research System (2026-04-23)
+
+The core research pipeline is code-complete and integration-verified: LangGraph + PydanticAI substrate, temporally-correct data ingestion (SEC EDGAR + yfinance + FRED + Finnhub), single-agent research loop, manager-analyst hierarchy with 3 specialists, structured bull/bear adversarial debate, Risk Manager with veto power, episodic + belief memory with offline self-critique, and investor-ready signal output with a LangGraph `interrupt()`-backed human review gate and compliance-grade audit trail. 1,108 tests green. 12 human-UAT items deferred (all require live API keys or subjective judgment; none are code defects).
+
+**Next up:** v1.1 / v2.0 to be defined via `/gsd-new-milestone`. Likely themes: paper trading integration + track record generation, richer human-review surface (web/TUI), portfolio optimization on top of ranked signals, automated compliance reports.
+
 ## What This Is
 
 A multi-agent LLM research system for an AI-native hedge fund targeting US equities and options. Agents generate investment hypotheses, gather evidence from SEC filings and financial data, adversarially critique each other's theses, and produce quantitative signals backed by structured thesis documents. The system is the core IP of a management company targeting YC and eventual LP capital.
@@ -12,24 +20,28 @@ Produce institutional-quality investment research at scale — structured theses
 
 ### Validated
 
-(None yet — ship to validate)
+- ✓ Single research agent reads SEC filings (10-K, 10-Q, 8-K) and produces a structured investment thesis — v1.0 Phase 3
+- ✓ Agent uses tool augmentation for all financial calculations (never computes ratios/metrics directly) — v1.0 (tool-first invariant honored across Phases 3-8)
+- ✓ Strict temporal controls on all data — every input timestamped, no look-ahead bias — v1.0 (FUTUREX regression proves `as_of_date <= target` end-to-end)
+- ✓ Structured thesis output: bull/bear case, evidence citations, confidence score, risk factors — v1.0 Phase 5
+- ✓ Quantitative signal output: long/short/neutral + conviction level backed by thesis — v1.0 Phase 8 (`FinalSignalOutput`)
+- ✓ Multi-agent specialization: Fundamental, Sentiment, and Technical/Quant analyst agents — v1.0 Phase 4
+- ✓ Manager agent synthesizes analyst outputs into unified thesis — v1.0 Phase 4
+- ✓ Adversarial bull/bear debate protocol (structured 5-act format, not free-form) — v1.0 Phase 5
+- ✓ Dual-model routing: Haiku for extraction, Sonnet for analysis, Opus for complex reasoning — v1.0 Phase 1
+- ✓ Human-readable belief memory that persists investment theses across sessions — v1.0 Phase 7 (ruamel.yaml, comment preservation, human-edit guard)
+- ✓ LangGraph orchestration with checkpointing and human-in-the-loop capability — v1.0 Phase 1 + 8 (`interrupt()` primitive)
+- ✓ PostgreSQL-backed episodic memory for recent analyses and trade outcomes — v1.0 Phase 7 (append-only, 90-day retention)
+- ✓ Cost monitoring and per-agent token budget caps — v1.0 Phase 1
 
-### Active
+### Active (candidates for v1.1+)
 
-- [ ] Single research agent can read SEC filings (10-K, 10-Q, 8-K) and produce a structured investment thesis
-- [ ] Agent uses tool augmentation for all financial calculations (never computes ratios/metrics directly)
-- [ ] Strict temporal controls on all data — every input timestamped, no look-ahead bias
-- [ ] Structured thesis output: bull/bear case, evidence citations, confidence score, risk factors
-- [ ] Quantitative signal output: long/short/neutral + conviction level backed by thesis
-- [ ] Multi-agent specialization: Fundamental, Sentiment, and Technical/Quant analyst agents
-- [ ] Manager agent synthesizes analyst outputs into unified thesis
-- [ ] Adversarial bull/bear debate protocol (structured 5-act format, not free-form)
-- [ ] Dual-model routing: Haiku for extraction, Sonnet for analysis, Opus for complex reasoning
-- [ ] Human-readable belief memory that persists investment theses across sessions
-- [ ] LangGraph orchestration with checkpointing and human-in-the-loop capability
-- [ ] PostgreSQL-backed episodic memory for recent analyses and trade outcomes
-- [ ] Cost monitoring and per-agent token budget caps
-- [ ] Paper trading integration to generate a track record from signals
+- [ ] Paper trading integration to generate a track record from signals (deferred from v1.0 Active list)
+- [ ] Rich reviewer UI replacing CLI blocking stdin (web or TUI)
+- [ ] Portfolio optimization on top of ranked signals (SIG-02 produces the rank; optimization is next)
+- [ ] Automated compliance report generation (Langfuse trace → PDF)
+- [ ] Live-run UAT closure for Phases 1/2/3/5/7/8 (12 human-UAT items deferred at v1.0 close; tracked in STATE.md)
+- [ ] VALIDATION.md frontmatter retrofit for Phases 1/2/5/6 (Nyquist convention introduced starting Phase 7)
 
 ### Out of Scope
 
@@ -69,15 +81,15 @@ Produce institutional-quality investment research at scale — structured theses
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| LangGraph for orchestration | Dominant in production financial agent systems (Kensho/S&P, Captide), graph-based state machines map to analyst-debate-synthesis pipeline, checkpointing + human-in-the-loop built in | — Pending |
-| PydanticAI for agent logic | Type-safe I/O catches financial data errors at dev time, matches existing Pydantic patterns, dependency injection for testability | — Pending |
-| Manager-Analyst + Adversarial Debate architecture | Strongest evidence base across 3 independent papers (FinCon, TradingAgents, AlphaAgents), reduces communication overhead vs peer-to-peer | — Pending |
-| Structured 5-act debate protocol (not free-form) | SAS paper shows structured debate outperforms free-form; free-form degrades into repetition | — Pending |
-| Dual-model routing from day one | TradingAgents validated deep_think_llm + quick_think_llm pattern; without it, costs spiral to $5K/day at 500 tickers | — Pending |
-| Tool-first for all quantitative work | LLMs hallucinate financial numbers; FinAgent showed 36% improvement from tool augmentation | — Pending |
-| Human-readable belief memory | Both transparency feature (investors can inspect) and safety mechanism (humans can correct systematic errors) | — Pending |
-| Start with free data stack, upgrade incrementally | $0/mo is sufficient for v1; $110/mo (Polygon + FMP + ThetaData) is the "can talk to investors" threshold | — Pending |
-| Target YC with management company structure | YC takes 7% of management company (C-Corp), not the fund (LP). Use Repool (YC S21) for fund infrastructure | — Pending |
+| LangGraph for orchestration | Dominant in production financial agent systems (Kensho/S&P, Captide), graph-based state machines map to analyst-debate-synthesis pipeline, checkpointing + human-in-the-loop built in | ✓ Good (v1.0) |
+| PydanticAI for agent logic | Type-safe I/O catches financial data errors at dev time, matches existing Pydantic patterns, dependency injection for testability | ✓ Good (v1.0) |
+| Manager-Analyst + Adversarial Debate architecture | Strongest evidence base across 3 independent papers (FinCon, TradingAgents, AlphaAgents), reduces communication overhead vs peer-to-peer | ✓ Good (v1.0) |
+| Structured 5-act debate protocol (not free-form) | SAS paper shows structured debate outperforms free-form; free-form degrades into repetition | ✓ Good (v1.0) |
+| Dual-model routing from day one | TradingAgents validated deep_think_llm + quick_think_llm pattern; without it, costs spiral to $5K/day at 500 tickers | ✓ Good (v1.0) |
+| Tool-first for all quantitative work | LLMs hallucinate financial numbers; FinAgent showed 36% improvement from tool augmentation | ✓ Good (v1.0) |
+| Human-readable belief memory | Both transparency feature (investors can inspect) and safety mechanism (humans can correct systematic errors) | ✓ Good (v1.0) |
+| Start with free data stack, upgrade incrementally | $0/mo is sufficient for v1; $110/mo (Polygon + FMP + ThetaData) is the "can talk to investors" threshold | ✓ Good (v1.0) |
+| Target YC with management company structure | YC takes 7% of management company (C-Corp), not the fund (LP). Use Repool (YC S21) for fund infrastructure | ✓ Good (v1.0) |
 
 ## Evolution
 
@@ -97,4 +109,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-11 after initialization*
+*Last updated: 2026-04-23 after v1.0 milestone*
