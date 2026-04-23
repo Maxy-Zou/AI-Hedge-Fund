@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_plan: 1 of 6 (08-00 complete)
+current_plan: 2 of 6 (08-00 + 08-01 complete)
 status: unknown
-stopped_at: Completed 08-00-PLAN.md -- Phase 8 Wave-0 scaffold + A7 discharge
-last_updated: "2026-04-23T04:48:39.059Z"
-last_activity: 2026-04-23 -- Phase 8 Plan 08-00 (Wave-0 scaffold + Langfuse span coverage) complete; A7 discharged
+stopped_at: Completed 08-01-PLAN.md -- ReviewPolicy + FinalSignalOutput + assembler + formatters
+last_updated: "2026-04-23T05:01:50.177Z"
+last_activity: 2026-04-23 -- Phase 8 Plan 08-01 (ReviewPolicy + FinalSignalOutput SIG-01 + assembler + formatters) complete
 progress:
   total_phases: 8
   completed_phases: 7
   total_plans: 34
-  completed_plans: 29
-  percent: 85
+  completed_plans: 30
+  percent: 88
 ---
 
 # Project State
@@ -27,13 +27,13 @@ See: .planning/PROJECT.md (updated 2026-04-11)
 ## Current Position
 
 Phase: 8 (Signal and Output) — IN PROGRESS
-Current Plan: 1 of 6 (08-00 complete)
+Current Plan: 2 of 6 (08-00 + 08-01 complete)
 Total Plans: 6
-Completed Plans: 1 (08-00)
-Next: 08-01 (ReviewPolicy + SignalOutput schema) and 08-02 (portfolio_view) -- runnable in parallel as Wave 1
-Last activity: 2026-04-23 -- Phase 8 Plan 08-00 (Wave-0 scaffold + Langfuse span coverage) complete; A7 discharged
+Completed Plans: 2 (08-00, 08-01)
+Next: 08-02 (portfolio_view — Wave 1 parallel-runnable; no longer blocked by 08-01) then 08-03 (graph wiring) which depends on 08-01 + 08-02
+Last activity: 2026-04-23 -- Phase 8 Plan 08-01 (ReviewPolicy + FinalSignalOutput SIG-01 + assembler + formatters) complete
 
-Progress: [█████████░] 85%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [█████████░] 85%
 | Phase 07 P04 | 9m | 3 tasks | 8 files |
 | Phase 07 P05 | 7m | 3 tasks | 3 files |
 | Phase 08 P00 | 9m | 3 tasks | 11 files |
+| Phase 08 P01 | 7m 32s | 3 tasks | 12 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,11 @@ Recent decisions affecting current work:
 - A7 assumption DISCHARGED empirically: all 13 Phase-1-7 pipeline events emit the SIG-04 audit fields (ticker + tokens + policy_sha where applicable) -- no production gap-fill needed
 - Phase 8 Plan 08-00 -- verify_langfuse_spans.py runs the composed pipeline TWICE (APPROVED via wide-open in-memory RiskPolicy + VETOED via OTC exclusion) so risk_manager_complete AND risk_manager_veto are both exercised in one smoke
 - Phase 8 Plan 08-00 -- multi_agent_signal_complete (not signal_complete) is the debate-pipeline signal-node event name per src/ai_hedge_fund/graph/pipeline.py line 300; REQUIRED_FIELDS_PER_AGENT uses the real name
+- Phase 8 Plan 08-01 -- ReviewPolicy byte-for-byte mirrors RiskPolicy (yaml.safe_load only + canonical-JSON SHA-256 via compute_review_policy_sha); T-08-01 + T-08-02 mitigations inherit the Phase-6 pattern
+- Phase 8 Plan 08-01 -- FinalSignalOutput is a NEW schema file (schemas/signal_output.py), NOT a replacement for Phase-5 SignalOutput (schemas/agents.py); preserves byte-for-byte backcompat for the LLM agent surface while enforcing SIG-01 no-null contract on the investor-facing output
+- Phase 8 Plan 08-01 -- derive_risk_score rules per 08-RESEARCH A9: VETOED=100, APPROVED=clamped(observed/limit*100), unknown=50 (middle-ground); pure-Python, zero LLM (T-08-12 tool-first grep -r agent.run src/ai_hedge_fund/output/ returns 0)
+- Phase 8 Plan 08-01 -- thesis_link uses literal 'episodic://{id}' URI scheme; dereferenced by Plan 08-04 CLI against episodic_memory primary key
+- Phase 8 Plan 08-01 -- Formatters accept dict-shaped inputs (callers pass model_dump(mode='json')); stdlib f-strings only; _short_sha truncates to 12-char+ellipsis for T-08-14 readability while full SHA remains in DB for audit
 
 ### Pending Todos
 
@@ -109,8 +115,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-23T04:48:38.604Z
-Stopped at: Completed 08-00-PLAN.md -- Phase 8 Wave-0 scaffold + A7 discharge
+Last session: 2026-04-23T05:01:14.305Z
+Stopped at: Completed 08-01-PLAN.md -- ReviewPolicy + FinalSignalOutput + assembler + formatters
 Resume file: None
 
 **Planned Phase:** 8 (Signal and Output) — 6 plans — 2026-04-23T04:34:51.629Z
