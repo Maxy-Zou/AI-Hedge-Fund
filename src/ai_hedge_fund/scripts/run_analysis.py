@@ -269,6 +269,11 @@ def _format_output(final_state: dict[str, Any], *, as_json: bool) -> str:
             "episodic_stored_id": final_state.get("episodic_stored_id"),
         }
         if as_json:
+            # Full SHAs intentional here: the JSON surface is the audit-grade
+            # form piped into compliance pipelines, where the complete
+            # 64-char policy_sha is required for tamper-evident linkage to
+            # the DB-stored policy row. Human-readable truncation (T-08-14)
+            # applies only to the markdown branch below.
             return json.dumps(payload, indent=2, default=str)
         sha = (risk.get("policy_sha") or "")[:12]
         return (
@@ -289,6 +294,8 @@ def _format_output(final_state: dict[str, Any], *, as_json: bool) -> str:
         return f"# NO SIGNAL\n\nerror: {final_state.get('error', '-')}\n"
 
     if as_json:
+        # Full SHAs intentional: JSON output is the audit-grade surface.
+        # See T-08-14 rationale in the VETOED branch above.
         return json.dumps(final_signal, indent=2, default=str)
     return format_signal_md(final_signal)
 
