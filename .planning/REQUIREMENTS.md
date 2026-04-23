@@ -68,10 +68,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **SIG-01
 **: Quantitative signal output per ticker: direction, conviction, thesis summary, risk score
-- [ ] **SIG-02**: Portfolio-level ranked opportunity list with thesis summaries
+- [x] **SIG-02
+**: Portfolio-level ranked opportunity list with thesis summaries
 - [x] **SIG-03
 **: Human-in-the-loop review step for signals above a configurable conviction threshold
-- [ ] **SIG-04**: Decision audit trail -- every agent step logged with inputs, outputs, and reasoning for compliance
+- [x] **SIG-04
+**: Decision audit trail -- every agent step logged with inputs, outputs, and reasoning for compliance
 
 ## v2 Requirements
 

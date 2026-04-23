@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_plan: 2 of 6 (08-00 + 08-01 complete)
+current_plan: 3 of 6 (08-00 + 08-01 + 08-02 complete)
 status: unknown
-stopped_at: Completed 08-01-PLAN.md -- ReviewPolicy + FinalSignalOutput + assembler + formatters
-last_updated: "2026-04-23T05:01:50.177Z"
-last_activity: 2026-04-23 -- Phase 8 Plan 08-01 (ReviewPolicy + FinalSignalOutput SIG-01 + assembler + formatters) complete
+stopped_at: Completed 08-02-PLAN.md -- query_portfolio_view (SIG-02) + reconstruct_audit_trail CLI (SIG-04)
+last_updated: "2026-04-23T05:12:16.534Z"
+last_activity: 2026-04-23 -- Phase 8 Plan 08-02 (SIG-02 portfolio_view + SIG-04 audit reconstruct) complete
 progress:
   total_phases: 8
   completed_phases: 7
   total_plans: 34
-  completed_plans: 30
-  percent: 88
+  completed_plans: 31
+  percent: 91
 ---
 
 # Project State
@@ -27,13 +27,13 @@ See: .planning/PROJECT.md (updated 2026-04-11)
 ## Current Position
 
 Phase: 8 (Signal and Output) — IN PROGRESS
-Current Plan: 2 of 6 (08-00 + 08-01 complete)
+Current Plan: 3 of 6 (08-00 + 08-01 + 08-02 complete)
 Total Plans: 6
-Completed Plans: 2 (08-00, 08-01)
-Next: 08-02 (portfolio_view — Wave 1 parallel-runnable; no longer blocked by 08-01) then 08-03 (graph wiring) which depends on 08-01 + 08-02
-Last activity: 2026-04-23 -- Phase 8 Plan 08-01 (ReviewPolicy + FinalSignalOutput SIG-01 + assembler + formatters) complete
+Completed Plans: 3 (08-00, 08-01, 08-02)
+Next: 08-03 (graph wiring: human_review_node interrupt + review_store_node) -- depends on 08-01 + 08-02 which are both now complete
+Last activity: 2026-04-23 -- Phase 8 Plan 08-02 (SIG-02 portfolio_view + SIG-04 audit reconstruct) complete
 
-Progress: [█████████░] 88%
+Progress: [█████████░] 91%
 
 ## Performance Metrics
 
@@ -63,6 +63,7 @@ Progress: [█████████░] 88%
 | Phase 07 P05 | 7m | 3 tasks | 3 files |
 | Phase 08 P00 | 9m | 3 tasks | 11 files |
 | Phase 08 P01 | 7m 32s | 3 tasks | 12 files |
+| Phase 08 P02 | 8m 30s | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -101,6 +102,10 @@ Recent decisions affecting current work:
 - Phase 8 Plan 08-01 -- derive_risk_score rules per 08-RESEARCH A9: VETOED=100, APPROVED=clamped(observed/limit*100), unknown=50 (middle-ground); pure-Python, zero LLM (T-08-12 tool-first grep -r agent.run src/ai_hedge_fund/output/ returns 0)
 - Phase 8 Plan 08-01 -- thesis_link uses literal 'episodic://{id}' URI scheme; dereferenced by Plan 08-04 CLI against episodic_memory primary key
 - Phase 8 Plan 08-01 -- Formatters accept dict-shaped inputs (callers pass model_dump(mode='json')); stdlib f-strings only; _short_sha truncates to 12-char+ellipsis for T-08-14 readability while full SHA remains in DB for audit
+- Phase 8 Plan 08-02 -- query_portfolio_view is a PURE QUERY (no memoization); SIG-02 freshness is STRUCTURAL via append-only truth; test_freshness_after_new_insert_no_cache + test_no_lru_cache_decorator anchor T-08-15
+- Phase 8 Plan 08-02 -- reconstruct_audit_trail is SYNCHRONOUS (no asyncio); latest review row wins via order_by(id.desc()).first(); ValueError on missing OR wrong record_type (T-08-19 repudiation mitigation)
+- Phase 8 Plan 08-02 -- as_of_date rendered as isoformat()[:10] in portfolio_view + audit_reconstruct; dialect-neutral date-only string for both Date and datetime round-trips (SQLite coerces Date columns to datetime in some paths)
+- Phase 8 Plan 08-02 -- CLI _main(argv=None) uses module-level attr access (session_mod.get_engine) so monkeypatch.setattr('ai_hedge_fund.db.session.get_engine', ...) works; pattern for all testable CLI entry points going forward
 
 ### Pending Todos
 
@@ -115,8 +120,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-23T05:01:14.305Z
-Stopped at: Completed 08-01-PLAN.md -- ReviewPolicy + FinalSignalOutput + assembler + formatters
+Last session: 2026-04-23T05:12:16.528Z
+Stopped at: Completed 08-02-PLAN.md -- query_portfolio_view (SIG-02) + reconstruct_audit_trail CLI (SIG-04)
 Resume file: None
 
 **Planned Phase:** 8 (Signal and Output) — 6 plans — 2026-04-23T04:34:51.629Z

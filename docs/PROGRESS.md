@@ -1,5 +1,15 @@
 # Progress
 
+## 2026-04-23 — Phase 8 Plan 08-02: query_portfolio_view (SIG-02) + reconstruct_audit_trail CLI (SIG-04)
+
+- **query_portfolio_view** (`src/ai_hedge_fund/output/portfolio_view.py`): pure read-path query over append-only `episodic_memory`. Returns `{sector: [entry, ...]}` ranked by `conviction DESC, as_of_date DESC`; latest-per-ticker; `record_type='analysis'` only; `as_of_date <= target` temporal cutoff; `limit_per_sector=50` DoS cap. No memoization -- the append-only table IS the cache (Pitfall C / T-08-15).
+- **reconstruct_audit_trail + audit_reconstruct CLI** (`src/ai_hedge_fund/scripts/audit_reconstruct.py`): synchronous reconstruction of analysis row + linked review row + Langfuse `thread_id` hint; `policy_sha` + `review_policy_sha` preserved for compliance linkage. CLI: `uv run python -m ai_hedge_fund.scripts.audit_reconstruct --episodic-id N` prints JSON. Raises `ValueError` on missing id OR wrong `record_type` (T-08-19 repudiation mitigation).
+- **output/__init__.py** extended: `query_portfolio_view` re-exported alongside the 4 existing Plan 08-01 re-exports (APPEND, not rewrite).
+- **Tests added:** +21 (11 portfolio_view + 10 audit_reconstruct). Wave-1 output suite 84/84 green; cross-phase (output + memory + review) 268/268 green; full suite 1026 passed (+21 from 08-01 baseline), 2 pre-existing unrelated failures.
+- Files: `08-02-PLAN.md`, `08-02-SUMMARY.md`, `portfolio_view.py`, `audit_reconstruct.py`, `test_portfolio_view.py`, `test_audit_reconstruct.py`, `output/__init__.py`, `STATE.md`, `ROADMAP.md`, `REQUIREMENTS.md`.
+- Requirements closed: **SIG-02** (portfolio view) and **SIG-04** (compliance-grade audit read side).
+- Milestone progress: 3/6 Phase-8 plans complete; ~91% overall.
+
 ## 2026-04-22 — Phase 7 Post-Completion: Review, Fixes, Verification
 
 - **Code review (standard depth):** 34 source files reviewed. 0 critical, 3 warnings (WR-01 sector regex guard gap, WR-02 orphan outcome row logging, WR-03 observed_date nullable=False hardening), 6 info items deferred.
