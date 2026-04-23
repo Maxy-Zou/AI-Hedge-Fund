@@ -46,18 +46,24 @@ from ai_hedge_fund.graph.nodes import (
     extract_node,
     final_arguments_node,
     fundamental_node,
+    human_review_node,
     manager_node,
     memory_recall_node,
     multi_agent_signal_node,
+    output_node,
     rebuttal_node,
     research_node,
+    review_store_node,
     risk_manager_node,
     route_after_risk,
+    route_before_review,
     sentiment_node,
     signal_node,
     technical_node,
 )
+from ai_hedge_fund.graph.review_deps import ReviewDeps
 from ai_hedge_fund.graph.risk_deps import RiskDeps
+from ai_hedge_fund.review.policy import load_review_policy
 from ai_hedge_fund.schemas.state import (
     DebatePipelineState,
     MultiAgentPipelineState,
@@ -190,6 +196,9 @@ def build_debate_pipeline(
     risk_deps: RiskDeps | None = None,
     with_memory: bool = False,
     memory_deps: MemoryDeps | None = None,
+    with_output: bool = False,
+    with_review: bool = False,
+    review_deps: ReviewDeps | None = None,
 ) -> CompiledStateGraph:
     """Build the Phase-5 adversarial-debate pipeline (+ Phase-6 risk gate,
     + Phase-7 memory substrate).
@@ -260,14 +269,46 @@ def build_debate_pipeline(
         memory_deps: Bound :class:`MemoryDeps` consumed by the two memory
             nodes. Required when ``with_memory=True``; must be ``None``
             otherwise.
+        with_output: When True (Phase 8 SIG-01), inserts ``output_node``
+            after ``episodic_store`` to assemble the
+            :class:`ai_hedge_fund.schemas.signal_output.FinalSignalOutput`.
+            Requires ``with_memory=True`` (output_node needs
+            ``episodic_stored_id`` for ``thesis_link``) and ``review_deps``
+            (for the ``review_policy_sha`` stamp). Does NOT imply
+            ``with_review``.
+        with_review: When True (Phase 8 SIG-03), wires the
+            ``human_review_node`` behind a conditional edge
+            (:func:`route_before_review`). Signals with conviction >=
+            threshold pause the graph via :func:`langgraph.types.interrupt`;
+            below-threshold signals route directly to ``review_store``.
+            Requires ``with_output=True``, ``review_deps``, and a
+            ``checkpointer`` (the interrupt primitive persists state via
+            the checkpointer -- Pitfall I).
+
+            Note: callers using ``with_review=True`` MUST seed initial
+            state with ``_review_threshold`` (read from
+            ``review_deps.policy.conviction_threshold``). The
+            ``run_analysis`` CLI (Plan 08-04) handles this; tests inject
+            it in the initial state dict.
+        review_deps: Bound :class:`ReviewDeps` (db_session + policy XOR
+            policy_path). Required when ``with_output=True``; reused by
+            both ``output_node`` (for the SHA stamp) and
+            ``review_store_node`` (for the audit row append).
 
     Returns:
         Compiled ``StateGraph`` ready for invocation via ``ainvoke``.
 
     Raises:
-        ValueError: When ``with_risk=True`` but ``risk_deps`` is ``None``,
-            OR when ``with_memory=True`` but ``memory_deps`` is ``None``
-            -- the corresponding node(s) cannot run without dependencies.
+        ValueError: When any of these invalid combinations are passed:
+            * ``with_risk=True`` but ``risk_deps`` is ``None``;
+            * ``with_memory=True`` but ``memory_deps`` is ``None``;
+            * ``with_output=True`` but ``with_memory=False`` (Phase-8
+              T-08-23 -- output_node needs ``episodic_stored_id``);
+            * ``with_output=True`` but ``review_deps`` is ``None``;
+            * ``with_review=True`` but ``with_output=False`` (the gate
+              reads from ``final_signal``);
+            * ``with_review=True`` but ``checkpointer`` is ``None``
+              (Pitfall I -- Phase-8 T-08-21).
     """
     if with_risk and risk_deps is None:
         raise ValueError(
@@ -278,6 +319,28 @@ def build_debate_pipeline(
         raise ValueError(
             "build_debate_pipeline(with_memory=True) requires memory_deps -- "
             "supply a MemoryDeps instance with db_session and beliefs_path."
+        )
+    # --- Phase-8 guards ---
+    if with_output and not with_memory:
+        raise ValueError(
+            "build_debate_pipeline(with_output=True) requires with_memory=True "
+            "-- output_node needs episodic_stored_id from episodic_store_node."
+        )
+    if with_output and review_deps is None:
+        raise ValueError(
+            "build_debate_pipeline(with_output=True) requires review_deps -- "
+            "supply a ReviewDeps instance with db_session and policy "
+            "(or policy_path)."
+        )
+    if with_review and not with_output:
+        raise ValueError(
+            "build_debate_pipeline(with_review=True) requires with_output=True "
+            "-- the review gate reads from final_signal."
+        )
+    if with_review and checkpointer is None:
+        raise ValueError(
+            "build_debate_pipeline(with_review=True) requires a checkpointer "
+            "-- langgraph.types.interrupt() persists state via the checkpointer."
         )
 
     builder = StateGraph(DebatePipelineState)
@@ -318,6 +381,37 @@ def build_debate_pipeline(
 
         builder.add_node("memory_recall", _memory_recall_bound)
         builder.add_node("episodic_store", _episodic_store_bound)
+
+    if with_output:
+        # Resolve the review policy once at build time so each node call
+        # avoids re-loading the YAML. Pipeline-builder owns the
+        # XOR-policy/policy_path resolution; the bound closures below
+        # see a normalised ReviewDeps with policy populated.
+        assert review_deps is not None  # for the type checker; enforced above
+        if review_deps.policy is not None:
+            _resolved_review_deps = review_deps
+        else:
+            assert review_deps.policy_path is not None
+            _loaded_policy = load_review_policy(review_deps.policy_path)
+            _resolved_review_deps = ReviewDeps(
+                db_session=review_deps.db_session,
+                policy=_loaded_policy,
+            )
+
+        async def _output_bound(state: DebatePipelineState) -> dict:
+            return await output_node(state, _resolved_review_deps)
+
+        async def _review_store_bound(state: DebatePipelineState) -> dict:
+            return await review_store_node(state, _resolved_review_deps)
+
+        builder.add_node("output", _output_bound)
+        builder.add_node("review_store", _review_store_bound)
+
+    if with_review:
+        # human_review_node has no deps -- the interrupt primitive is
+        # owned by langgraph itself and the resumed payload is validated
+        # in-node via ReviewDecision.model_validate.
+        builder.add_node("human_review", human_review_node)
 
     # Fan-out: START -> memory_recall (if enabled) -> 3 analysts, else
     # START -> 3 analysts directly (Phase-4/5 topology preserved byte-for-byte
@@ -362,7 +456,10 @@ def build_debate_pipeline(
                 {"signal": "signal", "__end__": "episodic_store"},
             )
             builder.add_edge("signal", "episodic_store")
-            builder.add_edge("episodic_store", END)
+            # When with_output is enabled, episodic_store flows into output_node
+            # (Phase-8); otherwise it terminates the graph (Phase-7 backcompat).
+            if not with_output:
+                builder.add_edge("episodic_store", END)
         else:
             # Risk only (Phase-6 topology, unchanged).
             builder.add_conditional_edges(
@@ -377,9 +474,34 @@ def build_debate_pipeline(
         if with_memory:
             # Memory only: signal -> episodic_store -> END.
             builder.add_edge("signal", "episodic_store")
-            builder.add_edge("episodic_store", END)
+            # When with_output is enabled, episodic_store flows into output_node
+            # (Phase-8); otherwise it terminates the graph (Phase-7 backcompat).
+            if not with_output:
+                builder.add_edge("episodic_store", END)
         else:
             # Phase-5 backcompat: signal -> END (byte-for-byte unchanged).
             builder.add_edge("signal", END)
+
+    if with_output:
+        # Phase-8 tail: episodic_store -> output -> (human_review|review_store) -> END.
+        # Guarded by the `with_output and not with_memory` ValueError above,
+        # so episodic_store is guaranteed registered when this branch fires.
+        builder.add_edge("episodic_store", "output")
+
+        if with_review:
+            # Conditional: above-threshold conviction -> human_review;
+            # below-threshold -> straight to review_store (NOT_REQUIRED row).
+            builder.add_conditional_edges(
+                "output",
+                route_before_review,
+                {"human_review": "human_review", "review_store": "review_store"},
+            )
+            builder.add_edge("human_review", "review_store")
+        else:
+            # No review gate -- output flows directly into review_store
+            # (writes a NOT_REQUIRED audit row).
+            builder.add_edge("output", "review_store")
+
+        builder.add_edge("review_store", END)
 
     return builder.compile(checkpointer=checkpointer)

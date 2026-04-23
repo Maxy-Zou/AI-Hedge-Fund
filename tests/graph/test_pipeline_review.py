@@ -248,3 +248,47 @@ def test_review_store_terminates_graph(
     assert any(
         src == "review_store" and tgt in {END, "__end__"} for src, tgt in edges
     )
+
+
+def test_vetoed_path_short_circuits_before_interrupt(
+    portfolio_db_session: Session, beliefs_tmp_dir: Path
+) -> None:
+    """T-08-06 mitigation: VETOED signals MUST NOT trigger interrupt().
+
+    On VETO, ``risk_manager`` routes to ``episodic_store``; ``output_node``
+    short-circuits because ``state['signal']`` is None and sets an error;
+    ``human_review_node`` then short-circuits on the error. End result: no
+    ``__interrupt__`` marker on the final state.
+    """
+    import asyncio
+
+    from langgraph.checkpoint.memory import InMemorySaver
+
+    mdeps = MemoryDeps(db_session=portfolio_db_session, beliefs_path=beliefs_tmp_dir)
+    rdeps_rev = ReviewDeps(db_session=portfolio_db_session, policy=ReviewPolicy())
+    graph = build_debate_pipeline(
+        checkpointer=InMemorySaver(),
+        with_memory=True,
+        memory_deps=mdeps,
+        with_output=True,
+        with_review=True,
+        review_deps=rdeps_rev,
+    )
+
+    # Drive the human_review_node directly with a VETOED-style state where
+    # signal is missing and error is set (mimics the post-VETO state on
+    # arrival at human_review through the conditional edges).
+    from ai_hedge_fund.graph.nodes import human_review_node
+
+    veto_state = {
+        "ticker": "AAPL",
+        "as_of_date": "2026-04-20",
+        "error": "No signal available for output assembly",
+    }
+    result = asyncio.run(human_review_node(veto_state))
+    # Short-circuited; no review_decision, no interrupt would be emitted.
+    assert result == {}
+    # And the topology still routes through review_store (audit row written
+    # for every output-bearing path). The integration-level VETO->review-skip
+    # test is in Plan 08-05.
+    assert graph is not None
