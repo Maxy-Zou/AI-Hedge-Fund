@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_plan: 4 of 6 (08-00 + 08-01 + 08-02 + 08-03 complete)
+current_plan: 5 of 6 (08-00 + 08-01 + 08-02 + 08-03 + 08-04 complete)
 status: unknown
-stopped_at: Completed 08-03-PLAN.md -- output_node + human_review_node interrupt() + review_store_node + route_before_review + build_debate_pipeline extension
-last_updated: "2026-04-23T07:34:33Z"
-last_activity: 2026-04-23 -- Phase 8 Plan 08-03 (graph wiring: HITL interrupt + output assembly + review_store) complete
+stopped_at: Completed 08-04-PLAN.md -- run_analysis + portfolio_view CLIs shipped; SIG-01..04 CLI-exposed end-to-end
+last_updated: "2026-04-23T07:51:36.685Z"
+last_activity: 2026-04-23 -- Phase 8 Plan 08-04 (run_analysis + portfolio_view CLI entrypoints) complete
 progress:
   total_phases: 8
   completed_phases: 7
   total_plans: 34
-  completed_plans: 32
-  percent: 94
+  completed_plans: 33
+  percent: 97
 ---
 
 # Project State
@@ -27,13 +27,13 @@ See: .planning/PROJECT.md (updated 2026-04-11)
 ## Current Position
 
 Phase: 8 (Signal and Output) — IN PROGRESS
-Current Plan: 4 of 6 (08-00 + 08-01 + 08-02 + 08-03 complete)
+Current Plan: 5 of 6 (08-00 + 08-01 + 08-02 + 08-03 + 08-04 complete)
 Total Plans: 6
-Completed Plans: 4 (08-00, 08-01, 08-02, 08-03)
-Next: 08-04 (run_analysis CLI driving composed pipeline with HITL stdin loop) -- depends on 08-03 which is now complete
-Last activity: 2026-04-23 -- Phase 8 Plan 08-03 (HITL interrupt + output assembly + review_store graph wiring) complete
+Completed Plans: 5 (08-00, 08-01, 08-02, 08-03, 08-04)
+Next: 08-05 (e2e integration tests for the composed Phase 5+6+7+8 pipeline) -- depends on 08-04 which is now complete
+Last activity: 2026-04-23 -- Phase 8 Plan 08-04 (run_analysis + portfolio_view CLI entrypoints) complete
 
-Progress: [█████████▌] 94%
+Progress: [██████████] 97%
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Progress: [█████████▌] 94%
 | Phase 08 P01 | 7m 32s | 3 tasks | 12 files |
 | Phase 08 P02 | 8m 30s | 2 tasks | 5 files |
 | Phase 08 P03 | 13m | 2 tasks | 7 files |
+| Phase 08 P04 | 7m 11s | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -113,6 +114,10 @@ Recent decisions affecting current work:
 - Phase 8 Plan 08-03 -- VETOED signals never reach review by construction: route_after_risk ends conditional at episodic_store, output_node short-circuits on missing signal (sets error), human_review_node short-circuits on the resulting error; T-08-06 architectural mitigation
 - Phase 8 Plan 08-03 -- with_output ALWAYS requires review_deps (even when with_review=False) because output_node stamps review_policy_sha for the FinalSignalOutput contract; design contract is "output requires review_deps; review requires output + checkpointer"
 - Phase 8 Plan 08-03 -- _review_threshold is caller-injected state key (NOT bound at build time); mirrors Phase-6 risk_assessment dataflow + decouples threshold mutation from rebuild cycle; route_before_review fails closed (missing threshold/signal -> human_review)
+- Phase 8 Plan 08-04 -- run_analysis CLI composes ALL 4 Phase 6+7+8 kwargs (with_memory + with_risk + with_output + with_review) with InMemorySaver checkpointer; first CLI that exercises them together end-to-end
+- Phase 8 Plan 08-04 -- Dependency-injected pipeline_factory + reviewer_io kwargs keep run_analysis unit tests LLM-free; _FakeGraph returns canned (__interrupt__, post-resume) state pairs and MagicMock reviewer_io blocks the stdin prompt
+- Phase 8 Plan 08-04 -- thread_id suffix via uuid.uuid4().hex[:8] (Pitfall J/T-08-08); _review_threshold caller-injected into initial state from review_policy.conviction_threshold
+- Phase 8 Plan 08-04 -- _format_output three-branch renderer (FinalSignalOutput markdown/JSON + VETOED BLOCKED-BY-RISK + NO_SIGNAL error) so operators never see a raw traceback
 
 ### Pending Todos
 
@@ -127,8 +132,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-23T07:34:33Z
-Stopped at: Completed 08-03-PLAN.md -- output_node + human_review_node interrupt() + review_store_node + route_before_review + build_debate_pipeline extension
+Last session: 2026-04-23T07:51:36.681Z
+Stopped at: Completed 08-04-PLAN.md -- run_analysis + portfolio_view CLIs shipped; SIG-01..04 CLI-exposed end-to-end
 Resume file: None
 
 **Planned Phase:** 8 (Signal and Output) — 6 plans — 2026-04-23T04:34:51.629Z
