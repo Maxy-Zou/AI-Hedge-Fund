@@ -249,5 +249,9 @@ def test_cli_prints_valid_json(
 
     assert rc == 0
     out = capsys.readouterr().out
-    parsed = json.loads(out)
+    # Structlog may emit a human-readable log line on stdout before the JSON.
+    # Strip everything before the first ``{`` so we parse only the CLI payload.
+    json_start = out.find("{")
+    assert json_start != -1, f"No JSON object in CLI output: {out!r}"
+    parsed = json.loads(out[json_start:])
     assert parsed["analysis_row"]["id"] == aid
