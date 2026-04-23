@@ -1,0 +1,6 @@
+# Malformed ReviewPolicy -- carries an unknown key.
+# Plan 08-01's load_review_policy MUST reject this via extra="forbid".
+conviction_threshold: 70
+review_prompt_template: "Review required: {ticker}"
+reviewer_id_default: null
+unknown_key: "should trigger ValidationError"

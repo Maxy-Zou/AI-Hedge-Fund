@@ -1,0 +1,5 @@
+# Sample ReviewPolicy fixture for Phase-8 tests.
+# Mirrors the shape Plan 08-01 will formalize in src/ai_hedge_fund/review/policy.py.
+conviction_threshold: 70
+review_prompt_template: "Review required: {ticker} conviction {conviction}. Approve (y) or reject (n)?"
+reviewer_id_default: "test"
