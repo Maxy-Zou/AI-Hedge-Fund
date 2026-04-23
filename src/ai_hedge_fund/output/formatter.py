@@ -44,6 +44,53 @@ def _fmt_value(value: Any) -> str:
     return str(value)
 
 
+def _fmt_risk(risk: Any) -> str:
+    """Render a risk_assessment dict for the reviewer packet (T-08-14).
+
+    Replaces ``str(dict)`` rendering so the 64-char ``policy_sha`` is
+    truncated to its first 12 chars + ellipsis -- matching the
+    ``format_signal_md`` Audit section. Unknown keys present on the dict
+    are rendered verbatim (non-SHA fields are already short).
+    """
+    if risk is None:
+        return "-"
+    if not isinstance(risk, dict):
+        return str(risk)
+    if not risk:
+        return "(empty)"
+    lines = [
+        f"- status: {risk.get('status', '-')}",
+        f"- constraint_violated: {risk.get('constraint_violated', '-')}",
+        f"- rationale: {risk.get('rationale', '-')}",
+        f"- policy_sha: {_short_sha(risk.get('policy_sha'))}",
+    ]
+    # Preserve additional fields (observed/limit/etc) without leaking SHAs.
+    rendered_keys = {"status", "constraint_violated", "rationale", "policy_sha"}
+    for key, value in risk.items():
+        if key in rendered_keys:
+            continue
+        lines.append(f"- {key}: {_fmt_value(value)}")
+    return "\n".join(lines)
+
+
+def _fmt_hit(hit: Any) -> str:
+    """Render a single episodic_hits / beliefs_consulted entry (T-08-14).
+
+    For dict entries, truncates any field whose key ends in ``_sha`` so the
+    reviewer packet never displays a full 64-char policy hash inline. For
+    scalar entries, falls through to ``str(hit)``.
+    """
+    if not isinstance(hit, dict):
+        return str(hit)
+    parts: list[str] = []
+    for key, value in hit.items():
+        if isinstance(value, str) and key.endswith("_sha"):
+            parts.append(f"{key}={_short_sha(value)}")
+        else:
+            parts.append(f"{key}={value}")
+    return "{" + ", ".join(parts) + "}"
+
+
 def format_signal_md(final_signal: dict) -> str:
     """Render a FinalSignalOutput (as dict) into compact markdown (~25-30 lines).
 
@@ -138,15 +185,19 @@ def format_review_request_md(review_request: dict) -> str:
         "",
         "## Risk Assessment",
         "",
-        _fmt_value(risk),
+        _fmt_risk(risk),
         "",
         f"## Episodic Hits ({len(hits)})",
         "",
-        _fmt_value(hits) if not hits else "\n".join(f"- {h}" for h in hits),
+        _fmt_value(hits) if not hits else "\n".join(f"- {_fmt_hit(h)}" for h in hits),
         "",
         f"## Beliefs Consulted ({len(beliefs)})",
         "",
-        _fmt_value(beliefs) if not beliefs else "\n".join(f"- {b}" for b in beliefs),
+        (
+            _fmt_value(beliefs)
+            if not beliefs
+            else "\n".join(f"- {_fmt_hit(b)}" for b in beliefs)
+        ),
         "",
         "---",
         "",
