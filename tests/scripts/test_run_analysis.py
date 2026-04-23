@@ -20,6 +20,15 @@ Dependency-injected: the tests pass a fake ``pipeline_factory`` that returns a
 
 from __future__ import annotations
 
+import os
+
+# Match the documented Phase-7 workaround: the graph package eagerly
+# instantiates PydanticAI agents at import time, which require
+# ``ANTHROPIC_API_KEY``. The tests never call real agents but the import
+# chain triggers the provider check; set a dummy key before any
+# ``ai_hedge_fund`` import (same pattern as tests/integration/test_phase7_e2e.py).
+os.environ.setdefault("ANTHROPIC_API_KEY", "test-key-for-phase8-run-analysis")
+
 import asyncio
 import json
 import re
