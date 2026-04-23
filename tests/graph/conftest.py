@@ -54,6 +54,12 @@ from tests.memory.conftest import (  # noqa: F401 -- re-export
     sample_outcomes_yaml_path,
 )
 
+# Phase-8 alias: portfolio_db_session = memory_db_session (Plan 08-03 tests
+# import this name from tests/graph/conftest.py to mirror tests/output/conftest.py).
+from tests.memory.conftest import (  # noqa: F401 -- re-export under alias
+    memory_db_session as portfolio_db_session,
+)
+
 RISK_FIXTURES_DIR = Path(__file__).parent.parent / "risk" / "fixtures"
 
 
