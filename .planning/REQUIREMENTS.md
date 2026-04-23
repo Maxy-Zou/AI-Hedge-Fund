@@ -152,10 +152,10 @@ Deferred to future release. Tracked but not in current roadmap.
 | MEM-02 | Phase 7 | Complete (07-02 Belief schema + 07-03 memory_recall_node reads beliefs_consulted + 07-05 e2e; shipped 2026-04-22) |
 | MEM-03 | Phase 7 | Complete (07-02 write_belief chokepoint + 07-03 read path + 07-04 ingest_outcome cross-req + 07-05 e2e MEM-03 x MEM-04; shipped 2026-04-22) |
 | MEM-04 | Phase 7 | Complete (07-04 compute_new_confidence + RationaleOnly + ingest_outcome; 07-05 e2e write loop 72->82; shipped 2026-04-22) |
-| SIG-01 | Phase 8 | Pending |
-| SIG-02 | Phase 8 | Pending |
-| SIG-03 | Phase 8 | Pending |
-| SIG-04 | Phase 8 | Pending |
+| SIG-01 | Phase 8 | In progress (08-01 schema + assembler + 08-03 output_node graph wiring; CLI in 08-04, e2e in 08-05) |
+| SIG-02 | Phase 8 | Complete (08-02 query_portfolio_view + audit_reconstruct CLI; shipped 2026-04-23) |
+| SIG-03 | Phase 8 | In progress (08-01 ReviewPolicy + ReviewDecision + 08-03 human_review_node interrupt() + route_before_review; CLI in 08-04, e2e in 08-05) |
+| SIG-04 | Phase 8 | In progress (08-02 audit_reconstruct + 08-03 review_store_node append-only persistence; e2e in 08-05) |
 
 **Coverage:**
 - v1 requirements: 36 total

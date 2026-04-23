@@ -1,5 +1,21 @@
 # Progress
 
+## 2026-04-23 — Phase 8 Plan 08-03: Graph wiring (HITL interrupt + output assembly + review_store)
+
+- **ReviewDeps** (`src/ai_hedge_fund/graph/review_deps.py`): frozen dataclass mirroring `MemoryDeps`/`RiskDeps`. Carries `db_session` + XOR `policy`/`policy_path`; XOR enforced in `__post_init__`; `TYPE_CHECKING` SQLAlchemy import to keep runtime surface minimal.
+- **4 new graph primitives** (`src/ai_hedge_fund/graph/nodes.py`):
+  - `output_node` (SIG-01): pure-Python `FinalSignalOutput` assembly from authoritative state; stamps `review_policy_sha`; short-circuits on upstream error / missing signal / missing episodic_id.
+  - `human_review_node` (SIG-03): builds review_request dict + calls `langgraph.types.interrupt(review_request)` -- the genuine LangGraph HITL primitive (T-08-03 mitigation, greppable in source); `Command(resume=...)` -> `ReviewDecision.model_validate` (T-08-04 schema enforcement).
+  - `review_store_node` (SIG-04): appends new `record_type='review'` `EpisodicMemory` row with `linked_analysis_id` (T-08-05 append-only); fires on BOTH reviewed and NOT_REQUIRED paths (audit row uniformity).
+  - `route_before_review`: fail-closed conditional router; `conviction >= threshold` routes to `human_review`; below or missing routes to either `review_store` (below threshold) or `human_review` (fail-closed missing state).
+- **DebatePipelineState extension** (`src/ai_hedge_fund/schemas/state.py`): 4 new single-writer keys (`final_signal`, `review_decision`, `review_stored_id`, `_review_threshold`) -- NO `operator.add` reducer.
+- **build_debate_pipeline extension** (`src/ai_hedge_fund/graph/pipeline.py`): 3 new kwargs (`with_output`, `with_review`, `review_deps`) + 4 ValueError guards (T-08-21 + T-08-23 + 2 structural). Pipeline-builder normalises `review_deps` once at build time (loads YAML if `policy_path`); per-call I/O eliminated. Surgical edge edits: existing `episodic_store -> END` becomes conditional on `not with_output`; new tail block adds `episodic_store -> output -> [route_before_review|review_store] -> END`.
+- **Tests added:** +45 (7 in `test_review_node.py` + 24 in `test_output_node.py` + 14 in `test_pipeline_review.py`). Graph subsuite 101/101 green; Phase 5/6/7 cross-phase regression 31/31 green; full suite 1071 passing (2 pre-existing pytest-asyncio failures documented in 07-04 deferred-items).
+- **VETOED-no-review invariant verified:** VETO routes to episodic_store (Phase-6 conditional); output_node short-circuits on missing signal; human_review_node short-circuits on the resulting error; no `__interrupt__` fires.
+- Files: `08-03-PLAN.md`, `08-03-SUMMARY.md`, `review_deps.py`, `nodes.py`, `pipeline.py`, `state.py`, `test_review_node.py`, `test_output_node.py`, `test_pipeline_review.py`, `tests/graph/conftest.py`, `STATE.md`, `ROADMAP.md`, `REQUIREMENTS.md`.
+- Requirements progressed (CLI in 08-04, e2e in 08-05): **SIG-01** (output_node graph wiring), **SIG-03** (human_review_node interrupt + route_before_review), **SIG-04** (review_store_node append-only persistence).
+- Milestone progress: 4/6 Phase-8 plans complete; ~94% overall.
+
 ## 2026-04-23 — Phase 8 Plan 08-02: query_portfolio_view (SIG-02) + reconstruct_audit_trail CLI (SIG-04)
 
 - **query_portfolio_view** (`src/ai_hedge_fund/output/portfolio_view.py`): pure read-path query over append-only `episodic_memory`. Returns `{sector: [entry, ...]}` ranked by `conviction DESC, as_of_date DESC`; latest-per-ticker; `record_type='analysis'` only; `as_of_date <= target` temporal cutoff; `limit_per_sector=50` DoS cap. No memoization -- the append-only table IS the cache (Pitfall C / T-08-15).

@@ -157,7 +157,7 @@ Plans:
 - [ ] 08-00-PLAN.md -- Wave 0 scaffold: tests/review + tests/output packages, ReviewPolicy YAML fixtures (valid + malformed), integration conftest extension, Langfuse/structlog span coverage smoke (A7 discharge)
 - [ ] 08-01-PLAN.md -- Schemas + formatters: FinalSignalOutput (SIG-01 no-null contract) + ReviewPolicy + ReviewDecision + compute_review_policy_sha + assemble_final_signal + derive_risk_score + markdown formatters + config/review_policy.yaml
 - [x] 08-02-PLAN.md -- Portfolio view + audit reconstruct: query_portfolio_view over episodic_memory (no cache, temporal filter, record_type='analysis' only) + reconstruct_audit_trail + audit_reconstruct CLI (SIG-02 + SIG-04 read-side)
-- [ ] 08-03-PLAN.md -- Graph integration: ReviewDeps frozen dataclass + DebatePipelineState extensions + output_node + human_review_node (calls langgraph.types.interrupt) + review_store_node (append-only) + route_before_review + build_debate_pipeline with_output/with_review extension (4 ValueError guards, full backcompat)
+- [x] 08-03-PLAN.md -- Graph integration: ReviewDeps frozen dataclass + DebatePipelineState extensions + output_node + human_review_node (calls langgraph.types.interrupt) + review_store_node (append-only) + route_before_review + build_debate_pipeline with_output/with_review extension (4 ValueError guards, full backcompat)
 - [ ] 08-04-PLAN.md -- CLIs: run_analysis.py (argparse + async pipeline + blocking stdin reviewer prompt + interrupt/resume via Command(resume=...) + uuid-suffixed thread_id + markdown/JSON output) + portfolio_view.py CLI (SIG-02 ranked view)
 - [ ] 08-05-PLAN.md -- Integration + phase gate: 8 e2e scenarios + 6 review_policy_sha linkage + 4 audit reconstruction + full-suite regression + validation sign-off
 
@@ -175,4 +175,4 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8
 | 5. Adversarial Critique | 3/3 | Complete    | 2026-04-22 |
 | 6. Risk Management | 6/6 | Complete | 2026-04-22 |
 | 7. Memory and Learning | 6/6 | Complete | 2026-04-22 |
-| 8. Signal and Output | 3/6 | In Progress | - |
+| 8. Signal and Output | 4/6 | In Progress | - |

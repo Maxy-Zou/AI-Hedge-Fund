@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_plan: 3 of 6 (08-00 + 08-01 + 08-02 complete)
+current_plan: 4 of 6 (08-00 + 08-01 + 08-02 + 08-03 complete)
 status: unknown
-stopped_at: Completed 08-02-PLAN.md -- query_portfolio_view (SIG-02) + reconstruct_audit_trail CLI (SIG-04)
-last_updated: "2026-04-23T05:12:16.534Z"
-last_activity: 2026-04-23 -- Phase 8 Plan 08-02 (SIG-02 portfolio_view + SIG-04 audit reconstruct) complete
+stopped_at: Completed 08-03-PLAN.md -- output_node + human_review_node interrupt() + review_store_node + route_before_review + build_debate_pipeline extension
+last_updated: "2026-04-23T07:34:33Z"
+last_activity: 2026-04-23 -- Phase 8 Plan 08-03 (graph wiring: HITL interrupt + output assembly + review_store) complete
 progress:
   total_phases: 8
   completed_phases: 7
   total_plans: 34
-  completed_plans: 31
-  percent: 91
+  completed_plans: 32
+  percent: 94
 ---
 
 # Project State
@@ -27,13 +27,13 @@ See: .planning/PROJECT.md (updated 2026-04-11)
 ## Current Position
 
 Phase: 8 (Signal and Output) — IN PROGRESS
-Current Plan: 3 of 6 (08-00 + 08-01 + 08-02 complete)
+Current Plan: 4 of 6 (08-00 + 08-01 + 08-02 + 08-03 complete)
 Total Plans: 6
-Completed Plans: 3 (08-00, 08-01, 08-02)
-Next: 08-03 (graph wiring: human_review_node interrupt + review_store_node) -- depends on 08-01 + 08-02 which are both now complete
-Last activity: 2026-04-23 -- Phase 8 Plan 08-02 (SIG-02 portfolio_view + SIG-04 audit reconstruct) complete
+Completed Plans: 4 (08-00, 08-01, 08-02, 08-03)
+Next: 08-04 (run_analysis CLI driving composed pipeline with HITL stdin loop) -- depends on 08-03 which is now complete
+Last activity: 2026-04-23 -- Phase 8 Plan 08-03 (HITL interrupt + output assembly + review_store graph wiring) complete
 
-Progress: [█████████░] 91%
+Progress: [█████████▌] 94%
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Progress: [█████████░] 91%
 | Phase 08 P00 | 9m | 3 tasks | 11 files |
 | Phase 08 P01 | 7m 32s | 3 tasks | 12 files |
 | Phase 08 P02 | 8m 30s | 2 tasks | 5 files |
+| Phase 08 P03 | 13m | 2 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -106,6 +107,12 @@ Recent decisions affecting current work:
 - Phase 8 Plan 08-02 -- reconstruct_audit_trail is SYNCHRONOUS (no asyncio); latest review row wins via order_by(id.desc()).first(); ValueError on missing OR wrong record_type (T-08-19 repudiation mitigation)
 - Phase 8 Plan 08-02 -- as_of_date rendered as isoformat()[:10] in portfolio_view + audit_reconstruct; dialect-neutral date-only string for both Date and datetime round-trips (SQLite coerces Date columns to datetime in some paths)
 - Phase 8 Plan 08-02 -- CLI _main(argv=None) uses module-level attr access (session_mod.get_engine) so monkeypatch.setattr('ai_hedge_fund.db.session.get_engine', ...) works; pattern for all testable CLI entry points going forward
+- Phase 8 Plan 08-03 -- human_review_node uses GENUINE langgraph.types.interrupt() primitive (not a log line, not a custom channel); T-08-03 mitigation greppable as `interrupt(review_request)` in src/ai_hedge_fund/graph/nodes.py; Command(resume=...) -> ReviewDecision.model_validate at the resume boundary (T-08-04)
+- Phase 8 Plan 08-03 -- ReviewDeps mirrors MemoryDeps + RiskDeps shape (frozen dataclass + XOR policy/policy_path + TYPE_CHECKING SQLAlchemy); pipeline-builder normalises once at build time so per-call YAML I/O is eliminated
+- Phase 8 Plan 08-03 -- review_store_node fires on BOTH reviewed AND NOT_REQUIRED paths; audit row uniformity (Pitfall G); below-threshold signals get a review row with review_status='NOT_REQUIRED' so audit_reconstruct CLI can distinguish "no review needed" from "review row lost"
+- Phase 8 Plan 08-03 -- VETOED signals never reach review by construction: route_after_risk ends conditional at episodic_store, output_node short-circuits on missing signal (sets error), human_review_node short-circuits on the resulting error; T-08-06 architectural mitigation
+- Phase 8 Plan 08-03 -- with_output ALWAYS requires review_deps (even when with_review=False) because output_node stamps review_policy_sha for the FinalSignalOutput contract; design contract is "output requires review_deps; review requires output + checkpointer"
+- Phase 8 Plan 08-03 -- _review_threshold is caller-injected state key (NOT bound at build time); mirrors Phase-6 risk_assessment dataflow + decouples threshold mutation from rebuild cycle; route_before_review fails closed (missing threshold/signal -> human_review)
 
 ### Pending Todos
 
@@ -120,8 +127,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-23T05:12:16.528Z
-Stopped at: Completed 08-02-PLAN.md -- query_portfolio_view (SIG-02) + reconstruct_audit_trail CLI (SIG-04)
+Last session: 2026-04-23T07:34:33Z
+Stopped at: Completed 08-03-PLAN.md -- output_node + human_review_node interrupt() + review_store_node + route_before_review + build_debate_pipeline extension
 Resume file: None
 
 **Planned Phase:** 8 (Signal and Output) — 6 plans — 2026-04-23T04:34:51.629Z
