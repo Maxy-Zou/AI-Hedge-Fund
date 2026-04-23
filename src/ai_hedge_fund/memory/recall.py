@@ -87,6 +87,7 @@ def query_episodic(
     rows = (
         db_session.query(EpisodicMemory)
         .filter(EpisodicMemory.as_of_date <= target)
+        .filter(EpisodicMemory.record_type.in_(("analysis", "outcome")))
         .filter(or_(*predicates))
         .order_by(EpisodicMemory.as_of_date.desc())
         .limit(limit)
