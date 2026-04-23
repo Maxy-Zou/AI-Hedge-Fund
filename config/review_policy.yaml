@@ -1,0 +1,8 @@
+# Human review gating policy (Phase 8 SIG-03).
+# Signals with conviction >= conviction_threshold pause the pipeline for
+# human approval via langgraph.types.interrupt() inside human_review_node.
+# Loaded once at pipeline build; fingerprinted via compute_review_policy_sha
+# and stamped on every persisted ReviewDecision for audit (T-08-02).
+conviction_threshold: 70
+review_prompt_template: "Review required: {ticker} conviction {conviction}. Approve (y) or reject (n)?"
+reviewer_id_default: null
