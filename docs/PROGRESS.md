@@ -1,5 +1,19 @@
 # Progress
 
+## 2026-04-23 — Phase 8 Plan 08-05 + MILESTONE v1.0 COMPLETE (8/8 phases)
+
+- **Phase-gate integration suite (18 tests) shipped:**
+  - `tests/integration/test_phase8_e2e.py` — 8 composed-pipeline scenarios covering SIG-01..04 (above-threshold interrupt, below-threshold NOT_REQUIRED, APPROVED/REJECTED resume via `Command(resume=ReviewDecision(...))`, T-08-05 append-only invariant under REJECTED, T-08-06 VETOED-never-reaches-review, uniform-audit NOT_REQUIRED row, portfolio_view freshness, Phase-5 backcompat topology).
+  - `tests/integration/test_phase8_review_policy_sha_linkage.py` — 6 three-way SHA scenarios (determinism, drift sensitivity, idempotent revert, 64-char hex on APPROVED + REJECTED, three-way equality state/row/recomputed).
+  - `tests/integration/test_phase8_audit_reconstruction.py` — 4 audit-trail scenarios (APPROVED + NOT_REQUIRED + both risk/review policy_shas + wrong-id ValueError).
+  - All 12 agents (11 debate/risk + self_critique) stubbed via TestModel; zero real LLM calls.
+- **Rule 1 auto-fix:** `src/ai_hedge_fund/memory/recall.py::query_episodic` now filters `record_type IN ('analysis','outcome')`. Review rows are audit metadata, not analyst evidence — surfacing them to `memory_recall_node` violated `EpisodicHit.record_type` pattern `^(analysis|outcome)$` and blocked multi-run integration tests sharing a session.
+- **Validation sign-off:** `.planning/phases/08-signal-and-output/08-VALIDATION.md` stamped with `nyquist_compliant: true`, `wave_0_complete: true`, `status: complete`. Per-Task Verification Map populated with 15 rows across Plans 08-00..08-05, all marked green.
+- **Test counts:** Phase-8 integration 18/18 green; full suite 1108 passed, 9 skipped, 2 documented pre-existing baseline failures (pytest-asyncio absence on research_pipeline.py — unchanged).
+- **Requirements closed:** SIG-01 (no-null signal), SIG-02 (portfolio view freshness), SIG-03 (HITL review gate), SIG-04 (compliance audit trail) — all delivered end-to-end.
+- **MILESTONE v1.0 COMPLETE: 8/8 phases, 34/34 plans shipped.** Phase 1 (Foundation) -> Phase 2 (Data) -> Phase 3 (Research Agent) -> Phase 4 (Multi-Agent) -> Phase 5 (Debate) -> Phase 6 (Risk) -> Phase 7 (Memory) -> Phase 8 (Signal + Output) all green.
+- Files: `test_phase8_e2e.py`, `test_phase8_review_policy_sha_linkage.py`, `test_phase8_audit_reconstruction.py`, `08-05-SUMMARY.md`, `08-VALIDATION.md`, `STATE.md`, `ROADMAP.md`, `REQUIREMENTS.md`, `recall.py` (Rule 1 fix).
+
 ## 2026-04-23 — Phase 8 Plan 08-03: Graph wiring (HITL interrupt + output assembly + review_store)
 
 - **ReviewDeps** (`src/ai_hedge_fund/graph/review_deps.py`): frozen dataclass mirroring `MemoryDeps`/`RiskDeps`. Carries `db_session` + XOR `policy`/`policy_path`; XOR enforced in `__post_init__`; `TYPE_CHECKING` SQLAlchemy import to keep runtime surface minimal.

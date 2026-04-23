@@ -2,17 +2,17 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-current_plan: 5 of 6 (08-00 + 08-01 + 08-02 + 08-03 + 08-04 complete)
+current_plan: 6 of 6 (all Phase-8 plans shipped)
 status: unknown
-stopped_at: Completed 08-04-PLAN.md -- run_analysis + portfolio_view CLIs shipped; SIG-01..04 CLI-exposed end-to-end
-last_updated: "2026-04-23T07:51:36.685Z"
-last_activity: 2026-04-23 -- Phase 8 Plan 08-04 (run_analysis + portfolio_view CLI entrypoints) complete
+stopped_at: Completed 08-05-PLAN.md -- phase-gate integration suite (18 tests); SIG-01..04 delivered end-to-end; MILESTONE v1.0 COMPLETE (8/8 phases)
+last_updated: "2026-04-23T08:12:50.390Z"
+last_activity: "2026-04-23 -- Phase 8 Plan 08-05 (phase-gate integration: 18 tests) complete; MILESTONE v1.0 COMPLETE (8/8 phases)"
 progress:
   total_phases: 8
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 34
-  completed_plans: 33
-  percent: 97
+  completed_plans: 34
+  percent: 100
 ---
 
 # Project State
@@ -26,14 +26,14 @@ See: .planning/PROJECT.md (updated 2026-04-11)
 
 ## Current Position
 
-Phase: 8 (Signal and Output) — IN PROGRESS
-Current Plan: 5 of 6 (08-00 + 08-01 + 08-02 + 08-03 + 08-04 complete)
+Phase: 8 (Signal and Output) — COMPLETE
+Current Plan: 6 of 6 (all Phase-8 plans shipped)
 Total Plans: 6
-Completed Plans: 5 (08-00, 08-01, 08-02, 08-03, 08-04)
-Next: 08-05 (e2e integration tests for the composed Phase 5+6+7+8 pipeline) -- depends on 08-04 which is now complete
-Last activity: 2026-04-23 -- Phase 8 Plan 08-04 (run_analysis + portfolio_view CLI entrypoints) complete
+Completed Plans: 6 (08-00, 08-01, 08-02, 08-03, 08-04, 08-05)
+Next: milestone v1.0 complete -- Phase 9 planning or formal /gsd-verify-work
+Last activity: 2026-04-23 -- Phase 8 Plan 08-05 (phase-gate integration: 18 tests) complete; MILESTONE v1.0 COMPLETE (8/8 phases)
 
-Progress: [██████████] 97%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -66,6 +66,7 @@ Progress: [██████████] 97%
 | Phase 08 P02 | 8m 30s | 2 tasks | 5 files |
 | Phase 08 P03 | 13m | 2 tasks | 7 files |
 | Phase 08 P04 | 7m 11s | 2 tasks | 6 files |
+| Phase 08 P05 | 18m | 3 tasks tasks | 5 files files |
 
 ## Accumulated Context
 
@@ -118,6 +119,8 @@ Recent decisions affecting current work:
 - Phase 8 Plan 08-04 -- Dependency-injected pipeline_factory + reviewer_io kwargs keep run_analysis unit tests LLM-free; _FakeGraph returns canned (__interrupt__, post-resume) state pairs and MagicMock reviewer_io blocks the stdin prompt
 - Phase 8 Plan 08-04 -- thread_id suffix via uuid.uuid4().hex[:8] (Pitfall J/T-08-08); _review_threshold caller-injected into initial state from review_policy.conviction_threshold
 - Phase 8 Plan 08-04 -- _format_output three-branch renderer (FinalSignalOutput markdown/JSON + VETOED BLOCKED-BY-RISK + NO_SIGNAL error) so operators never see a raw traceback
+- Phase 8 Plan 08-05 -- 18 integration tests (8 e2e + 6 review_policy_sha linkage + 4 audit reconstruction) prove SIG-01..04 end-to-end; Phase 5/6/7/8 composed pipeline green under TestModel stubs for all 12 agents; full-suite 1108 passed; 08-VALIDATION.md stamped (nyquist_compliant: true, wave_0_complete: true); MILESTONE v1.0 COMPLETE (8/8 phases)
+- Phase 8 Plan 08-05 -- Rule 1 auto-fix in src/ai_hedge_fund/memory/recall.py: query_episodic now filters record_type IN ('analysis','outcome'). Review rows are audit metadata, not analyst evidence; surfacing them to memory_recall_node violated EpisodicHit.record_type pattern '^(analysis|outcome)$' and blocked multi-run integration tests sharing a session
 
 ### Pending Todos
 
@@ -132,8 +135,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-23T07:51:36.681Z
-Stopped at: Completed 08-04-PLAN.md -- run_analysis + portfolio_view CLIs shipped; SIG-01..04 CLI-exposed end-to-end
+Last session: 2026-04-23T08:12:50.384Z
+Stopped at: Completed 08-05-PLAN.md -- phase-gate integration suite (18 tests); SIG-01..04 delivered end-to-end; MILESTONE v1.0 COMPLETE (8/8 phases)
 Resume file: None
 
 **Planned Phase:** 8 (Signal and Output) — 6 plans — 2026-04-23T04:34:51.629Z
