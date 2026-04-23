@@ -46,6 +46,7 @@ def upgrade() -> None:
             "observed_date",
             sa.DateTime(timezone=True),
             server_default=sa.func.now(),
+            nullable=False,
         ),
     )
     op.create_index("ix_episodic_ticker_asof", "episodic_memory", ["ticker", "as_of_date"])

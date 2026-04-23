@@ -42,6 +42,13 @@ class DualTimestampMixin:
 
     This separation prevents look-ahead bias -- queries filter by as_of_date
     to ensure only data available at that time is used.
+
+    Both columns are ``nullable=False``: a row without an ``observed_date``
+    would silently defeat the temporal audit trail that underpins the
+    look-ahead-bias defense (see CLAUDE.md "Data Handling"). ``server_default``
+    guarantees the column is populated at the DB boundary; the ORM-level
+    non-null makes a caller-supplied ``None`` a type error instead of a
+    silent NULL insert.
     """
 
     as_of_date: Mapped[str] = mapped_column(
@@ -51,4 +58,5 @@ class DualTimestampMixin:
     observed_date: Mapped[str] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
+        nullable=False,
     )
