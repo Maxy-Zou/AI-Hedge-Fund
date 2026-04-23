@@ -106,9 +106,20 @@ def _default_reviewer_io(
             f"Reviewer input must start with y or n (got: {answer!r})"
         )
 
-    note = input("Reviewer note (1-2000 chars): ").strip()
-    if not note:
-        note = f"{status.lower()} without note"
+    # Enforce the documented 1-2000 char cap at prompt time so the reviewer
+    # can correct an over-long paste BEFORE the pipeline fires its Pydantic
+    # re-validation (which would bubble a ValidationError and drop the
+    # in-progress input). Empty input is substituted with a deterministic
+    # placeholder so the min-length invariant is never violated.
+    while True:
+        note = input("Reviewer note (1-2000 chars): ").strip()
+        if not note:
+            note = f"{status.lower()} without note"
+        if len(note) <= 2000:
+            break
+        print(
+            f"Note too long ({len(note)} chars; limit 2000). Try again."
+        )
 
     sha = compute_review_policy_sha(review_policy)
     return {
