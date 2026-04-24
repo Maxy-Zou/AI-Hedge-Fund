@@ -20,6 +20,11 @@ from ai_hedge_fund.config import AppSettings
 
 # ---------------------------------------------------------------------------
 # Mock filing class (supports bracket notation via __getitem__)
+#
+# The real edgartools ``EntityFiling`` exposes the form as ``.form`` (not
+# ``.form_type``). Tests keep ``form_type=`` as the kwarg name for
+# readability; ``MockFiling`` stores it on ``.form`` so the production
+# client sees the same attribute shape as the real library.
 # ---------------------------------------------------------------------------
 
 
@@ -38,7 +43,8 @@ class MockFiling:
     ) -> None:
         self.accession_no = accession_no
         self.filing_date = filing_date
-        self.form_type = form_type
+        # Real edgartools EntityFiling exposes ``.form``; mirror that here.
+        self.form = form_type
         self.company = company
         self._sections = sections or {}
         self._full_text = full_text

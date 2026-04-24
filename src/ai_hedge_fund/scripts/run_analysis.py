@@ -180,22 +180,46 @@ async def run_analysis(
         Final pipeline state dict. Keys of interest: ``final_signal``,
         ``review_decision``, ``episodic_stored_id``, ``review_stored_id``.
     """
-    # Risk and returns deps are required by RiskDeps; for the CLI path the
-    # empty-DataFrame default is acceptable because downstream correlation
-    # checks consult ``session.load_portfolio()`` for per-ticker history.
-    # Importing pandas lazily keeps the runtime surface minimal for tests
-    # that never touch the risk deps constructor.
+    # Build the daily-log-returns DataFrame that drawdown + correlation
+    # checks require. We read daily_prices for (candidate ticker + existing
+    # portfolio tickers), filter by trade_date <= as_of_date to preserve
+    # temporal controls, pivot wide, and compute log returns.
+    import numpy as np
     import pandas as pd
+    from sqlalchemy import select
+
+    from ai_hedge_fund.db.models import DailyPrice, PortfolioPosition
 
     if thread_id is None:
         thread_id = f"{ticker}-{as_of_date}-{uuid.uuid4().hex[:8]}"
     if checkpointer is None:
         checkpointer = InMemorySaver()
 
+    as_of = datetime.fromisoformat(as_of_date).date()
+    portfolio_tickers = [
+        row[0]
+        for row in session.execute(select(PortfolioPosition.ticker).distinct()).all()
+    ]
+    universe = sorted({ticker, *portfolio_tickers})
+    price_rows = session.execute(
+        select(DailyPrice.ticker, DailyPrice.trade_date, DailyPrice.adj_close_cents)
+        .where(DailyPrice.ticker.in_(universe))
+        .where(DailyPrice.trade_date <= as_of)
+    ).all()
+    if price_rows:
+        prices = (
+            pd.DataFrame(price_rows, columns=["ticker", "trade_date", "adj_close_cents"])
+            .pivot(index="trade_date", columns="ticker", values="adj_close_cents")
+            .sort_index()
+        )
+        returns_df = np.log(prices / prices.shift(1)).dropna(how="all")
+    else:
+        returns_df = pd.DataFrame()
+
     memory_deps = MemoryDeps(db_session=session, beliefs_path=beliefs_dir)
     risk_deps = RiskDeps(
         db_session=session,
-        returns=pd.DataFrame(),
+        returns=returns_df,
         policy=risk_policy,
     )
     review_deps = ReviewDeps(db_session=session, policy=review_policy)

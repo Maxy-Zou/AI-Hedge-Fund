@@ -19,6 +19,20 @@ from ai_hedge_fund.config import AppSettings
 
 # ---------------------------------------------------------------------------
 # Mock CompanyFacts helpers
+#
+# The production XbrlClient consumes
+# ``edgar.EntityFacts.to_dataframe(pit_mode=True)`` which has columns:
+#
+#   concept, label, value, numeric_value, unit, period_type,
+#   period_start, period_end, fiscal_year, fiscal_period,
+#   filing_date, form_type
+#
+# ``filing_date`` and ``period_end`` are native ``datetime.date``; ``concept``
+# is taxonomy-prefixed (e.g. ``'us-gaap:Revenues'``). These helpers build a
+# mock ``EntityFacts`` whose ``.to_dataframe(pit_mode=True)`` returns a
+# DataFrame with that schema. Tests keep using the pre-migration call
+# signatures (``_make_fact_row(val=..., fiscal_year=..., filed=...)``) —
+# the fixture does the translation.
 # ---------------------------------------------------------------------------
 
 
@@ -30,7 +44,12 @@ def _make_fact_row(
     fiscal_year: int = 2024,
     filed: str = "2024-02-01",
 ) -> dict[str, Any]:
-    """Create a single fact row dict matching pandas DataFrame row structure."""
+    """Create a single fact row dict for ``_make_company_facts``.
+
+    The returned dict is consumed internally by ``_make_company_facts``; it
+    is not itself a DataFrame row. Dates are parsed to ``datetime.date`` at
+    DataFrame-construction time to match the edgartools runtime shape.
+    """
     return {
         "val": val,
         "units": unit,
@@ -42,55 +61,93 @@ def _make_fact_row(
     }
 
 
-def _make_facts_dataframe(rows: list[dict[str, Any]]) -> Any:
-    """Create a mock pandas-like object from fact rows.
-
-    Returns an object with .iterrows() that yields (index, row_namespace) pairs,
-    and supports len() and column filtering.
-    """
-    import pandas as pd
-
-    return pd.DataFrame(rows)
-
-
 def _make_company_facts(
     concept_data: dict[str, list[dict[str, Any]]],
     cik: str = "0000320193",
 ) -> SimpleNamespace:
-    """Create a mock CompanyFacts object.
+    """Create a mock ``EntityFacts`` object.
+
+    The returned object exposes ``.to_dataframe(pit_mode=True)`` which
+    yields a DataFrame matching the schema produced by edgartools >= 5.28.
 
     Args:
-        concept_data: Maps XBRL tag name to list of fact row dicts.
+        concept_data: Maps XBRL tag name (unprefixed, e.g. ``"Revenues"``)
+            to a list of fact row dicts built by ``_make_fact_row``.
         cik: CIK number for the company.
     """
     import pandas as pd
 
-    # Build a mock that mimics edgartools CompanyFacts
     facts = SimpleNamespace()
     facts.cik = cik
 
-    all_rows = []
+    def _to_date(value: Any) -> date:
+        if isinstance(value, date):
+            return value
+        return date.fromisoformat(str(value))
+
+    all_rows: list[dict[str, Any]] = []
     for tag_name, rows in concept_data.items():
+        concept_key = f"us-gaap:{tag_name}"
         for row in rows:
-            all_rows.append({
-                "namespace": "us-gaap",
-                "fact": tag_name,
-                "val": row["val"],
-                "units": row.get("units", "USD"),
-                "fp": row.get("fp", "FY"),
-                "fy": row.get("fy", 2024),
-                "filed": row.get("filed", "2024-02-01"),
-                "form": row.get("form", "10-K"),
-                "start": row.get("start", "2023-01-01"),
-                "end": row.get("end", "2023-12-31"),
-            })
+            fiscal_year = int(row.get("fy", 2024))
+            fiscal_period = str(row.get("fp", "FY"))
+            filing_date = _to_date(row.get("filed", "2024-02-01"))
 
-    facts_df = pd.DataFrame(all_rows) if all_rows else pd.DataFrame()
+            # Default period_end derived from fiscal year for FY facts;
+            # interim periods (Q1/Q2/Q3) get an approximate quarter-end.
+            if "end" in row:
+                period_end = _to_date(row["end"])
+            elif fiscal_period == "FY":
+                period_end = date(fiscal_year, 12, 31)
+            else:
+                quarter_month = {"Q1": 3, "Q2": 6, "Q3": 9, "Q4": 12}.get(fiscal_period, 12)
+                quarter_day = 31 if quarter_month in (3, 12) else 30
+                period_end = date(fiscal_year, quarter_month, quarter_day)
 
-    def to_pandas(*args: Any, **kwargs: Any) -> Any:
+            period_start = (
+                _to_date(row["start"]) if "start" in row else date(fiscal_year - 1, 1, 1)
+            )
+
+            numeric = float(row["val"])
+            all_rows.append(
+                {
+                    "concept": concept_key,
+                    "label": tag_name,
+                    "value": numeric,
+                    "numeric_value": numeric,
+                    "unit": row.get("units", "USD"),
+                    "period_type": "duration",
+                    "period_start": period_start,
+                    "period_end": period_end,
+                    "fiscal_year": fiscal_year,
+                    "fiscal_period": fiscal_period,
+                    "filing_date": filing_date,
+                    "form_type": row.get("form", "10-K"),
+                }
+            )
+
+    columns = [
+        "concept",
+        "label",
+        "value",
+        "numeric_value",
+        "unit",
+        "period_type",
+        "period_start",
+        "period_end",
+        "fiscal_year",
+        "fiscal_period",
+        "filing_date",
+        "form_type",
+    ]
+    facts_df = pd.DataFrame(all_rows, columns=columns)
+
+    def to_dataframe(*args: Any, **kwargs: Any) -> Any:
+        # pit_mode flag is accepted but ignored — the fixture always
+        # returns the PIT-mode schema.
         return facts_df
 
-    facts.to_pandas = to_pandas
+    facts.to_dataframe = to_dataframe
     return facts
 
 

@@ -78,7 +78,7 @@ class EdgarClient:
                 {
                     "accession_no": f.accession_no,
                     "filing_date": filing_date,
-                    "form_type": f.form_type,
+                    "form_type": f.form,
                     "company_name": getattr(f, "company", ""),
                 }
             )
@@ -159,7 +159,7 @@ class EdgarClient:
                 {
                     "accession_no": f.accession_no,
                     "filing_date": filing_date,
-                    "form_type": f.form_type,
+                    "form_type": f.form,
                     "sections": sections,
                 }
             )
