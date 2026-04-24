@@ -114,6 +114,9 @@ Priority order for agent consumption:
 - **Token budgets from day one.** Every agent has a per-run token cap. Every pipeline has a total cost cap. Use Langfuse to track.
 - **Belief memory is human-readable.** Investment beliefs stored as structured documents (YAML/JSON), not opaque embeddings. Humans can read, edit, and override.
 
+### Fix-as-you-find
+When incidental errors or mistakes surface during unrelated work — a broken import, a stale library call, a failing assertion, a typo, a dead branch, drift between code and tests — fix them inline in the same session rather than just reporting them. Group the fixes into their own atomic commit (separate from the main task's commit) so history stays reviewable. If a discovered issue is large enough to warrant its own plan (>~50 LOC change, architectural, or crosses phase boundaries), file it as a `/gsd-debug` session instead of patching ad-hoc.
+
 ### Data Handling
 - Raw data cached locally (PostgreSQL) to avoid redundant API calls
 - Append-only for financial time-series data (never overwrite historical observations)

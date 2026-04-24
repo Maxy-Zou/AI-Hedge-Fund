@@ -1,5 +1,32 @@
 # Progress
 
+## 2026-04-24 — First end-to-end pipeline run (AAPL) + edgartools 5.28.5 migration
+
+First real `run_analysis` invocation against live APIs surfaced two classes of drift that milestone-v1.0's unit tests had masked:
+
+- **edgartools API drift.** Code was written against a pre-5.x edgartools surface; installed `edgartools==5.28.5` renamed `EntityFiling.form_type` → `.form` and replaced `CompanyFacts.to_pandas()` (flat `namespace/fact/val/units/fp/fy/filed/form` schema) with `EntityFacts.to_dataframe(pit_mode=True)` (`concept/value/unit/period_type/period_end/fiscal_year/fiscal_period/filing_date/form_type`). Migration strategy: use native `pit_mode=True` path — it preserves `filing_date` + `form_type` columns and is documented as "lookahead-bias-free for backtesting", matching our temporal-controls invariant natively. No `FactQuery.as_of()` rewrite needed.
+- **Risk returns DataFrame never populated.** `run_analysis.py` hard-coded `RiskDeps(returns=pd.DataFrame())`, so even with `daily_prices` seeded the drawdown check always reported `observed=0.0 < limit=60` and VETOed. Patched to query `daily_prices` for `{candidate_ticker ∪ portfolio_tickers}` where `trade_date <= as_of_date`, pivot on ticker, compute `np.log(prices / prices.shift(1))`.
+
+**Files changed (code fixes):**
+- `src/ai_hedge_fund/data/clients/edgar_client.py:81,162` — `.form_type` → `.form`
+- `src/ai_hedge_fund/data/clients/xbrl_client.py` — full rewrite of `get_facts` + `_resolve_concept_facts` against `to_dataframe(pit_mode=True)`; dedupe restatements per `(concept, period_end)` by latest `filing_date`; prefer 10-K / 10-K/A; public contract (`{ticker, fiscal_period, fiscal_year, metrics: {concept: {current, prior}}}`) preserved.
+- `src/ai_hedge_fund/scripts/run_analysis.py` — build real log-returns DataFrame from `daily_prices` before constructing `RiskDeps`.
+- `tests/unit/test_financial_tools.py` — fixture `_make_company_facts` produces `.to_dataframe(pit_mode=True)` in the new schema.
+- `tests/unit/test_filing_tools.py` — `MockFiling.form_type` → `.form` to match real `EntityFiling`.
+
+**Verification:**
+- End-to-end run: `AAPL / 2026-04-18 / Technology` completes in ~3.7 min, ~111k tokens (~$1.50–2 API cost). Output: `direction=NEUTRAL, conviction=55, review_status=NOT_REQUIRED, risk_status=APPROVED`. Debate pre/post confidence: 62 → 55 (bear moved the needle); synthesis quality: 79.
+- Full test suite: 1032/1032 passing across `tests/{unit,graph,memory,output,review,risk,scripts}`. Ruff clean.
+- Persisted: `episodic_memory.id=3` (analysis) + `id=4` (review NOT_REQUIRED audit row) with `risk_policy_sha` and `review_policy_sha` stamped.
+- Debug session record: `.planning/debug/xbrl-api-mismatch.md` (resolved).
+
+**Ops steps taken (not code):**
+- Added free-tier `FINNHUB_API_KEY` + `FRED_API_KEY` to `.env` (sentiment + macro agents hard-required them).
+- Seeded `daily_prices` with 85 days of AAPL OHLCV via `PriceClient.download()` (2025-12-15 → 2026-04-18).
+- Stamped alembic to `head` (DB had tables from a prior `metadata.create_all()` but no `alembic_version` row); ran `Base.metadata.create_all(checkfirst=True)` to backfill `portfolio_positions`, `episodic_memory`, `daily_prices`, `insider_trades`, `macro_indicators`, `news_articles`.
+
+**Gap worth flagging:** milestone-v1.0 shipped with 100% unit-test coverage but zero integration runs against live edgartools/yfinance/Finnhub/FRED. The `08-HUMAN-UAT.md` verification step apparently never exercised the real data layer. Consider adding a smoke-test target that runs one pipeline per week against live APIs to catch vendor-API drift early.
+
 ## 2026-04-23 — Phase 8 Plan 08-05 + MILESTONE v1.0 COMPLETE (8/8 phases)
 
 - **Phase-gate integration suite (18 tests) shipped:**
