@@ -1,16 +1,19 @@
 """Tests for :mod:`ai_hedge_fund.risk.correlation`.
 
-Covers 06-03 Task 2 behaviours 1-5:
+Covers 06-03 Task 2 behaviours 1-5 plus the post-fix utilization contract:
 
     1. Known high-correlation pair (MSFT built to track AAPL ~0.95) is
        surfaced as the top correlated ticker.
     2. Empty ``portfolio_tickers`` returns ``("", 0.0)``.
     3. Aligned window below ``min_window`` returns ``("", 0.0)`` and
        emits a structlog warning.
-    4. ``check_correlation`` returns a :class:`Violation` when max
-       correlation exceeds ``policy.max_correlation_with_portfolio``.
-    5. ``check_correlation`` returns ``None`` when max correlation is at
-       or below the policy limit.
+    4. ``check_correlation`` returns a :class:`CheckResult` carrying a
+       :class:`Violation` when max correlation exceeds
+       ``policy.max_correlation_with_portfolio`` and ``ratio`` reflects
+       the breach magnitude.
+    5. ``check_correlation`` returns a :class:`CheckResult` with
+       ``violation=None`` when max correlation is at or below the policy
+       limit; ``ratio`` carries |corr| / cap for utilization aggregation.
 """
 
 from __future__ import annotations
@@ -26,7 +29,7 @@ from ai_hedge_fund.risk.correlation import (
 )
 from ai_hedge_fund.risk.policy import RiskPolicy
 from ai_hedge_fund.risk.portfolio import PortfolioSnapshot, PortfolioSnapshotPosition
-from ai_hedge_fund.schemas.risk import Violation
+from ai_hedge_fund.schemas.risk import CheckResult, Violation
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -119,10 +122,14 @@ def test_check_correlation_vetoes_when_above_limit(
     # strict policy caps correlation at 0.80; AAPL<->MSFT is ~0.94 in fixture.
     result = check_correlation("AAPL", portfolio, golden_returns, strict_corr_policy)
 
-    assert isinstance(result, Violation)
-    assert result.name == "max_correlation_with_portfolio"
-    assert result.observed > 0.80
-    assert result.limit == 0.80
+    assert isinstance(result, CheckResult)
+    assert isinstance(result.violation, Violation)
+    assert result.violation.name == "max_correlation_with_portfolio"
+    assert result.violation.observed > 0.80
+    assert result.violation.limit == 0.80
+    # |corr| / cap > 1.0 -- aggregator clamps. Verify the math is consistent
+    # with the violation's observed value.
+    assert result.ratio == pytest.approx(result.violation.observed / 0.80)
 
 
 def test_check_correlation_approves_when_within_limit(
@@ -130,4 +137,9 @@ def test_check_correlation_approves_when_within_limit(
 ) -> None:
     portfolio = _snapshot_with_tickers(["MSFT", "JNJ", "JPM"])
     # loose policy caps at 0.99; AAPL<->MSFT 0.94 is under.
-    assert check_correlation("AAPL", portfolio, golden_returns, loose_corr_policy) is None
+    result = check_correlation("AAPL", portfolio, golden_returns, loose_corr_policy)
+
+    assert isinstance(result, CheckResult)
+    assert result.violation is None
+    # APPROVED still reports a meaningful ratio for utilization aggregation.
+    assert 0.0 < result.ratio < 1.0

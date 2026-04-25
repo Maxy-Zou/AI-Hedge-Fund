@@ -9,6 +9,7 @@ Covers 06-05 Task 1 behaviours. Organised into four groups:
   each of the five violation types, first-violation-wins ordering, and
   the Pitfall-1 regression that ignores an LLM-authored fake status.
 * Budget exhaustion (test 13).
+* Utilization aggregation (post-fix regression suite, end of file).
 
 No real LLM calls: every test that invokes the node through the agent
 uses ``risk_manager_agent.override(model=TestModel(...))``.
@@ -409,3 +410,100 @@ def test_route_missing_assessment_fails_closed() -> None:
 def test_route_none_assessment_fails_closed() -> None:
     state: DebatePipelineState = {"risk_assessment": None}
     assert route_after_risk(state) == "__end__"
+
+
+# ---------- Utilization aggregation regression suite ----------
+
+
+def test_approved_assessment_carries_nonzero_utilization(risk_deps: RiskDeps) -> None:
+    """Regression for risk-score-zero-on-approved.
+
+    Pre-fix: APPROVED assessments had observed/limit == None and the
+    downstream ``derive_risk_score`` collapsed to 0. Post-fix: the node
+    aggregates per-check ratios into a deterministic ``utilization`` field
+    that is ALWAYS populated, including on APPROVED.
+    """
+    state = _state(thesis=_thesis(ticker="MSFT", confidence=40))
+    with risk_manager_agent.override(
+        model=TestModel(custom_output_args={"rationale": STUB_RATIONALE})
+    ):
+        result = _run_node(state, risk_deps)
+
+    assessment = result["risk_assessment"]
+    assert assessment["status"] == "APPROVED"
+    assert "utilization" in assessment
+    assert isinstance(assessment["utilization"], float)
+    # Some constraint must have non-zero utilization for a real candidate
+    # against a real portfolio (sized > 0; portfolio non-empty).
+    assert assessment["utilization"] > 0.0
+    assert assessment["utilization"] <= 1.0
+
+
+def test_vetoed_assessment_clamps_utilization_to_one(
+    seeded_portfolio_session: Any, golden_returns_df: pd.DataFrame
+) -> None:
+    """A breach yields ratio >= 1; the assessment field clamps to 1.0."""
+    tight_policy = RiskPolicy(
+        max_single_position_pct=10.0,
+        max_sector_pct=30.0,
+        max_correlation_with_portfolio=0.99,
+        max_projected_drawdown_pct=90.0,
+    )
+    deps = RiskDeps(
+        db_session=seeded_portfolio_session,
+        returns=golden_returns_df,
+        policy=tight_policy,
+    )
+    state = _state(
+        thesis=_thesis(ticker="AAPL", confidence=40),
+        candidate_metadata={"sector": "Technology"},
+    )
+    with risk_manager_agent.override(
+        model=TestModel(custom_output_args={"rationale": STUB_RATIONALE})
+    ):
+        result = _run_node(state, deps)
+
+    assessment = result["risk_assessment"]
+    assert assessment["status"] == "VETOED"
+    # Sector is ~52% post-trade vs. 30% cap -> ratio ~1.7 -> clamps to 1.0.
+    assert assessment["utilization"] == pytest.approx(1.0)
+
+
+def test_utilization_reflects_position_size_under_safe_policy(
+    seeded_portfolio_session: Any, golden_returns_df: pd.DataFrame
+) -> None:
+    """When position-size is the tightest binding constraint and other
+    checks have lower ratios, utilization tracks the position-size ratio.
+
+    confidence=40 maps to "low" -> derived size = 2.5%. Cap = 10%. Ratio
+    = 0.25. Sector is Consumer Staples (~14% of portfolio), with 30% cap
+    -> post-trade 16.5% / 30% = 0.55. So utilization is dominated by the
+    sector check at ~0.55 -- demonstrating max-aggregation, not just
+    position-size echo.
+    """
+    safe = RiskPolicy(
+        max_single_position_pct=10.0,
+        max_sector_pct=30.0,
+        max_correlation_with_portfolio=0.99,
+        max_projected_drawdown_pct=99.0,
+    )
+    deps = RiskDeps(
+        db_session=seeded_portfolio_session,
+        returns=golden_returns_df,
+        policy=safe,
+    )
+    state = _state(
+        ticker="PG",
+        thesis=_thesis(ticker="PG", confidence=40),
+        candidate_metadata={"sector": "Consumer Staples"},
+    )
+    with risk_manager_agent.override(
+        model=TestModel(custom_output_args={"rationale": STUB_RATIONALE})
+    ):
+        result = _run_node(state, deps)
+
+    assessment = result["risk_assessment"]
+    assert assessment["status"] == "APPROVED"
+    # Strictly between 0 and 1 -- regression guard against the all-zero
+    # bug AND against the "always 1.0" anti-pattern.
+    assert 0.0 < assessment["utilization"] < 1.0

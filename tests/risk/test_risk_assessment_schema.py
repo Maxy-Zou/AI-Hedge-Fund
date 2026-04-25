@@ -8,6 +8,8 @@ Verifies T-06-02 (LLM cannot tamper with status) at the schema layer:
   mutated between production and consumption
 - ``policy_sha`` is mandatory (64-char hex) -- ensures every assessment is
   tied to a specific RiskPolicy version (T-06-04 audit)
+- ``utilization`` is a required, deterministic [0,1] float that drives the
+  Phase-8 risk_score (T-08-12)
 """
 
 from __future__ import annotations
@@ -15,25 +17,27 @@ from __future__ import annotations
 import pytest
 from pydantic import ValidationError
 
-from ai_hedge_fund.schemas.risk import RiskAssessment, Violation
+from ai_hedge_fund.schemas.risk import CheckResult, RiskAssessment, Violation
 
 # Valid 64-char hex SHA used across tests.
 _SHA: str = "0" * 64
 
 
 def test_risk_assessment_validates_minimal_approved() -> None:
-    """Test 1: Minimal APPROVED instance validates."""
+    """Test 1: Minimal APPROVED instance validates with utilization."""
     assessment = RiskAssessment(
         ticker="AAPL",
         status="APPROVED",
         rationale="Within all risk limits",
         policy_sha=_SHA,
+        utilization=0.4,
     )
     assert assessment.ticker == "AAPL"
     assert assessment.status == "APPROVED"
     assert assessment.constraint_violated is None
     assert assessment.observed is None
     assert assessment.limit is None
+    assert assessment.utilization == 0.4
 
 
 def test_risk_assessment_validates_vetoed_with_violation_details() -> None:
@@ -44,6 +48,7 @@ def test_risk_assessment_validates_vetoed_with_violation_details() -> None:
         constraint_violated="max_single_position_pct",
         observed=15.0,
         limit=10.0,
+        utilization=1.0,
         rationale="Position size 15% exceeds 10% cap",
         policy_sha=_SHA,
     )
@@ -51,6 +56,7 @@ def test_risk_assessment_validates_vetoed_with_violation_details() -> None:
     assert assessment.constraint_violated == "max_single_position_pct"
     assert assessment.observed == 15.0
     assert assessment.limit == 10.0
+    assert assessment.utilization == 1.0
 
 
 def test_risk_assessment_rejects_invalid_status() -> None:
@@ -61,6 +67,7 @@ def test_risk_assessment_rejects_invalid_status() -> None:
             status="MAYBE",  # type: ignore[arg-type]
             rationale="ok",
             policy_sha=_SHA,
+            utilization=0.0,
         )
 
 
@@ -73,6 +80,7 @@ def test_risk_assessment_rejects_invalid_constraint_name() -> None:
             constraint_violated="made_up_rule",  # type: ignore[arg-type]
             observed=1.0,
             limit=0.5,
+            utilization=1.0,
             rationale="bad",
             policy_sha=_SHA,
         )
@@ -86,6 +94,7 @@ def test_risk_assessment_rejects_empty_rationale() -> None:
             status="APPROVED",
             rationale="",
             policy_sha=_SHA,
+            utilization=0.0,
         )
 
 
@@ -96,6 +105,7 @@ def test_risk_assessment_requires_policy_sha() -> None:
             ticker="AAPL",
             status="APPROVED",
             rationale="ok",
+            utilization=0.0,
         )
 
 
@@ -121,3 +131,59 @@ def test_risk_assessment_importable_from_schemas_package() -> None:
 
     assert Re_RiskAssessment is RiskAssessment
     assert Re_Violation is Violation
+
+
+def test_risk_assessment_requires_utilization() -> None:
+    """Test 9: utilization is mandatory -- omission raises ValidationError."""
+    with pytest.raises(ValidationError):
+        RiskAssessment(  # type: ignore[call-arg]
+            ticker="AAPL",
+            status="APPROVED",
+            rationale="ok",
+            policy_sha=_SHA,
+        )
+
+
+@pytest.mark.parametrize("bad", [-0.01, 1.01, 5.0])
+def test_risk_assessment_utilization_out_of_range_raises(bad: float) -> None:
+    """Test 10: utilization must be in [0, 1]. Aggregator clamps but
+    schema enforces."""
+    with pytest.raises(ValidationError):
+        RiskAssessment(
+            ticker="AAPL",
+            status="APPROVED",
+            rationale="ok",
+            policy_sha=_SHA,
+            utilization=bad,
+        )
+
+
+@pytest.mark.parametrize("good", [0.0, 0.5, 1.0])
+def test_risk_assessment_utilization_boundaries_accepted(good: float) -> None:
+    """Test 11: utilization=0 and utilization=1 are accepted boundaries."""
+    assessment = RiskAssessment(
+        ticker="AAPL",
+        status="APPROVED",
+        rationale="ok",
+        policy_sha=_SHA,
+        utilization=good,
+    )
+    assert assessment.utilization == good
+
+
+def test_check_result_namedtuple_is_immutable() -> None:
+    """Test 12: CheckResult is a NamedTuple -- assignment raises AttributeError."""
+    cr = CheckResult(ratio=0.5, violation=None)
+    assert cr.ratio == 0.5
+    assert cr.violation is None
+    # NamedTuples are immutable -- the runtime raises AttributeError on assign.
+    with pytest.raises(AttributeError):
+        cr.ratio = 0.7  # type: ignore[misc]
+
+
+def test_check_result_indexable_for_legacy_callers() -> None:
+    """Test 13: CheckResult is also tuple-indexable for ergonomic unpacking."""
+    cr = CheckResult(ratio=0.25, violation=None)
+    ratio, violation = cr
+    assert ratio == 0.25
+    assert violation is None

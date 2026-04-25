@@ -9,13 +9,15 @@ post-debate thesis dict (``state['thesis']``), and the Phase-6
 ``derive_risk_score`` is a deterministic function of the risk assessment.
 Rules (per 08-RESEARCH.md A9 resolution):
     * VETOED -> 100
-    * APPROVED -> min(100, round(observed / max(limit, eps) * 100))
+    * APPROVED -> ``round(utilization * 100)`` (clamped to [0, 100])
     * any other / unknown status -> 50 (middle-ground; anomalous)
 
 Threat mitigations:
     T-08-12: LLM-authored risk_score -- ``derive_risk_score`` has zero LLM
              invocations and is deterministic; no PydanticAI Agent calls
-             anywhere in this subpackage.
+             anywhere in this subpackage. ``utilization`` is sourced from
+             :class:`RiskAssessment` (which is Python-authored) so the
+             score never depends on free-form LLM output.
 """
 
 from __future__ import annotations
@@ -30,10 +32,16 @@ def derive_risk_score(risk_assessment: dict) -> int:
 
     Deterministic; zero LLM. Rules:
         * ``status == "VETOED"`` -> 100
-        * ``status == "APPROVED"`` -> ``int(round(observed / limit * 100))``
-          clamped to [0, 100]. Missing ``observed``/``limit`` default to
-          0/1 -> 0.
-        * any other / unknown status -> 50 (middle-ground; anomalous)
+        * ``status == "APPROVED"`` -> ``int(round(utilization * 100))``
+          clamped to [0, 100]. The ``utilization`` field is the
+          deterministic max-ratio across all checks (see
+          :class:`ai_hedge_fund.schemas.risk.RiskAssessment` and
+          ``risk_manager_node`` in ``graph/nodes.py``).
+        * Legacy fallback: when ``utilization`` is missing on the
+          assessment dict (older Phase-6 records pre-dating the schema
+          field), recompute from ``observed`` / ``limit`` to keep
+          backwards compatibility with replay tests. Missing observed +
+          limit -> 0; unrecognised status -> 50.
 
     Args:
         risk_assessment: A dict-shaped ``RiskAssessment`` (from
@@ -48,8 +56,19 @@ def derive_risk_score(risk_assessment: dict) -> int:
     if status != "APPROVED":
         # Unknown / anomalous status -- middle-ground fallback.
         return 50
-    observed = float(risk_assessment.get("observed") or 0.0)
-    limit = float(risk_assessment.get("limit") or 1.0)
+
+    if "utilization" in risk_assessment and risk_assessment["utilization"] is not None:
+        utilization = float(risk_assessment["utilization"])
+        utilization = max(0.0, min(1.0, utilization))
+        return int(round(utilization * 100))
+
+    # Legacy / pre-utilization assessments fall back to observed/limit.
+    observed_raw = risk_assessment.get("observed")
+    limit_raw = risk_assessment.get("limit")
+    if observed_raw is None or limit_raw is None:
+        return 0
+    observed = float(observed_raw)
+    limit = float(limit_raw)
     if limit <= 0:
         limit = 1e-9
     ratio = max(0.0, min(1.0, observed / limit))

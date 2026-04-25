@@ -1,6 +1,6 @@
 """Tests for :mod:`ai_hedge_fund.risk.drawdown`.
 
-Covers 06-03 Task 2 behaviours 6-11:
+Covers 06-03 Task 2 behaviours 6-11 plus the post-fix utilization contract:
 
     6.  Historical simulation on the golden fixture returns a finite
         drawdown value and no error name.
@@ -10,10 +10,12 @@ Covers 06-03 Task 2 behaviours 6-11:
         solo drawdown, not ``0.0`` (Pitfall 3).
     9.  All-zero returns produce a drawdown of ``0.0`` with no NaN or
         division-by-zero (T-06-05 guard).
-    10. ``check_drawdown`` returns a :class:`Violation` when projected
-        drawdown exceeds the policy cap.
+    10. ``check_drawdown`` returns a :class:`CheckResult` whose
+        ``violation`` is a :class:`Violation` when projected drawdown
+        exceeds the policy cap.
     11. ``check_drawdown`` surfaces the ``insufficient_price_history``
-        error as a named :class:`Violation`.
+        error as a named :class:`Violation` with ``ratio = 1.0``
+        (fail-closed: data-quality budget fully consumed).
 """
 
 from __future__ import annotations
@@ -27,7 +29,7 @@ import pytest
 from ai_hedge_fund.risk.drawdown import check_drawdown, project_max_drawdown_pct
 from ai_hedge_fund.risk.policy import RiskPolicy
 from ai_hedge_fund.risk.portfolio import PortfolioSnapshot, PortfolioSnapshotPosition
-from ai_hedge_fund.schemas.risk import Violation
+from ai_hedge_fund.schemas.risk import CheckResult, Violation
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -99,10 +101,10 @@ def test_empty_portfolio_uses_candidate_only_weights(
 
     result = check_drawdown("AAPL", 10.0, empty_portfolio, golden_returns, default_policy)
 
-    # drawdown must have been computed (not short-circuited to 0.0)
-    # The test only asserts the check ran end-to-end; APPROVED or VETOED
-    # both prove the candidate-only path activated.
-    assert result is None or isinstance(result, Violation)
+    # drawdown must have been computed (not short-circuited to 0.0). Both
+    # branches return a CheckResult; we only assert the candidate-only
+    # path activated end-to-end.
+    assert isinstance(result, CheckResult)
 
 
 def test_all_zero_returns_produce_zero_drawdown_no_nan(default_policy: RiskPolicy) -> None:
@@ -128,10 +130,33 @@ def test_check_drawdown_vetoes_when_above_limit(golden_returns: pd.DataFrame) ->
 
     result = check_drawdown("AAPL", 5.0, portfolio, golden_returns, tight_policy)
 
-    assert isinstance(result, Violation)
-    assert result.name == "max_projected_drawdown_pct"
-    assert result.observed > tight_policy.max_projected_drawdown_pct
-    assert result.limit == tight_policy.max_projected_drawdown_pct
+    assert isinstance(result, CheckResult)
+    assert isinstance(result.violation, Violation)
+    assert result.violation.name == "max_projected_drawdown_pct"
+    assert result.violation.observed > tight_policy.max_projected_drawdown_pct
+    assert result.violation.limit == tight_policy.max_projected_drawdown_pct
+    # ratio surfaces beyond 1.0 -- aggregator clamps but stores breach magnitude.
+    assert result.ratio > 1.0
+
+
+def test_check_drawdown_approved_branch_reports_meaningful_ratio(
+    golden_returns: pd.DataFrame,
+) -> None:
+    """APPROVED drawdown still reports drawdown/cap so the aggregator can
+    use it for ``RiskAssessment.utilization``."""
+    loose_policy = RiskPolicy(
+        max_single_position_pct=10.0,
+        max_sector_pct=30.0,
+        max_correlation_with_portfolio=0.80,
+        max_projected_drawdown_pct=99.0,  # very loose -- dd will not breach
+    )
+    portfolio = _snapshot([("MSFT", "Technology"), ("JNJ", "Healthcare")])
+
+    result = check_drawdown("AAPL", 5.0, portfolio, golden_returns, loose_policy)
+
+    assert isinstance(result, CheckResult)
+    assert result.violation is None
+    assert 0.0 <= result.ratio < 1.0
 
 
 def test_check_drawdown_surfaces_insufficient_history(
@@ -141,7 +166,11 @@ def test_check_drawdown_surfaces_insufficient_history(
 
     result = check_drawdown("NEW", 10.0, empty_portfolio, golden_returns, default_policy)
 
-    assert isinstance(result, Violation)
-    assert result.name == "insufficient_price_history"
-    assert result.observed == 0.0
-    assert result.limit == float(default_policy.min_history_days)
+    assert isinstance(result, CheckResult)
+    assert isinstance(result.violation, Violation)
+    assert result.violation.name == "insufficient_price_history"
+    assert result.violation.observed == 0.0
+    assert result.violation.limit == float(default_policy.min_history_days)
+    # Fail-closed contract: ratio saturates so utilization aggregation
+    # reflects the data-quality breach as full budget consumption.
+    assert result.ratio == 1.0

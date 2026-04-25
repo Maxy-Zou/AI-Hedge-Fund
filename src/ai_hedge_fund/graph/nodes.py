@@ -114,7 +114,7 @@ from ai_hedge_fund.risk.drawdown import check_drawdown
 from ai_hedge_fund.risk.policy import compute_policy_sha, load_policy
 from ai_hedge_fund.risk.portfolio import load_portfolio
 from ai_hedge_fund.risk.sizing import derive_candidate_size_pct
-from ai_hedge_fund.schemas.risk import RiskAssessment, Violation
+from ai_hedge_fund.schemas.risk import CheckResult, RiskAssessment, Violation
 from ai_hedge_fund.schemas.state import (
     DebatePipelineState,
     MultiAgentPipelineState,
@@ -936,14 +936,28 @@ async def risk_manager_node(state: DebatePipelineState, deps: RiskDeps) -> dict:
     candidate_instrument_type = candidate_meta.get("instrument_type") or "equity"
     candidate_size_pct = derive_candidate_size_pct(conviction, policy)
 
-    # 5 deterministic checks in fixed order; first violation wins.
-    violation: Violation | None = (
-        check_exclusions(candidate_sector, candidate_instrument_type, policy)
-        or check_position_size(candidate_size_pct, policy)
-        or check_sector_concentration(candidate_sector, candidate_size_pct, portfolio, policy)
-        or check_correlation(candidate_ticker, portfolio, deps.returns, policy)
-        or check_drawdown(candidate_ticker, candidate_size_pct, portfolio, deps.returns, policy)
+    # 5 deterministic checks in fixed order. We run ALL of them so the
+    # node can aggregate per-check utilization ratios into
+    # ``RiskAssessment.utilization`` (08-RESEARCH.md A9), but the
+    # "first violation wins" contract is preserved by walking the
+    # ordered results list and picking the first non-None violation.
+    check_results: list[CheckResult] = [
+        check_exclusions(candidate_sector, candidate_instrument_type, policy),
+        check_position_size(candidate_size_pct, policy),
+        check_sector_concentration(candidate_sector, candidate_size_pct, portfolio, policy),
+        check_correlation(candidate_ticker, portfolio, deps.returns, policy),
+        check_drawdown(candidate_ticker, candidate_size_pct, portfolio, deps.returns, policy),
+    ]
+    violation: Violation | None = next(
+        (cr.violation for cr in check_results if cr.violation is not None),
+        None,
     )
+    # max() over the ratios; clamp to [0, 1]. On VETOED, the offending
+    # ratio is naturally >= 1.0 and clamps. On APPROVED, the largest
+    # surviving ratio reflects how close the candidate is to the tightest
+    # binding constraint -- exactly the signal the Phase-8 risk_score wants.
+    utilization = min(1.0, max((cr.ratio for cr in check_results), default=0.0))
+    utilization = max(0.0, utilization)
     status: Literal["APPROVED", "VETOED"] = "VETOED" if violation else "APPROVED"
 
     # Call LLM for rationale (advisory) -- even on veto, for audit trail.
@@ -968,13 +982,14 @@ async def risk_manager_node(state: DebatePipelineState, deps: RiskDeps) -> dict:
     # DETERMINISTIC OVERWRITE -- LLM status value is DISCARDED. The agent's
     # RationaleOnly schema has no status field, so this is belt-and-braces:
     # even if the agent were replaced with a wider schema, the node's
-    # Python-authored ``status`` is what ships.
+    # Python-authored ``status`` and ``utilization`` are what ship.
     assessment = RiskAssessment(
         ticker=candidate_ticker,
         status=status,
         constraint_violated=violation.name if violation else None,
         observed=violation.observed if violation else None,
         limit=violation.limit if violation else None,
+        utilization=utilization,
         rationale=result.output.rationale,
         policy_sha=policy_sha,
     )
@@ -988,6 +1003,7 @@ async def risk_manager_node(state: DebatePipelineState, deps: RiskDeps) -> dict:
         constraint_violated=assessment.constraint_violated,
         observed=assessment.observed,
         limit=assessment.limit,
+        utilization=utilization,
         policy_sha=policy_sha,
         input_tokens=usage.input_tokens,
         output_tokens=usage.output_tokens,
@@ -1210,12 +1226,7 @@ async def output_node(state: DebatePipelineState, deps: ReviewDeps) -> dict:
         return {"error": "No signal available for output assembly"}
     if state.get("episodic_stored_id") is None:
         logger.error("output_no_episodic_id", ticker=state.get("ticker"))
-        return {
-            "error": (
-                "No episodic_stored_id available; output_node requires "
-                "with_memory=True"
-            )
-        }
+        return {"error": ("No episodic_stored_id available; output_node requires with_memory=True")}
 
     # Resolve review_policy from deps (policy takes precedence; policy_path
     # is loaded by the pipeline builder, but we keep this fallback for the

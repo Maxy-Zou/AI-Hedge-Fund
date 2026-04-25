@@ -1,3 +1,35 @@
+## 2026-04-24 — Fix: risk_score=0 on every APPROVED signal (debug session: risk-score-zero-on-approved)
+
+Second drift surfaced from the first end-to-end AAPL run: APPROVED risk assessments shipped with `risk_score: 0/100`. Root cause: `derive_risk_score` (output/signal.py) read `observed`/`limit` off `RiskAssessment`, but those fields are only populated when a check fires a `Violation` -- i.e. only on VETOED. APPROVED runs collapsed `or 0.0` / `or 1.0` fallbacks to ratio=0.
+
+**Fix shape (per 08-RESEARCH.md A9):** every deterministic check now returns a `CheckResult(ratio, violation | None)` NamedTuple so utilization aggregation runs even when no violation fires. The risk_manager_node aggregates `utilization = min(1.0, max(per_check_ratios))` and writes it to a new required `RiskAssessment.utilization: float` field. `derive_risk_score` reads that field directly; legacy observed/limit fallback preserved for stored audit payloads.
+
+Invariants preserved:
+- "First violation wins" short-circuit kept by walking the ordered `[exclusions, position_size, sector, correlation, drawdown]` list and taking the first non-`None` violation.
+- Tool-first: LLM still authors only the rationale; `status` and `utilization` are Python-derived (T-06-02, T-08-12).
+- Frozen result types: `Violation` stays a frozen Pydantic model; new `CheckResult` is a NamedTuple (immutable).
+- Policy SHA audit (T-06-04) and veto bypass protection (T-06-02) untouched.
+
+**Files changed:**
+- `src/ai_hedge_fund/schemas/risk.py` — added `CheckResult` NamedTuple + required `utilization: float = Field(ge=0.0, le=1.0)` on `RiskAssessment`.
+- `src/ai_hedge_fund/risk/checks.py` — `check_position_size`, `check_sector_concentration`, `check_exclusions` return `CheckResult`; shared `_safe_ratio` helper.
+- `src/ai_hedge_fund/risk/correlation.py` — `check_correlation` returns `CheckResult`.
+- `src/ai_hedge_fund/risk/drawdown.py` — `check_drawdown` returns `CheckResult`; `insufficient_price_history` fail-closed branch saturates `ratio=1.0` so utilization reflects the data-quality breach.
+- `src/ai_hedge_fund/graph/nodes.py` — `risk_manager_node` runs all 5 checks unconditionally, aggregates utilization, logs it.
+- `src/ai_hedge_fund/output/signal.py` — `derive_risk_score` reads `utilization` directly with legacy observed/limit fallback for back-compat.
+
+**Test changes:**
+- `tests/risk/test_position_size.py`, `test_sector_check.py`, `test_correlation.py`, `test_drawdown.py` — updated for new return shape; added per-check ratio assertions including pass-through utilization for APPROVED branches.
+- `tests/risk/test_risk_assessment_schema.py` — added 5 tests covering `utilization` required-field semantics, [0,1] bounds, and `CheckResult` immutability + tuple unpacking.
+- `tests/output/test_final_signal.py` — added utilization-driven derivation tests, legacy fallback tests, and out-of-range clamp tests (defensive against stale payloads).
+- `tests/graph/test_risk_node.py` — added 3-test utilization aggregation regression suite (APPROVED non-zero, VETOED clamps to 1.0, max-aggregation across checks).
+
+**Verification:**
+- 76 risk tests + 94 output tests + 105 graph tests = 275 tests, all green post-fix.
+- Phase-6/7/8 integration suite (78 tests touching risk_assessment) all green; 3 unrelated `pytest.mark.asyncio` plugin failures pre-existed and are not caused by this fix.
+- `ruff format` reformatted 2 files (cosmetic); `ruff check` clean on every file touched.
+- End-to-end re-run pending (requires live `ANTHROPIC_API_KEY` + EDGAR + DB) -- session file `.planning/debug/risk-score-zero-on-approved.md` marked `status: resolved`, with the AAPL re-run flagged as the human-UAT verification step.
+
 # Progress
 
 ## 2026-04-24 — First end-to-end pipeline run (AAPL) + edgartools 5.28.5 migration

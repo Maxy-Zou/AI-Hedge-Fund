@@ -6,7 +6,9 @@ Verifies:
   frozen.
 - T-08-12 (LLM-authored risk_score) -- derive_risk_score is pure Python,
   deterministic; assemble_final_signal has zero LLM calls (tested
-  end-to-end with plain state dicts).
+  end-to-end with plain state dicts). Post-fix: derive_risk_score reads
+  the deterministic ``utilization`` field on the assessment (08-RESEARCH.md
+  A9). Legacy fallback to observed/limit is still tested.
 """
 
 from __future__ import annotations
@@ -48,11 +50,22 @@ def test_valid_construction() -> None:
     assert s.ticker == "AAPL" and s.conviction == 75
 
 
-@pytest.mark.parametrize("field", [
-    "ticker", "as_of_date", "direction", "conviction", "thesis_summary",
-    "risk_score", "thesis_link", "policy_sha", "review_policy_sha",
-    "episodic_id", "review_status",
-])
+@pytest.mark.parametrize(
+    "field",
+    [
+        "ticker",
+        "as_of_date",
+        "direction",
+        "conviction",
+        "thesis_summary",
+        "risk_score",
+        "thesis_link",
+        "policy_sha",
+        "review_policy_sha",
+        "episodic_id",
+        "review_status",
+    ],
+)
 def test_missing_any_required_field_raises(field: str) -> None:
     """Test 2: deleting any required field raises ValidationError (SIG-01 no-null contract)."""
     kwargs = _valid_kwargs()
@@ -157,25 +170,34 @@ def test_json_round_trip() -> None:
 # ---- assemble_final_signal tests ----
 
 
-def _realistic_state(conviction: int = 75, status: str = "APPROVED") -> dict:
+def _realistic_state(
+    conviction: int = 75,
+    status: str = "APPROVED",
+    utilization: float | None = 0.5,
+) -> dict:
+    risk: dict[str, object] = {
+        "status": status,
+        "policy_sha": SHA_A,
+        "observed": 4.0,
+        "limit": 8.0,
+    }
+    if utilization is not None:
+        risk["utilization"] = utilization
     return {
         "ticker": "AAPL",
         "as_of_date": "2026-04-20",
         "signal": {"direction": "long", "thesis_summary": "Bullish on iPhone cycle."},
         "thesis": {"confidence": conviction},
-        "risk_assessment": {
-            "status": status,
-            "policy_sha": SHA_A,
-            "observed": 4.0,
-            "limit": 8.0,
-        },
+        "risk_assessment": risk,
     }
 
 
 def test_assembler_happy_path() -> None:
     """Test 15: realistic state + args produce a valid FinalSignalOutput."""
     out = assemble_final_signal(
-        _realistic_state(), review_policy_sha=SHA_B, episodic_id=42,
+        _realistic_state(),
+        review_policy_sha=SHA_B,
+        episodic_id=42,
     )
     assert out.review_status == "NOT_REQUIRED"
     assert out.conviction == 75
@@ -188,7 +210,9 @@ def test_assembler_happy_path() -> None:
 def test_assembler_vetoed_risk_score_100() -> None:
     """Test 16: VETOED risk_assessment -> risk_score == 100."""
     out = assemble_final_signal(
-        _realistic_state(status="VETOED"), review_policy_sha=SHA_B, episodic_id=42,
+        _realistic_state(status="VETOED", utilization=1.0),
+        review_policy_sha=SHA_B,
+        episodic_id=42,
     )
     assert out.risk_score == 100
 
@@ -196,7 +220,9 @@ def test_assembler_vetoed_risk_score_100() -> None:
 def test_assembler_review_status_override() -> None:
     """Test 17: review_status kwarg overrides the NOT_REQUIRED default."""
     out = assemble_final_signal(
-        _realistic_state(), review_policy_sha=SHA_B, episodic_id=42,
+        _realistic_state(),
+        review_policy_sha=SHA_B,
+        episodic_id=42,
         review_status="APPROVED",
     )
     assert out.review_status == "APPROVED"
@@ -205,7 +231,9 @@ def test_assembler_review_status_override() -> None:
 def test_assembler_thesis_link_format() -> None:
     """Test 18: thesis_link == f'episodic://{episodic_id}'."""
     out = assemble_final_signal(
-        _realistic_state(), review_policy_sha=SHA_B, episodic_id=99,
+        _realistic_state(),
+        review_policy_sha=SHA_B,
+        episodic_id=99,
     )
     assert out.thesis_link == "episodic://99"
 
@@ -213,9 +241,26 @@ def test_assembler_thesis_link_format() -> None:
 def test_assembler_conviction_from_thesis_confidence() -> None:
     """Test 19: conviction is read from state['thesis']['confidence']."""
     out = assemble_final_signal(
-        _realistic_state(conviction=85), review_policy_sha=SHA_B, episodic_id=42,
+        _realistic_state(conviction=85),
+        review_policy_sha=SHA_B,
+        episodic_id=42,
     )
     assert out.conviction == 85
+
+
+def test_assembler_uses_utilization_field_for_risk_score() -> None:
+    """Regression: APPROVED with utilization=0.42 -> risk_score == 42.
+
+    Pre-fix bug: derive_risk_score read observed/limit (None on APPROVED)
+    and produced 0. Post-fix: it reads utilization, which the node always
+    sets.
+    """
+    out = assemble_final_signal(
+        _realistic_state(status="APPROVED", utilization=0.42),
+        review_policy_sha=SHA_B,
+        episodic_id=42,
+    )
+    assert out.risk_score == 42
 
 
 # ---- derive_risk_score tests ----
@@ -226,18 +271,38 @@ def test_derive_risk_score_vetoed_is_100() -> None:
     assert derive_risk_score({"status": "VETOED"}) == 100
 
 
-def test_derive_risk_score_approved_ratio() -> None:
-    """Test 21: APPROVED observed=4, limit=8 -> 50."""
+def test_derive_risk_score_approved_uses_utilization() -> None:
+    """Test 21: APPROVED with utilization=0.5 -> 50.
+
+    Post-fix: utilization is the canonical signal. observed/limit may be
+    populated as audit metadata but no longer drive the score on the
+    APPROVED path.
+    """
+    assert (
+        derive_risk_score({"status": "APPROVED", "utilization": 0.5, "observed": 4.0, "limit": 8.0})
+        == 50
+    )
+
+
+def test_derive_risk_score_approved_utilization_at_one_is_100() -> None:
+    """Test 22: APPROVED with utilization == 1.0 -> 100 (right at the cap)."""
+    assert derive_risk_score({"status": "APPROVED", "utilization": 1.0}) == 100
+
+
+def test_derive_risk_score_approved_zero_utilization_is_0() -> None:
+    """Test 22b: APPROVED with utilization == 0.0 -> 0."""
+    assert derive_risk_score({"status": "APPROVED", "utilization": 0.0}) == 0
+
+
+def test_derive_risk_score_legacy_fallback_to_observed_limit() -> None:
+    """Test 23: legacy assessments without utilization fall back to
+    observed/limit so older payloads in the audit trail keep working.
+    """
     assert derive_risk_score({"status": "APPROVED", "observed": 4.0, "limit": 8.0}) == 50
 
 
-def test_derive_risk_score_approved_at_limit_is_100() -> None:
-    """Test 22: APPROVED observed=limit -> 100."""
-    assert derive_risk_score({"status": "APPROVED", "observed": 8.0, "limit": 8.0}) == 100
-
-
 def test_derive_risk_score_approved_empty_is_0() -> None:
-    """Test 23: APPROVED with no observed/limit -> 0."""
+    """Test 23b: APPROVED with neither utilization nor observed/limit -> 0."""
     assert derive_risk_score({"status": "APPROVED"}) == 0
 
 
@@ -246,8 +311,25 @@ def test_derive_risk_score_unknown_is_50() -> None:
     assert derive_risk_score({"status": "REVIEWED"}) == 50
 
 
+@pytest.mark.parametrize("utilization", [0.0, 0.25, 0.5, 0.75, 1.0])
+def test_derive_risk_score_utilization_bounded(utilization: float) -> None:
+    """Test 25: utilization in [0, 1] always maps into [0, 100]."""
+    score = derive_risk_score({"status": "APPROVED", "utilization": utilization})
+    assert 0 <= score <= 100
+
+
 @pytest.mark.parametrize("observed,limit", [(0, 1), (5, 10), (100, 1), (1, 100), (-5, 10)])
-def test_derive_risk_score_bounded(observed: float, limit: float) -> None:
-    """Test 25: output is always in [0, 100] regardless of input."""
+def test_derive_risk_score_bounded_via_legacy_path(observed: float, limit: float) -> None:
+    """Test 25b: legacy observed/limit input is always clamped to [0, 100]."""
     score = derive_risk_score({"status": "APPROVED", "observed": observed, "limit": limit})
     assert 0 <= score <= 100
+
+
+def test_derive_risk_score_clamps_out_of_range_utilization() -> None:
+    """Defensive: a stale payload with utilization > 1 should still clamp."""
+    assert derive_risk_score({"status": "APPROVED", "utilization": 1.5}) == 100
+
+
+def test_derive_risk_score_clamps_negative_utilization() -> None:
+    """Defensive: a stale payload with utilization < 0 should clamp to 0."""
+    assert derive_risk_score({"status": "APPROVED", "utilization": -0.25}) == 0

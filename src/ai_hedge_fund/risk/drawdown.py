@@ -14,6 +14,11 @@ named veto. Division-by-zero and NaN sanitisation are explicit guards
 
 Empty-portfolio candidates are evaluated solo (candidate weight = 1.0)
 rather than short-circuited to 0.0 -- that's Pitfall 3 in the research.
+
+Threat mitigations:
+    T-08-12: LLM-authored risk_score -- the per-check ``ratio`` returned
+             on :class:`CheckResult` is computed in pure Python here and
+             aggregated into ``RiskAssessment.utilization``.
 """
 
 from __future__ import annotations
@@ -23,7 +28,7 @@ import pandas as pd
 
 from ai_hedge_fund.risk.policy import RiskPolicy
 from ai_hedge_fund.risk.portfolio import PortfolioSnapshot
-from ai_hedge_fund.schemas.risk import Violation
+from ai_hedge_fund.schemas.risk import CheckResult, Violation
 
 
 def project_max_drawdown_pct(
@@ -66,19 +71,37 @@ def project_max_drawdown_pct(
     return (float(np.max(drawdown) * 100.0), None)
 
 
+def _safe_ratio(observed: float, limit: float) -> float:
+    """Defensive ratio for utilization aggregation.
+
+    See ``risk/checks.py::_safe_ratio`` for the same contract on the
+    position-size and sector-concentration checks.
+    """
+    if observed <= 0.0:
+        return 0.0
+    safe_limit = limit if limit > 0.0 else 1e-9
+    return observed / safe_limit
+
+
 def check_drawdown(
     candidate_ticker: str,
     candidate_size_pct: float,
     portfolio: PortfolioSnapshot,
     returns: pd.DataFrame,
     policy: RiskPolicy,
-) -> Violation | None:
+) -> CheckResult:
     """Veto when projected post-trade drawdown exceeds the policy cap.
 
     Post-trade weights are constructed by scaling pre-trade holdings down
     by ``(1 - candidate_size_fraction)`` and inserting the candidate at its
     fractional weight. For an empty portfolio the candidate becomes 100%
     of the projected portfolio (Pitfall 3 -- do not short-circuit to 0).
+
+    Returns ``CheckResult(ratio, violation)``. On the
+    ``insufficient_price_history`` branch ``ratio`` is ``1.0`` -- treating
+    the candidate as fully consuming the policy's data-quality budget so
+    the assessment's ``utilization`` reflects the fail-closed outcome. On
+    the success branch ``ratio`` is ``drawdown / max_projected_drawdown``.
     """
     candidate_fraction = candidate_size_pct / 100.0
 
@@ -95,17 +118,23 @@ def check_drawdown(
     drawdown_pct, err = project_max_drawdown_pct(weights, returns, policy)
 
     if err == "insufficient_price_history":
-        return Violation(
+        violation = Violation(
             name="insufficient_price_history",
             observed=0.0,
             limit=float(policy.min_history_days),
         )
+        # Fail-closed: utilization saturates so the upstream assessment
+        # records that the data-quality budget was fully consumed.
+        return CheckResult(ratio=1.0, violation=violation)
+
+    ratio = _safe_ratio(drawdown_pct, policy.max_projected_drawdown_pct)
 
     if drawdown_pct > policy.max_projected_drawdown_pct:
-        return Violation(
+        violation = Violation(
             name="max_projected_drawdown_pct",
             observed=drawdown_pct,
             limit=policy.max_projected_drawdown_pct,
         )
+        return CheckResult(ratio=ratio, violation=violation)
 
-    return None
+    return CheckResult(ratio=ratio, violation=None)
