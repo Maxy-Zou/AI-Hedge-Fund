@@ -1,39 +1,38 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-current_plan: 6 of 6 (all Phase-8 plans shipped)
-status: unknown
-stopped_at: Completed 08-05-PLAN.md -- phase-gate integration suite (18 tests); SIG-01..04 delivered end-to-end; MILESTONE v1.0 COMPLETE (8/8 phases)
-last_updated: "2026-04-23T08:12:50.390Z"
-last_activity: "2026-04-23 -- Phase 8 Plan 08-05 (phase-gate integration: 18 tests) complete; MILESTONE v1.0 COMPLETE (8/8 phases)"
+milestone: v1.1
+milestone_name: Paper Trading + Promotion Gate
+current_plan: —
+status: defining_requirements
+stopped_at: v1.1 milestone bootstrap — PROJECT.md updated, requirements + roadmap pending
+last_updated: "2026-04-25T00:00:00.000Z"
+last_activity: "2026-04-25 -- v1.1 milestone started; goals derived from docs/V1.1_PAPER_TRADING_PLAN.md"
 progress:
-  total_phases: 8
-  completed_phases: 8
-  total_plans: 34
-  completed_plans: 34
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-11)
+See: .planning/PROJECT.md (updated 2026-04-25)
 
 **Core value:** Produce institutional-quality investment research at scale -- structured theses with quantitative signals that are rigorous enough to trade on and transparent enough to show investors.
-**Current focus:** Phase 8 (Signal and Output)
+**Current focus:** v1.1 — Paper Trading + Promotion Gate (defining requirements)
 
 ## Current Position
 
-Phase: 8 (Signal and Output) — COMPLETE
-Current Plan: 6 of 6 (all Phase-8 plans shipped)
-Total Plans: 6
-Completed Plans: 6 (08-00, 08-01, 08-02, 08-03, 08-04, 08-05)
-Next: milestone v1.0 complete -- Phase 9 planning or formal /gsd-verify-work
-Last activity: 2026-04-23 -- Phase 8 Plan 08-05 (phase-gate integration: 18 tests) complete; MILESTONE v1.0 COMPLETE (8/8 phases)
+Milestone: v1.1 — Paper Trading + Promotion Gate
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements (source: docs/V1.1_PAPER_TRADING_PLAN.md)
+Last activity: 2026-04-25 -- v1.1 milestone started; PROJECT.md updated; REQUIREMENTS.md + ROADMAP.md pending
 
-Progress: [██████████] 100%
+Progress: [          ] 0%
 
 ## Performance Metrics
 

@@ -3,10 +3,34 @@
 ## Current State
 
 **Shipped:** v1.0 — Multi-Agent Research System (2026-04-23)
+**Active:** v1.1 — Paper Trading + Promotion Gate (started 2026-04-25)
 
-The core research pipeline is code-complete and integration-verified: LangGraph + PydanticAI substrate, temporally-correct data ingestion (SEC EDGAR + yfinance + FRED + Finnhub), single-agent research loop, manager-analyst hierarchy with 3 specialists, structured bull/bear adversarial debate, Risk Manager with veto power, episodic + belief memory with offline self-critique, and investor-ready signal output with a LangGraph `interrupt()`-backed human review gate and compliance-grade audit trail. 1,108 tests green. 12 human-UAT items deferred (all require live API keys or subjective judgment; none are code defects).
+The v1.0 core research pipeline is code-complete and integration-verified: LangGraph + PydanticAI substrate, temporally-correct data ingestion (SEC EDGAR + yfinance + FRED + Finnhub), single-agent research loop, manager-analyst hierarchy with 3 specialists, structured bull/bear adversarial debate, Risk Manager with veto power, episodic + belief memory with offline self-critique, and investor-ready signal output with a LangGraph `interrupt()`-backed human review gate and compliance-grade audit trail. 1,108 tests green. 12 human-UAT items deferred (all require live API keys or subjective judgment; none are code defects).
 
-**Next up:** v1.1 / v2.0 to be defined via `/gsd-new-milestone`. Likely themes: paper trading integration + track record generation, richer human-review surface (web/TUI), portfolio optimization on top of ranked signals, automated compliance reports.
+## Current Milestone: v1.1 Paper Trading + Promotion Gate
+
+**Goal:** Generate a credible track record from v1.0 signals via paper trading on a real clock, gated by a SHA-pinned promotion policy that joins the existing audit chain.
+
+**Source-of-truth plan:** `docs/V1.1_PAPER_TRADING_PLAN.md`
+
+**Target features:**
+- Alpaca paper-broker execution layer with deterministic tool-first sizing (LLM never sizes)
+- Append-only `paper_trades` / `paper_fills` / `paper_pnl_daily` schema with dual timestamps
+- Daily mark-to-market + per-signal attribution (analyst / debate-side / conviction)
+- Promotion gate: `promotion_policy_sha` joins `risk_policy_sha` + `review_policy_sha` audit chain
+- Track-record CLI (`render_track_record`), JSON + markdown, LP/YC-shareable
+
+**Explicitly OUT (deferred to v1.2+ or parking lot):**
+- Literature mining / arXiv-SSRN auto-strategy ingestion (parking lot — replication crisis, dilutes pitch)
+- Real-broker / live capital execution (only after promotion gate clears on paper)
+- Portfolio optimization on top of ranked signals (v1.2+)
+- Web/TUI reviewer UI (v1.2+)
+
+**Carried-forward invariants (from v1.0):**
+- Tool-first quantitative path — LLM never computes P&L, attribution, sizing, or promotion decision
+- Append-only financial time-series — no row ever updated
+- Temporal correctness — `as_of_date <= target` on every recall path
+- SHA-pinned policy round-trips — state == column == payload
 
 ## What This Is
 
@@ -34,9 +58,16 @@ Produce institutional-quality investment research at scale — structured theses
 - ✓ PostgreSQL-backed episodic memory for recent analyses and trade outcomes — v1.0 Phase 7 (append-only, 90-day retention)
 - ✓ Cost monitoring and per-agent token budget caps — v1.0 Phase 1
 
-### Active (candidates for v1.1+)
+### Active (v1.1 — in flight)
 
-- [ ] Paper trading integration to generate a track record from signals (deferred from v1.0 Active list)
+- [ ] Paper-broker execution layer (Alpaca paper) with deterministic sizing — v1.1
+- [ ] Append-only paper-trading schema (`paper_trades`, `paper_fills`, `paper_pnl_daily`) — v1.1
+- [ ] Daily mark-to-market + per-signal attribution — v1.1
+- [ ] Promotion gate with `promotion_policy_sha` in audit chain — v1.1
+- [ ] Track-record CLI / report (LP/YC-shareable JSON + markdown) — v1.1
+
+### Active (deferred to v1.2+)
+
 - [ ] Rich reviewer UI replacing CLI blocking stdin (web or TUI)
 - [ ] Portfolio optimization on top of ranked signals (SIG-02 produces the rank; optimization is next)
 - [ ] Automated compliance report generation (Langfuse trace → PDF)
@@ -52,6 +83,7 @@ Produce institutional-quality investment research at scale — structured theses
 - Real-time intraday trading — daily signal cadence matches data availability and fund strategy
 - Custom LLM training or fine-tuning — use frontier models (Claude) with good prompting, not custom models
 - High-frequency trading — latency requirements don't match LLM-based architecture
+- Literature mining / arXiv-SSRN auto-strategy ingestion — replication crisis (Hou/Xue/Zhang 2020: ~64% of 452 anomalies fail to replicate); LLM auto-extraction would surface mostly decayed anomalies. Dilutes the "research-on-filings" pitch. If revisited, lives as a side project (Slack digest for human review), never wired into agents.
 
 ## Context
 
@@ -90,6 +122,9 @@ Produce institutional-quality investment research at scale — structured theses
 | Human-readable belief memory | Both transparency feature (investors can inspect) and safety mechanism (humans can correct systematic errors) | ✓ Good (v1.0) |
 | Start with free data stack, upgrade incrementally | $0/mo is sufficient for v1; $110/mo (Polygon + FMP + ThetaData) is the "can talk to investors" threshold | ✓ Good (v1.0) |
 | Target YC with management company structure | YC takes 7% of management company (C-Corp), not the fund (LP). Use Repool (YC S21) for fund infrastructure | ✓ Good (v1.0) |
+| Paper trading before live capital (v1.1 scope) | YC/LP credibility gap requires a track record; FINSABER shows backtests of LLM strategies are unreliable, only forward paper trading on real-clock live data is credible. Cheapest path to a defensible record. | Pending (v1.1) |
+| Promotion gate via `promotion_policy_sha` (v1.1) | Reuses Phase 6/8 SHA-pinned policy pattern; gates signal → live capital eligibility on Sharpe / DD / hit-rate / sample-size thresholds. Compliance-grade audit chain extended end-to-end. | Pending (v1.1) |
+| Defer literature mining / paper ingestion (v1.1 parking lot) | Hou/Xue/Zhang 2020 replicated 452 anomalies, ~64% failed. Auto-extracting strategies from arXiv would pollute signal with decayed anomalies. Also dilutes the "research-on-filings" pitch. If revisited, ships as a side-project Slack digest, never as pipeline input. | Pending (v1.1) |
 
 ## Evolution
 
@@ -109,4 +144,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-23 after v1.0 milestone*
+*Last updated: 2026-04-25 — v1.1 (Paper Trading + Promotion Gate) milestone started*
