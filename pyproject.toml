@@ -51,6 +51,7 @@ extend-exclude = [
     "archive",
     ".venv",
     ".planning",
+    ".planning-archive",
     "alembic/versions",
 ]
 
