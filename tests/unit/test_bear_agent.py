@@ -49,7 +49,7 @@ class TestBearAgent:
 
     def test_agent_has_retries(self) -> None:
         """bear_agent is configured with retries=2 for output validation."""
-        assert bear_agent._max_result_retries == 2
+        assert bear_agent._max_output_retries == 2
 
     def test_agent_no_tools(self) -> None:
         """bear_agent has zero registered tools (pure synthesis agent)."""

@@ -51,7 +51,7 @@ class TestDebateSynthesisAgent:
 
     def test_agent_has_retries(self) -> None:
         """debate_synthesis_agent is configured with retries=2 for output validation."""
-        assert debate_synthesis_agent._max_result_retries == 2
+        assert debate_synthesis_agent._max_output_retries == 2
 
     def test_agent_no_tools(self) -> None:
         """debate_synthesis_agent has zero registered tools."""

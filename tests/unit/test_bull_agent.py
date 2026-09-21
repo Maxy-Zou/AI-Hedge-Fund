@@ -53,7 +53,7 @@ class TestBullAgent:
 
     def test_agent_has_retries(self) -> None:
         """bull_agent is configured with retries=2 for output validation."""
-        assert bull_agent._max_result_retries == 2
+        assert bull_agent._max_output_retries == 2
 
     def test_agent_no_tools(self) -> None:
         """bull_agent has zero registered tools (pure synthesis agent)."""

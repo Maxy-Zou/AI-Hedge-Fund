@@ -41,7 +41,7 @@ class TestTechnicalAgent:
 
     def test_agent_has_retries(self) -> None:
         """technical_agent is configured with retries=2."""
-        assert technical_agent._max_result_retries == 2
+        assert technical_agent._max_output_retries == 2
 
     def test_tool_count(self) -> None:
         """technical_agent has exactly 1 registered tool."""

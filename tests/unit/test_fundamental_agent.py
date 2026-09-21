@@ -41,7 +41,7 @@ class TestFundamentalAgent:
 
     def test_agent_has_retries(self) -> None:
         """fundamental_agent is configured with retries=2."""
-        assert fundamental_agent._max_result_retries == 2
+        assert fundamental_agent._max_output_retries == 2
 
     def test_tool_count(self) -> None:
         """fundamental_agent has exactly 3 registered tools."""

@@ -46,7 +46,7 @@ class TestManagerAgent:
 
     def test_agent_has_retries(self) -> None:
         """manager_agent is configured with retries=2 for output validation."""
-        assert manager_agent._max_result_retries == 2
+        assert manager_agent._max_output_retries == 2
 
     def test_agent_no_tools(self) -> None:
         """manager_agent has zero registered tools (pure synthesis agent)."""

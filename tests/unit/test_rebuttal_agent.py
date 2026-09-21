@@ -48,7 +48,7 @@ class TestRebuttalAgent:
 
     def test_agent_has_retries(self) -> None:
         """rebuttal_agent is configured with retries=2 for output validation."""
-        assert rebuttal_agent._max_result_retries == 2
+        assert rebuttal_agent._max_output_retries == 2
 
     def test_agent_no_tools(self) -> None:
         """rebuttal_agent has zero registered tools (pure synthesis agent)."""

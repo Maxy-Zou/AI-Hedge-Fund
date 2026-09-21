@@ -41,7 +41,7 @@ class TestSentimentAgent:
 
     def test_agent_has_retries(self) -> None:
         """sentiment_agent is configured with retries=2."""
-        assert sentiment_agent._max_result_retries == 2
+        assert sentiment_agent._max_output_retries == 2
 
     def test_tool_count(self) -> None:
         """sentiment_agent has exactly 2 registered tools."""

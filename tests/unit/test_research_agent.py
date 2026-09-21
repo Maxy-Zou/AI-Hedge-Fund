@@ -81,8 +81,8 @@ class TestResearchAgent:
     def test_agent_has_retries(self) -> None:
         """research_agent is configured with retries=2 for output validation."""
         # PydanticAI applies the `retries` constructor kwarg to both
-        # _max_result_retries and _max_tool_retries.
-        assert research_agent._max_result_retries == 2
+        # _max_output_retries and _max_tool_retries.
+        assert research_agent._max_output_retries == 2
 
     def test_tool_count(self) -> None:
         """research_agent has exactly 6 registered tools."""

@@ -144,7 +144,7 @@ async def extract_node(state: PipelineState) -> dict:
             f"Extract key financial metrics from: {state['raw_text']}",
             usage_limits=limits,
         )
-        usage = result.usage()
+        usage = result.usage
         logger.info(
             "extraction_complete",
             ticker=state["ticker"],
@@ -180,7 +180,7 @@ async def analyze_node(state: PipelineState) -> dict:
             f"Analyze financial data for {state['ticker']}: {state['extraction']}",
             usage_limits=limits,
         )
-        usage = result.usage()
+        usage = result.usage
         logger.info(
             "analysis_complete",
             ticker=state["ticker"],
@@ -221,7 +221,7 @@ async def research_node(state: ResearchPipelineState) -> dict:
             deps=deps,
             usage_limits=limits,
         )
-        usage = result.usage()
+        usage = result.usage
         logger.info(
             "research_complete",
             ticker=deps.ticker,
@@ -263,7 +263,7 @@ async def signal_node(state: ResearchPipelineState) -> dict:
             f"Generate a trade signal for {state['ticker']} based on this thesis:\n{thesis}",
             usage_limits=limits,
         )
-        usage = result.usage()
+        usage = result.usage
         logger.info(
             "signal_complete",
             ticker=state["ticker"],
@@ -315,7 +315,7 @@ async def fundamental_node(state: MultiAgentPipelineState) -> dict:
             deps=deps,
             usage_limits=limits,
         )
-        usage = result.usage()
+        usage = result.usage
         logger.info(
             "fundamental_complete",
             ticker=deps.ticker,
@@ -371,7 +371,7 @@ async def sentiment_node(state: MultiAgentPipelineState) -> dict:
             deps=deps,
             usage_limits=limits,
         )
-        usage = result.usage()
+        usage = result.usage
         logger.info(
             "sentiment_complete",
             ticker=deps.ticker,
@@ -426,7 +426,7 @@ async def technical_node(state: MultiAgentPipelineState) -> dict:
             deps=deps,
             usage_limits=limits,
         )
-        usage = result.usage()
+        usage = result.usage
         logger.info(
             "technical_complete",
             ticker=deps.ticker,
@@ -486,7 +486,7 @@ async def manager_node(state: MultiAgentPipelineState) -> dict:
     try:
         limits = get_manager_limits()
         result = await manager_agent.run(prompt, usage_limits=limits)
-        usage = result.usage()
+        usage = result.usage
         logger.info(
             "manager_complete",
             ticker=state["ticker"],
@@ -531,7 +531,7 @@ async def multi_agent_signal_node(state: MultiAgentPipelineState) -> dict:
             f"Generate a trade signal for {state['ticker']} based on this thesis:\n{thesis}",
             usage_limits=limits,
         )
-        usage = result.usage()
+        usage = result.usage
         logger.info(
             "multi_agent_signal_complete",
             ticker=state["ticker"],
@@ -585,7 +585,7 @@ async def bull_node(state: DebatePipelineState) -> dict:
     try:
         limits = get_bull_limits()
         result = await bull_agent.run(prompt, usage_limits=limits)
-        usage = result.usage()
+        usage = result.usage
         logger.info(
             "bull_complete",
             ticker=state["ticker"],
@@ -630,7 +630,7 @@ async def bear_node(state: DebatePipelineState) -> dict:
     try:
         limits = get_bear_limits()
         result = await bear_agent.run(prompt, usage_limits=limits)
-        usage = result.usage()
+        usage = result.usage
         logger.info(
             "bear_complete",
             ticker=state["ticker"],
@@ -676,7 +676,7 @@ async def rebuttal_node(state: DebatePipelineState) -> dict:
     try:
         limits = get_rebuttal_limits()
         result = await rebuttal_agent.run(prompt, usage_limits=limits)
-        usage = result.usage()
+        usage = result.usage
         logger.info(
             "rebuttal_complete",
             ticker=state["ticker"],
@@ -725,7 +725,7 @@ async def final_arguments_node(state: DebatePipelineState) -> dict:
     try:
         limits = get_final_arguments_limits()
         result = await final_arguments_agent.run(prompt, usage_limits=limits)
-        usage = result.usage()
+        usage = result.usage
         logger.info(
             "final_arguments_complete",
             ticker=state["ticker"],
@@ -828,7 +828,7 @@ async def debate_synthesis_node(state: DebatePipelineState) -> dict:
             "pre_debate_confidence": pre_debate_confidence,
         }
     )
-    usage = result.usage()
+    usage = result.usage
     logger.info(
         "debate_synthesis_complete",
         ticker=state["ticker"],
@@ -994,7 +994,7 @@ async def risk_manager_node(state: DebatePipelineState, deps: RiskDeps) -> dict:
         policy_sha=policy_sha,
     )
 
-    usage = result.usage()
+    usage = result.usage
     event_name = "risk_manager_complete" if status == "APPROVED" else "risk_manager_veto"
     logger.info(
         event_name,

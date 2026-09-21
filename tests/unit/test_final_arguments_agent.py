@@ -47,7 +47,7 @@ class TestFinalArgumentsAgent:
 
     def test_agent_has_retries(self) -> None:
         """final_arguments_agent is configured with retries=2 for output validation."""
-        assert final_arguments_agent._max_result_retries == 2
+        assert final_arguments_agent._max_output_retries == 2
 
     def test_agent_no_tools(self) -> None:
         """final_arguments_agent has zero registered tools."""
