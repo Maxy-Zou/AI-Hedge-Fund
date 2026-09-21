@@ -1,3 +1,35 @@
+## 2026-09-21 — Docs: dedupe CLAUDE.md (408 → 291 lines)
+
+A bad merge had left 12 section headings appearing exactly twice, so the main
+context document carried two drifted copies of Architecture, Conventions, GSD
+Workflow Enforcement, and Developer Profile.
+
+The two halves turned out to be different regimes: lines 1–195 were the
+hand-edited sections, and lines 196–408 were GSD-managed blocks delimited by
+`<!-- GSD:*-start/end -->` markers. Diffing each pair showed the hand-edited
+copies were strict supersets:
+
+- **Conventions** — the GSD copy was missing `### Dependency Policy` and
+  `### Fix-as-you-find` entirely.
+- **Architecture** — the GSD copy had ASCII-degraded text (`<-` for `←`,
+  "Three tiers" for "Three-tier architecture") and dropped the SAS-paper note
+  under the debate protocol.
+- **Data Sources** — the GSD copy's `### Data Sources (Priority Order)` table
+  dropped the Notes column and the specific rate limits (`Free (60 req/min)`,
+  `Free (250 calls/day)`).
+
+Kept the richer copy of each, then removed the redundant `GSD:conventions` and
+`GSD:architecture` blocks with their markers. For GSD Workflow Enforcement and
+Developer Profile the copies were identical apart from command spelling
+(`/gsd:quick` vs `/gsd-quick`); kept the GSD-generated dash form, since the
+tooling that writes those blocks is the authority on its own command names.
+
+Verified: no repeated headings, all 5 remaining GSD marker pairs balanced, no
+line of original content dropped except the superseded duplicates, no new text
+introduced.
+
+**Files changed:** `CLAUDE.md` (408 → 291 lines)
+
 ## 2026-09-21 — Fix: pydantic-ai 2.x API drift broke 84 tests on fresh clone
 
 Third instance of the vendor-drift class flagged in the 2026-04-24 entry — this time in a *direct* dependency, not a data vendor. A clean clone + `uv sync --extra dev` resolved `pydantic-ai==2.46.0` (pyproject pins only `>=1.0.0`), and 84 of 1134 tests failed immediately.
