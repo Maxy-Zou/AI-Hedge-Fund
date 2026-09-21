@@ -1,3 +1,63 @@
+## 2026-09-21 — Style: ruff format sweep + clear the lint backlog
+
+Cleared the formatting debt deliberately deferred during the dependency-pinning
+work, where a large mechanical reformat would have buried a 27-line API fix.
+
+`ruff format --check .` reported 64 files, but that number was two unrelated
+things stacked together:
+
+- **28 `.py` files** — the genuine debt. This is exactly the count ruff 0.15.x
+  reported on the same tree, so 0.16's formatter changes introduced *zero* new
+  Python diffs. The drift predates the `>=0.16.8,<0.17` pin.
+- **36 `.md` files**, all under `.planning-archive/` — entirely new in 0.16,
+  which formats Python code blocks *inside Markdown*. These were cosmetic edits
+  to illustrative snippets in a dated archive snapshot.
+
+`extend-exclude` already covered `archive` and `.planning`, but the pattern
+`.planning` does not match the directory `.planning-archive`, so the archive
+fell through the gap. Added it — the sweep now scopes to real code only, and
+`ruff format --check .` stays quiet on future runs instead of reporting 36
+permanently-dirty files.
+
+**The 4 non-auto-fixable lint errors, fixed by hand rather than `# noqa`'d:**
+
+- **`test_agents.py` E402 ×3** — three imports sat mid-file under a
+  `# ---- Concrete agent tests ----` comment. They can't move to the top of the
+  file: `agents/extraction.py:28` and `agents/analysis.py:27` call
+  `create_agent()` at module import time, which PydanticAI validates against
+  `ANTHROPIC_API_KEY`. Moved them into the import block that already follows the
+  `os.environ.setdefault` on line 20, so the env var is still set first. ruff
+  exempts imports that follow `os.environ` mutations, which is why that block
+  was never flagged while the mid-file one was.
+- **`test_macro_tools.py` E501** — 104-char single-line docstring, wrapped to
+  multi-line with the wording unchanged.
+
+The other 17 were auto-fixed: `I001` import sorting and `UP017`
+(`timezone.utc` → `datetime.UTC`, an alias swap on `requires-python >=3.11`,
+not a semantic change).
+
+Kept as three commits so the mechanical diff stays reviewable: the exclude
+config, the pure `ruff format` sweep, then the lint fixes.
+
+**Environment note:** partway through, `uv run pytest` started failing with
+`ModuleNotFoundError: No module named 'ai_hedge_fund'`. The venv had
+`virtualenv`-package artifacts (`_virtualenv.pth`/`_virtualenv.py`) inside a
+uv-created environment, which shadowed uv's editable-install `.pth`. Identical
+`.pth` content worked under a later-sorting filename, confirming a load-order
+conflict. `rm -rf .venv && uv sync --extra dev` restored it. Note that a bare
+`uv sync` prunes `[project.optional-dependencies] dev` — it drops
+`pytest-asyncio`, which `asyncio_mode = "auto"` needs; `pytest` itself survives
+only transitively via `pytest-httpx`. Use `--extra dev`.
+
+**Verified:** 1134 passed, 9 skipped — unchanged before the sweep, after the
+sweep, and after the lint fixes. `ruff check .` and `ruff format --check .`
+both clean.
+
+**Files changed:** 28 reformatted (`src/`, `tests/`, `alembic/env.py`);
+`pyproject.toml` (exclude); lint fixes in `tests/unit/test_agents.py`,
+`tests/unit/test_macro_tools.py`, `tests/unit/test_sentiment_tools.py`,
+`tests/memory/test_episodic_model.py`
+
 ## 2026-09-21 — Docs: dedupe CLAUDE.md (408 → 291 lines)
 
 A bad merge had left 12 section headings appearing exactly twice, so the main
