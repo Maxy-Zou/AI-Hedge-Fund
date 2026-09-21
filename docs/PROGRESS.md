@@ -1,3 +1,26 @@
+## 2026-09-21 — v1.1 roadmap: Phases 9-13 defined, 23/23 requirements mapped
+
+`.planning/STATE.md` claimed "REQUIREMENTS.md + ROADMAP.md pending". Only half true: `REQUIREMENTS.md` already held all 23 v1.1 requirements (EXEC/PT/MTM/PROMO/TRACK) from the 2026-04-25 bootstrap, but its traceability table read `TBD -- pending roadmap` for every row, and `ROADMAP.md` still said "No next milestone defined yet." So the requirements were real and the roadmap genuinely was not.
+
+**Written by hand, bypassing GSD.** The project's CLAUDE.md requires `/gsd-*` commands before file edits, but no GSD tooling is installed in this environment (`~/.claude/commands/` is empty, no GSD plugin, no gsd skill). User explicitly authorized the bypass. Format matched against `milestones/v1.0-ROADMAP.md` so the artifacts stay consistent with what the tooling produces: phase list, then Phase Details with Goal / Depends on / Requirements / numbered observable Success Criteria.
+
+**Phases (one per requirement category, linear dependency chain):**
+- **Phase 9 — Paper-Trading Data Layer** (PT-01..05): append-only tables, dual timestamps, `signal_id` FK to `episodic_memory.id`, FUTUREX temporal regression.
+- **Phase 10 — Paper Execution Surface** (EXEC-01..05): Alpaca paper client, deterministic sizing, idempotent submit, VETOED circuit breaker, fail-fast credential load.
+- **Phase 11 — Mark-to-Market and Attribution** (MTM-01..04): daily EOD P&L, idempotent by skip-or-insert, attribution by analyst / debate-side / conviction.
+- **Phase 12 — Promotion Gate** (PROMO-01..05): SHA-pinned `promotion_policy.yaml`, pure-Python verdict, three-way audit-chain equality.
+- **Phase 13 — Track-Record Reporting** (TRACK-01..04): `render_track_record` CLI, LP-shareable markdown, machine-verifiable JSON.
+
+**One deliberate deviation from the source plan.** `docs/V1.1_PAPER_TRADING_PLAN.md` drafted execution as Phase A and storage as Phase B. The roadmap inverts it. EXEC-03 (idempotent submit keyed on `signal_id`) has no way to deduplicate without a persisted `paper_trades` row, and EXEC-01 records order intent at submission time -- execution depends on the table it writes to, not the reverse. Storage-first also means no execution code ever exists that could write an unauditable row. Rationale recorded in REQUIREMENTS.md so the inversion is not mistaken for drift later.
+
+**Files changed:**
+- `.planning/ROADMAP.md` — v1.1 milestone entry, 5-phase list, full Phase Details, 5 rows added to the Progress table.
+- `.planning/REQUIREMENTS.md` — traceability table expanded from 5 category-level `TBD` rows to 23 per-requirement rows with phase assignments; coverage block and phase-ordering note added.
+- `.planning/STATE.md` — reconciled: `status: defining_requirements` -> `ready_to_execute`, `total_phases: 0` -> `5`, stale `stopped_at` / `last_activity` corrected.
+
+**Caveat on `status: ready_to_execute`:** the observable GSD status vocabulary in this repo is `{executing, verifying, complete, draft, human_needed, partial, tech_debt, defining_requirements}` — none of which describes "roadmap done, execution not started." That token is invented; if the GSD tooling expects a specific value once reinstalled, it needs correcting.
+
+No code changed. Test suite untouched at 1134 passed, 9 skipped.
 ## 2026-09-21 — Style: ruff format sweep + clear the lint backlog
 
 Cleared the formatting debt deliberately deferred during the dependency-pinning

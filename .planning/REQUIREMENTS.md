@@ -87,10 +87,37 @@ These are not numbered requirements — they are invariants every v1.1 phase mus
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| EXEC-01..05 | TBD | pending roadmap |
-| PT-01..05 | TBD | pending roadmap |
-| MTM-01..04 | TBD | pending roadmap |
-| PROMO-01..05 | TBD | pending roadmap |
-| TRACK-01..04 | TBD | pending roadmap |
+| PT-01 | Phase 9 | Pending |
+| PT-02 | Phase 9 | Pending |
+| PT-03 | Phase 9 | Pending |
+| PT-04 | Phase 9 | Pending |
+| PT-05 | Phase 9 | Pending |
+| EXEC-01 | Phase 10 | Pending |
+| EXEC-02 | Phase 10 | Pending |
+| EXEC-03 | Phase 10 | Pending |
+| EXEC-04 | Phase 10 | Pending |
+| EXEC-05 | Phase 10 | Pending |
+| MTM-01 | Phase 11 | Pending |
+| MTM-02 | Phase 11 | Pending |
+| MTM-03 | Phase 11 | Pending |
+| MTM-04 | Phase 11 | Pending |
+| PROMO-01 | Phase 12 | Pending |
+| PROMO-02 | Phase 12 | Pending |
+| PROMO-03 | Phase 12 | Pending |
+| PROMO-04 | Phase 12 | Pending |
+| PROMO-05 | Phase 12 | Pending |
+| TRACK-01 | Phase 13 | Pending |
+| TRACK-02 | Phase 13 | Pending |
+| TRACK-03 | Phase 13 | Pending |
+| TRACK-04 | Phase 13 | Pending |
 
-*Filled in by the roadmapper.*
+**Coverage:**
+- v1.1 requirements: 23 total
+- Mapped to phases: 23
+- Unmapped: 0
+
+**Phase ordering note.** `docs/V1.1_PAPER_TRADING_PLAN.md` drafted the execution surface as Phase A and storage as Phase B. The roadmap inverts that: storage is Phase 9, execution is Phase 10. EXEC-03 (idempotent submit on `signal_id`) cannot be built or tested without a persisted `paper_trades` row to deduplicate against, and EXEC-01 records order intent on submission -- so execution has a hard dependency on the table it writes to, not the reverse. Building storage first also means no execution code ever exists that could write an unauditable row.
+
+---
+*Requirements defined: 2026-04-25*
+*Last updated: 2026-09-21 after roadmap creation (traceability verified, 23/23 mapped)*

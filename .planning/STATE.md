@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Paper Trading + Promotion Gate
 current_plan: —
-status: defining_requirements
-stopped_at: v1.1 milestone bootstrap — PROJECT.md updated, requirements + roadmap pending
-last_updated: "2026-04-25T00:00:00.000Z"
-last_activity: "2026-04-25 -- v1.1 milestone started; goals derived from docs/V1.1_PAPER_TRADING_PLAN.md"
+status: ready_to_execute
+stopped_at: v1.1 roadmap complete — Phases 9-13 defined, 23/23 requirements mapped; Phase 9 not started
+last_updated: "2026-09-21T00:00:00.000Z"
+last_activity: "2026-09-21 -- v1.1 roadmap written by hand (GSD tooling not installed); Phases 9-13 defined, traceability filled 23/23"
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-04-25)
 ## Current Position
 
 Milestone: v1.1 — Paper Trading + Promotion Gate
-Phase: Not started (defining requirements)
+Phase: Phase 9 — Paper-Trading Data Layer (not started)
 Plan: —
-Status: Defining requirements (source: docs/V1.1_PAPER_TRADING_PLAN.md)
-Last activity: 2026-04-25 -- v1.1 milestone started; PROJECT.md updated; REQUIREMENTS.md + ROADMAP.md pending
+Status: Roadmap complete, ready to execute Phase 9 (source: docs/V1.1_PAPER_TRADING_PLAN.md)
+Last activity: 2026-09-21 -- v1.1 roadmap written; Phases 9-13 defined with success criteria; REQUIREMENTS.md traceability 23/23 mapped
 
 Progress: [          ] 0%
 
