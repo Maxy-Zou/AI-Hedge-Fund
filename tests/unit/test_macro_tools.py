@@ -25,7 +25,6 @@ from ai_hedge_fund.data.clients.fred_client import FRED_SERIES, FredClient
 from ai_hedge_fund.data.tools.macro_tools import get_macro_context
 from ai_hedge_fund.db.models import MacroIndicator
 
-
 # ---------------------------------------------------------------------------
 # Sample FRED data
 # ---------------------------------------------------------------------------
@@ -303,7 +302,9 @@ class TestGetMacroContext:
 
     @patch("ai_hedge_fund.data.tools.macro_tools.FredClient")
     def test_returns_macro_context_result(self, mock_client_cls: MagicMock) -> None:
-        """get_macro_context returns dict with indicators, cpi_yoy_pct, gdp_growth_pct, summary_text."""
+        """get_macro_context returns dict with indicators, cpi_yoy_pct,
+        gdp_growth_pct, summary_text.
+        """
         mock_instance = MagicMock()
         mock_instance.get_latest_values.return_value = {
             "fed_funds_rate": 5.33,

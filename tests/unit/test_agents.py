@@ -19,8 +19,19 @@ from pydantic_ai.usage import UsageLimits
 # Set dummy API key before importing agents (PydanticAI validates at construction)
 os.environ.setdefault("ANTHROPIC_API_KEY", "test-key-for-unit-tests")
 
+from ai_hedge_fund.agents.analysis import (
+    ANALYSIS_SYSTEM_PROMPT,
+    analysis_agent,
+    get_analysis_limits,
+)
 from ai_hedge_fund.agents.base import create_agent, get_usage_limits
+from ai_hedge_fund.agents.extraction import (
+    EXTRACTION_SYSTEM_PROMPT,
+    extraction_agent,
+    get_extraction_limits,
+)
 from ai_hedge_fund.models import ModelTier
+from ai_hedge_fund.schemas.agents import AnalysisOutput, ExtractionOutput
 
 
 class _TestOutput(BaseModel):
@@ -138,18 +149,6 @@ class TestGetUsageLimitsOverrides:
 
 
 # ---- Concrete agent tests (Task 2) ----
-
-from ai_hedge_fund.agents.extraction import (
-    EXTRACTION_SYSTEM_PROMPT,
-    extraction_agent,
-    get_extraction_limits,
-)
-from ai_hedge_fund.agents.analysis import (
-    ANALYSIS_SYSTEM_PROMPT,
-    analysis_agent,
-    get_analysis_limits,
-)
-from ai_hedge_fund.schemas.agents import AnalysisOutput, ExtractionOutput
 
 
 class TestExtractionAgent:

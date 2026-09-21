@@ -17,7 +17,6 @@ from sqlalchemy.orm import Session
 
 from ai_hedge_fund.db.models import EpisodicMemory
 
-
 _AS_OF_JAN10 = datetime(2026, 1, 10, tzinfo=UTC)
 _AS_OF_FEB01 = datetime(2026, 2, 1, tzinfo=UTC)
 _AS_OF_MAR15 = datetime(2026, 3, 15, tzinfo=UTC)

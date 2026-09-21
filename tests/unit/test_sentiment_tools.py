@@ -12,7 +12,7 @@ Tests cover:
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -22,7 +22,6 @@ from ai_hedge_fund.config import AppSettings
 from ai_hedge_fund.data.clients.finnhub_client import FinnhubClient
 from ai_hedge_fund.data.tools.sentiment_tools import get_news_sentiment
 from ai_hedge_fund.db.models import NewsArticle
-
 
 # ---------------------------------------------------------------------------
 # Sample Finnhub API responses
@@ -112,7 +111,7 @@ class TestFinnhubClient:
         assert articles[0]["url"] == "https://reuters.com/article/1"
         assert isinstance(articles[0]["published_date"], datetime)
         # Verify the datetime conversion from unix timestamp
-        assert articles[0]["published_date"] == datetime(2024, 1, 1, tzinfo=timezone.utc)
+        assert articles[0]["published_date"] == datetime(2024, 1, 1, tzinfo=UTC)
 
     @patch("ai_hedge_fund.data.clients.finnhub_client.finnhub.Client")
     def test_get_company_news_empty_response(self, mock_client_cls: MagicMock) -> None:
@@ -198,14 +197,14 @@ class TestGetNewsSentiment:
                 "source": "Reuters",
                 "url": "https://reuters.com/1",
                 "sentiment_score": 0.8,
-                "published_date": datetime(2024, 1, 1, tzinfo=timezone.utc),
+                "published_date": datetime(2024, 1, 1, tzinfo=UTC),
             },
             {
                 "headline": "Bad news",
                 "source": "Bloomberg",
                 "url": "https://bloomberg.com/2",
                 "sentiment_score": -0.4,
-                "published_date": datetime(2024, 1, 2, tzinfo=timezone.utc),
+                "published_date": datetime(2024, 1, 2, tzinfo=UTC),
             },
         ]
         mock_client_cls.return_value = mock_instance
@@ -232,14 +231,14 @@ class TestGetNewsSentiment:
                 "source": "Reuters",
                 "url": "https://reuters.com/1",
                 "sentiment_score": 0.5,
-                "published_date": datetime(2024, 1, 2, tzinfo=timezone.utc),
+                "published_date": datetime(2024, 1, 2, tzinfo=UTC),
             },
             {
                 "headline": "After cutoff",
                 "source": "Bloomberg",
                 "url": "https://bloomberg.com/2",
                 "sentiment_score": -0.3,
-                "published_date": datetime(2024, 1, 5, tzinfo=timezone.utc),
+                "published_date": datetime(2024, 1, 5, tzinfo=UTC),
             },
         ]
         mock_client_cls.return_value = mock_instance
@@ -285,21 +284,21 @@ class TestGetNewsSentiment:
                 "source": "S1",
                 "url": "https://a.com/1",
                 "sentiment_score": 0.6,
-                "published_date": datetime(2024, 1, 1, tzinfo=timezone.utc),
+                "published_date": datetime(2024, 1, 1, tzinfo=UTC),
             },
             {
                 "headline": "B",
                 "source": "S2",
                 "url": "https://b.com/2",
                 "sentiment_score": 0.2,
-                "published_date": datetime(2024, 1, 2, tzinfo=timezone.utc),
+                "published_date": datetime(2024, 1, 2, tzinfo=UTC),
             },
             {
                 "headline": "C",
                 "source": "S3",
                 "url": "https://c.com/3",
                 "sentiment_score": None,
-                "published_date": datetime(2024, 1, 2, tzinfo=timezone.utc),
+                "published_date": datetime(2024, 1, 2, tzinfo=UTC),
             },
         ]
         mock_client_cls.return_value = mock_instance
@@ -324,7 +323,7 @@ class TestGetNewsSentiment:
                 "source": "Reuters",
                 "url": "https://reuters.com/1",
                 "sentiment_score": 0.5,
-                "published_date": datetime(2024, 1, 1, tzinfo=timezone.utc),
+                "published_date": datetime(2024, 1, 1, tzinfo=UTC),
             },
         ]
         mock_client_cls.return_value = mock_instance
@@ -368,7 +367,7 @@ class TestGetNewsSentiment:
                 "source": "Reuters",
                 "url": "https://reuters.com/cache",
                 "sentiment_score": 0.3,
-                "published_date": datetime(2024, 1, 1, tzinfo=timezone.utc),
+                "published_date": datetime(2024, 1, 1, tzinfo=UTC),
             },
         ]
         mock_client_cls.return_value = mock_instance
@@ -398,7 +397,7 @@ class TestGetNewsSentiment:
             "source": "Reuters",
             "url": "https://reuters.com/same",
             "sentiment_score": 0.5,
-            "published_date": datetime(2024, 1, 1, tzinfo=timezone.utc),
+            "published_date": datetime(2024, 1, 1, tzinfo=UTC),
         }
         mock_instance.get_company_news.return_value = [article]
         mock_client_cls.return_value = mock_instance
