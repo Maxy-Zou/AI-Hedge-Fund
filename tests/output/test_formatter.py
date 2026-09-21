@@ -28,8 +28,13 @@ def test_signal_md_contains_all_fields() -> None:
     """Test 1: output contains ticker, date, conviction, risk, link, status, sha-prefix."""
     out = format_signal_md(SIGNAL)
     for needle in (
-        "AAPL", "2026-04-20", "85", "30", "episodic://42",
-        "APPROVED", "aaaaaaaaaaaa",  # short SHA prefix
+        "AAPL",
+        "2026-04-20",
+        "85",
+        "30",
+        "episodic://42",
+        "APPROVED",
+        "aaaaaaaaaaaa",  # short SHA prefix
     ):
         assert needle in out, f"missing: {needle}"
 
@@ -84,8 +89,14 @@ def test_review_request_md_renders_all_top_level_keys() -> None:
     """Test 6: output renders ticker, date, and every top-level section."""
     out = format_review_request_md(REVIEW_REQUEST)
     for needle in (
-        "AAPL", "2026-04-20", "Proposed Signal", "Thesis",
-        "Debate", "Risk Assessment", "Episodic Hits", "Beliefs Consulted",
+        "AAPL",
+        "2026-04-20",
+        "Proposed Signal",
+        "Thesis",
+        "Debate",
+        "Risk Assessment",
+        "Episodic Hits",
+        "Beliefs Consulted",
     ):
         assert needle in out, f"missing: {needle}"
 
@@ -94,8 +105,11 @@ def test_review_request_md_renders_debate_subsections() -> None:
     """Test 7: each of the 5 debate acts gets its own sub-heading."""
     out = format_review_request_md(REVIEW_REQUEST)
     for needle in (
-        "### Bull", "### Bear", "### Rebuttal",
-        "### Final Arguments", "### Synthesis",
+        "### Bull",
+        "### Bear",
+        "### Rebuttal",
+        "### Final Arguments",
+        "### Synthesis",
     ):
         assert needle in out, f"missing: {needle}"
 

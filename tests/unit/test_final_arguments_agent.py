@@ -70,10 +70,7 @@ class TestFinalArgumentsSystemPrompt:
     def test_prompt_forbids_new_evidence(self) -> None:
         """System prompt must forbid introducing new evidence in closings."""
         lower = FINAL_ARGUMENTS_SYSTEM_PROMPT.lower()
-        assert (
-            "not introduce new evidence" in lower
-            or "do not introduce" in lower
-        )
+        assert "not introduce new evidence" in lower or "do not introduce" in lower
 
 
 class TestFinalArgumentsLimits:

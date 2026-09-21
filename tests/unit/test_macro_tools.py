@@ -30,60 +30,75 @@ from ai_hedge_fund.db.models import MacroIndicator
 # Sample FRED data
 # ---------------------------------------------------------------------------
 
+
 def _make_series(data: dict[str, float]) -> pd.Series:
     """Build a pandas Series with DatetimeIndex from {date_str: value} dict."""
     index = pd.DatetimeIndex([pd.Timestamp(d) for d in data])
     return pd.Series(list(data.values()), index=index)
 
 
-SAMPLE_FED_FUNDS = _make_series({
-    "2023-10-01": 5.33,
-    "2023-11-01": 5.33,
-    "2023-12-01": 5.33,
-    "2024-01-01": 5.33,
-})
+SAMPLE_FED_FUNDS = _make_series(
+    {
+        "2023-10-01": 5.33,
+        "2023-11-01": 5.33,
+        "2023-12-01": 5.33,
+        "2024-01-01": 5.33,
+    }
+)
 
-SAMPLE_CPI = _make_series({
-    "2023-01-01": 300.5,  # 12 months prior
-    "2023-06-01": 304.1,
-    "2023-12-01": 308.7,
-    "2024-01-01": 310.2,  # Current month
-})
+SAMPLE_CPI = _make_series(
+    {
+        "2023-01-01": 300.5,  # 12 months prior
+        "2023-06-01": 304.1,
+        "2023-12-01": 308.7,
+        "2024-01-01": 310.2,  # Current month
+    }
+)
 
-SAMPLE_GDP = _make_series({
-    "2023-04-01": 22038.2,  # Q2 2023
-    "2023-07-01": 22340.5,  # Q3 2023
-    "2023-10-01": 22598.1,  # Q4 2023
-    "2024-01-01": 22801.0,  # Q1 2024
-})
+SAMPLE_GDP = _make_series(
+    {
+        "2023-04-01": 22038.2,  # Q2 2023
+        "2023-07-01": 22340.5,  # Q3 2023
+        "2023-10-01": 22598.1,  # Q4 2023
+        "2024-01-01": 22801.0,  # Q1 2024
+    }
+)
 
-SAMPLE_REAL_GDP = _make_series({
-    "2023-04-01": 20230.0,  # Q2 2023
-    "2023-07-01": 20380.0,  # Q3 2023
-    "2023-10-01": 20520.0,  # Q4 2023
-    "2024-01-01": 20640.0,  # Q1 2024
-})
+SAMPLE_REAL_GDP = _make_series(
+    {
+        "2023-04-01": 20230.0,  # Q2 2023
+        "2023-07-01": 20380.0,  # Q3 2023
+        "2023-10-01": 20520.0,  # Q4 2023
+        "2024-01-01": 20640.0,  # Q1 2024
+    }
+)
 
-SAMPLE_YIELD_SPREAD = _make_series({
-    "2023-12-01": -0.45,
-    "2023-12-15": -0.42,
-    "2024-01-02": -0.38,
-    "2024-01-15": -0.35,
-})
+SAMPLE_YIELD_SPREAD = _make_series(
+    {
+        "2023-12-01": -0.45,
+        "2023-12-15": -0.42,
+        "2024-01-02": -0.38,
+        "2024-01-15": -0.35,
+    }
+)
 
-SAMPLE_TREASURY_10Y = _make_series({
-    "2023-12-01": 4.25,
-    "2023-12-15": 3.98,
-    "2024-01-02": 4.05,
-    "2024-01-15": 4.12,
-})
+SAMPLE_TREASURY_10Y = _make_series(
+    {
+        "2023-12-01": 4.25,
+        "2023-12-15": 3.98,
+        "2024-01-02": 4.05,
+        "2024-01-15": 4.12,
+    }
+)
 
-SAMPLE_TREASURY_2Y = _make_series({
-    "2023-12-01": 4.70,
-    "2023-12-15": 4.40,
-    "2024-01-02": 4.43,
-    "2024-01-15": 4.47,
-})
+SAMPLE_TREASURY_2Y = _make_series(
+    {
+        "2023-12-01": 4.70,
+        "2023-12-15": 4.40,
+        "2024-01-02": 4.43,
+        "2024-01-15": 4.47,
+    }
+)
 
 
 # ---------------------------------------------------------------------------
@@ -189,10 +204,12 @@ class TestFredClient:
         """get_latest_values only includes observations <= as_of_date."""
         mock_instance = MagicMock()
         # Return series with a value after as_of_date
-        future_series = _make_series({
-            "2024-01-01": 5.33,
-            "2024-02-01": 5.50,  # After as_of_date of Jan 15
-        })
+        future_series = _make_series(
+            {
+                "2024-01-01": 5.33,
+                "2024-02-01": 5.50,  # After as_of_date of Jan 15
+            }
+        )
         mock_instance.get_series.return_value = future_series
         mock_fred_cls.return_value = mock_instance
 
@@ -362,9 +379,7 @@ class TestGetMacroContext:
         assert isinstance(result["summary_text"], str)
 
     @patch("ai_hedge_fund.data.tools.macro_tools.FredClient")
-    def test_results_cached_to_db(
-        self, mock_client_cls: MagicMock, db_session: Session
-    ) -> None:
+    def test_results_cached_to_db(self, mock_client_cls: MagicMock, db_session: Session) -> None:
         """Observations are cached to MacroIndicator model when db_session provided."""
         mock_instance = MagicMock()
         mock_instance.get_latest_values.return_value = {

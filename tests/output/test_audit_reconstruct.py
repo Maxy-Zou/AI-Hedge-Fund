@@ -241,9 +241,7 @@ def test_cli_prints_valid_json(
     original_close = portfolio_db_session.close
     portfolio_db_session.close = lambda: None  # type: ignore[method-assign]
     try:
-        rc = _main(
-            ["--episodic-id", str(aid), "--database-url", "sqlite:///:memory:"]
-        )
+        rc = _main(["--episodic-id", str(aid), "--database-url", "sqlite:///:memory:"])
     finally:
         portfolio_db_session.close = original_close  # type: ignore[method-assign]
 

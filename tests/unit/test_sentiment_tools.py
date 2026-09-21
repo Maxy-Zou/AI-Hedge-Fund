@@ -359,9 +359,7 @@ class TestGetNewsSentiment:
         assert "No recent news" in result["summary_text"]
 
     @patch("ai_hedge_fund.data.tools.sentiment_tools.FinnhubClient")
-    def test_articles_cached_to_db(
-        self, mock_client_cls: MagicMock, db_session: Session
-    ) -> None:
+    def test_articles_cached_to_db(self, mock_client_cls: MagicMock, db_session: Session) -> None:
         """Articles are cached to NewsArticle model when db_session provided."""
         mock_instance = MagicMock()
         mock_instance.get_company_news.return_value = [
@@ -409,10 +407,16 @@ class TestGetNewsSentiment:
 
         # Insert twice
         get_news_sentiment(
-            "AAPL", as_of_date=date(2024, 1, 3), db_session=db_session, settings=settings,
+            "AAPL",
+            as_of_date=date(2024, 1, 3),
+            db_session=db_session,
+            settings=settings,
         )
         get_news_sentiment(
-            "AAPL", as_of_date=date(2024, 1, 3), db_session=db_session, settings=settings,
+            "AAPL",
+            as_of_date=date(2024, 1, 3),
+            db_session=db_session,
+            settings=settings,
         )
 
         articles = db_session.query(NewsArticle).all()

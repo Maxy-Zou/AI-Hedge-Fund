@@ -69,9 +69,7 @@ def get_rebuttal_limits() -> UsageLimits:
     return get_usage_limits(ModelTier.REASONING, output_override=8_000)
 
 
-def format_debate_for_rebuttal(
-    bull_case: dict | None, bear_case: dict | None
-) -> str:
+def format_debate_for_rebuttal(bull_case: dict | None, bear_case: dict | None) -> str:
     """Format the (bull_case, bear_case) pair for the rebuttal agent's user prompt.
 
     Produces a two-section string separated by ``"\\n\\n---\\n\\n"``:

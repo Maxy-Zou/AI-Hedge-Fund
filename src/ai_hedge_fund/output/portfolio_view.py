@@ -100,11 +100,7 @@ def query_portfolio_view(
     for row in latest_by_ticker.values():
         payload = row.payload or {}
         thesis_data = payload.get("thesis") or {}
-        thesis_summary = (
-            thesis_data.get("bull_case")
-            or thesis_data.get("summary")
-            or ""
-        )
+        thesis_summary = thesis_data.get("bull_case") or thesis_data.get("summary") or ""
         entry = {
             "ticker": row.ticker,
             "sector": row.sector,

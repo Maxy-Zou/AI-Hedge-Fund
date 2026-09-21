@@ -104,9 +104,7 @@ def _make_company_facts(
                 quarter_day = 31 if quarter_month in (3, 12) else 30
                 period_end = date(fiscal_year, quarter_month, quarter_day)
 
-            period_start = (
-                _to_date(row["start"]) if "start" in row else date(fiscal_year - 1, 1, 1)
-            )
+            period_start = _to_date(row["start"]) if "start" in row else date(fiscal_year - 1, 1, 1)
 
             numeric = float(row["val"])
             all_rows.append(
@@ -236,12 +234,8 @@ class TestXbrlClient:
                 _make_fact_row(val=114_301_000_000.0, fiscal_year=2023, filed="2023-02-01"),
             ],
             "EarningsPerShareDiluted": [
-                _make_fact_row(
-                    val=6.42, unit="USD/shares", fiscal_year=2024, filed="2024-02-01"
-                ),
-                _make_fact_row(
-                    val=6.16, unit="USD/shares", fiscal_year=2023, filed="2023-02-01"
-                ),
+                _make_fact_row(val=6.42, unit="USD/shares", fiscal_year=2024, filed="2024-02-01"),
+                _make_fact_row(val=6.16, unit="USD/shares", fiscal_year=2023, filed="2023-02-01"),
             ],
             "Assets": [
                 _make_fact_row(val=352_583_000_000.0, fiscal_year=2024, filed="2024-02-01"),
@@ -346,12 +340,8 @@ class TestGetFinancialSummary:
                 _make_fact_row(val=114_301_000_000.0, fiscal_year=2023, filed="2023-02-01"),
             ],
             "EarningsPerShareDiluted": [
-                _make_fact_row(
-                    val=6.42, unit="USD/shares", fiscal_year=2024, filed="2024-02-01"
-                ),
-                _make_fact_row(
-                    val=6.16, unit="USD/shares", fiscal_year=2023, filed="2023-02-01"
-                ),
+                _make_fact_row(val=6.42, unit="USD/shares", fiscal_year=2024, filed="2024-02-01"),
+                _make_fact_row(val=6.16, unit="USD/shares", fiscal_year=2023, filed="2023-02-01"),
             ],
         }
         facts = _make_company_facts(concept_data)
@@ -381,9 +371,7 @@ class TestGetFinancialSummary:
         assert isinstance(result["summary_text"], str)
         assert len(result["summary_text"]) > 0
 
-    def test_summary_calls_format_financial_summary(
-        self, _mock_settings: AppSettings
-    ) -> None:
+    def test_summary_calls_format_financial_summary(self, _mock_settings: AppSettings) -> None:
         """Financial summary calls format_financial_summary to produce NL text."""
         concept_data = {
             "Revenues": [
@@ -399,12 +387,8 @@ class TestGetFinancialSummary:
                 _make_fact_row(val=22_000_000.0, fiscal_year=2023, filed="2023-02-01"),
             ],
             "EarningsPerShareDiluted": [
-                _make_fact_row(
-                    val=2.50, unit="USD/shares", fiscal_year=2024, filed="2024-02-01"
-                ),
-                _make_fact_row(
-                    val=2.25, unit="USD/shares", fiscal_year=2023, filed="2023-02-01"
-                ),
+                _make_fact_row(val=2.50, unit="USD/shares", fiscal_year=2024, filed="2024-02-01"),
+                _make_fact_row(val=2.25, unit="USD/shares", fiscal_year=2023, filed="2023-02-01"),
             ],
         }
         facts = _make_company_facts(concept_data)
@@ -445,12 +429,8 @@ class TestGetFinancialSummary:
                 _make_fact_row(val=45_000_000.0, fiscal_year=2023, filed="2023-02-01"),
             ],
             "EarningsPerShareDiluted": [
-                _make_fact_row(
-                    val=4.00, unit="USD/shares", fiscal_year=2024, filed="2024-02-01"
-                ),
-                _make_fact_row(
-                    val=3.50, unit="USD/shares", fiscal_year=2023, filed="2023-02-01"
-                ),
+                _make_fact_row(val=4.00, unit="USD/shares", fiscal_year=2024, filed="2024-02-01"),
+                _make_fact_row(val=3.50, unit="USD/shares", fiscal_year=2023, filed="2023-02-01"),
             ],
         }
         facts = _make_company_facts(concept_data)
@@ -490,9 +470,7 @@ class TestGetFinancialSummary:
                 _make_fact_row(val=25_000_000.0, fiscal_year=2024, filed="2024-02-01"),
             ],
             "EarningsPerShareDiluted": [
-                _make_fact_row(
-                    val=2.50, unit="USD/shares", fiscal_year=2024, filed="2024-02-01"
-                ),
+                _make_fact_row(val=2.50, unit="USD/shares", fiscal_year=2024, filed="2024-02-01"),
             ],
         }
         facts = _make_company_facts(concept_data)
@@ -540,9 +518,7 @@ class TestGetFinancialSummary:
                 _make_fact_row(val=25_000_000.0, fiscal_year=2023, filed="2023-02-01"),
             ],
             "EarningsPerShareDiluted": [
-                _make_fact_row(
-                    val=2.50, unit="USD/shares", fiscal_year=2023, filed="2023-02-01"
-                ),
+                _make_fact_row(val=2.50, unit="USD/shares", fiscal_year=2023, filed="2023-02-01"),
             ],
         }
         facts = _make_company_facts(concept_data)

@@ -61,9 +61,7 @@ def reconstruct_audit_trail(session: Session, episodic_id: int) -> dict[str, Any
     analysis = session.get(EpisodicMemory, episodic_id)
     if analysis is None or analysis.record_type != "analysis":
         found = analysis.record_type if analysis is not None else "None"
-        raise ValueError(
-            f"No analysis row at id {episodic_id} (found: {found})"
-        )
+        raise ValueError(f"No analysis row at id {episodic_id} (found: {found})")
 
     review = session.scalars(
         select(EpisodicMemory)

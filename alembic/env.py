@@ -38,6 +38,7 @@ def _get_database_url() -> str:
         return url
     try:
         from ai_hedge_fund.config import get_settings
+
         return get_settings().database_url
     except Exception:
         return "postgresql+psycopg://hedge:hedge@localhost:5432/ai_hedge_fund"
@@ -76,9 +77,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()

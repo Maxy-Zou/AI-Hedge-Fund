@@ -38,18 +38,14 @@ def test_review_deps_with_policy_ok(portfolio_db_session: Session) -> None:
     assert deps.policy is not None
 
 
-def test_review_deps_with_policy_path_ok(
-    portfolio_db_session: Session, tmp_path: Path
-) -> None:
+def test_review_deps_with_policy_path_ok(portfolio_db_session: Session, tmp_path: Path) -> None:
     p = tmp_path / "rp.yaml"
     p.write_text("conviction_threshold: 70\n")
     deps = ReviewDeps(db_session=portfolio_db_session, policy_path=p)
     assert deps.policy_path == p
 
 
-def test_review_deps_both_raises(
-    portfolio_db_session: Session, tmp_path: Path
-) -> None:
+def test_review_deps_both_raises(portfolio_db_session: Session, tmp_path: Path) -> None:
     p = tmp_path / "rp.yaml"
     p.write_text("conviction_threshold: 70\n")
     with pytest.raises(ValueError, match="exactly one"):
@@ -142,9 +138,7 @@ def test_output_stamps_review_policy_sha(portfolio_db_session: Session) -> None:
 # ============================================================
 
 
-def _seed_analysis(
-    session: Session, *, ticker: str = "AAPL", policy_sha: str = "a" * 64
-) -> int:
+def _seed_analysis(session: Session, *, ticker: str = "AAPL", policy_sha: str = "a" * 64) -> int:
     row = EpisodicMemory(
         ticker=ticker,
         sector="Technology",
@@ -183,11 +177,7 @@ def test_review_store_appends_review_row(portfolio_db_session: Session) -> None:
     deps = ReviewDeps(db_session=portfolio_db_session, policy=ReviewPolicy())
     res = asyncio.run(review_store_node(_review_state(aid), deps))
     assert res["review_stored_id"] != aid
-    rows = (
-        portfolio_db_session.query(EpisodicMemory)
-        .filter_by(record_type="review")
-        .all()
-    )
+    rows = portfolio_db_session.query(EpisodicMemory).filter_by(record_type="review").all()
     assert len(rows) == 1
     assert rows[0].linked_analysis_id == aid
 
@@ -196,11 +186,7 @@ def test_review_store_not_required_path(portfolio_db_session: Session) -> None:
     aid = _seed_analysis(portfolio_db_session)
     deps = ReviewDeps(db_session=portfolio_db_session, policy=ReviewPolicy())
     asyncio.run(review_store_node(_review_state(aid, decision=None), deps))
-    row = (
-        portfolio_db_session.query(EpisodicMemory)
-        .filter_by(record_type="review")
-        .one()
-    )
+    row = portfolio_db_session.query(EpisodicMemory).filter_by(record_type="review").one()
     assert row.payload["review_status"] == "NOT_REQUIRED"
 
 
@@ -215,11 +201,7 @@ def test_review_store_approved_path(portfolio_db_session: Session) -> None:
         "review_policy_sha": "b" * 64,
     }
     asyncio.run(review_store_node(_review_state(aid, decision=decision), deps))
-    row = (
-        portfolio_db_session.query(EpisodicMemory)
-        .filter_by(record_type="review")
-        .one()
-    )
+    row = portfolio_db_session.query(EpisodicMemory).filter_by(record_type="review").one()
     assert row.payload["review_status"] == "APPROVED"
     assert row.payload["review_decision"]["status"] == "APPROVED"
 
@@ -253,11 +235,7 @@ def test_review_row_policy_sha_from_risk(portfolio_db_session: Session) -> None:
     state = _review_state(aid)
     state["risk_assessment"]["policy_sha"] = "c" * 64
     asyncio.run(review_store_node(state, deps))
-    row = (
-        portfolio_db_session.query(EpisodicMemory)
-        .filter_by(record_type="review")
-        .one()
-    )
+    row = portfolio_db_session.query(EpisodicMemory).filter_by(record_type="review").one()
     assert row.policy_sha == "c" * 64
 
 
@@ -274,11 +252,7 @@ def test_review_row_review_policy_sha_in_payload(
         "review_policy_sha": "e" * 64,
     }
     asyncio.run(review_store_node(_review_state(aid, decision=decision), deps))
-    row = (
-        portfolio_db_session.query(EpisodicMemory)
-        .filter_by(record_type="review")
-        .one()
-    )
+    row = portfolio_db_session.query(EpisodicMemory).filter_by(record_type="review").one()
     assert row.payload["review_policy_sha"] == "e" * 64
 
 

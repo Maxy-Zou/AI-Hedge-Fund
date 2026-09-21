@@ -193,11 +193,7 @@ def format_review_request_md(review_request: dict) -> str:
         "",
         f"## Beliefs Consulted ({len(beliefs)})",
         "",
-        (
-            _fmt_value(beliefs)
-            if not beliefs
-            else "\n".join(f"- {_fmt_hit(b)}" for b in beliefs)
-        ),
+        (_fmt_value(beliefs) if not beliefs else "\n".join(f"- {_fmt_hit(b)}" for b in beliefs)),
         "",
         "---",
         "",

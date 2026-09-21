@@ -179,15 +179,9 @@ async def test_full_pipeline_real_llm() -> None:
     thesis = result.output
     assert isinstance(thesis, ThesisOutput)
     assert thesis.ticker.upper() == "AAPL" or "AAPL" in thesis.ticker.upper()
-    assert len(thesis.bull_case) >= 3, (
-        f"Bull case needs >= 3 points, got {len(thesis.bull_case)}"
-    )
-    assert len(thesis.bear_case) >= 3, (
-        f"Bear case needs >= 3 points, got {len(thesis.bear_case)}"
-    )
-    assert len(thesis.risk_factors) >= 2, (
-        f"Risk factors need >= 2, got {len(thesis.risk_factors)}"
-    )
+    assert len(thesis.bull_case) >= 3, f"Bull case needs >= 3 points, got {len(thesis.bull_case)}"
+    assert len(thesis.bear_case) >= 3, f"Bear case needs >= 3 points, got {len(thesis.bear_case)}"
+    assert len(thesis.risk_factors) >= 2, f"Risk factors need >= 2, got {len(thesis.risk_factors)}"
     assert 0 <= thesis.confidence <= 100, f"Confidence out of range: {thesis.confidence}"
     for point in thesis.bull_case:
         assert point.source_tool, "Bull point missing source_tool"
@@ -240,9 +234,7 @@ async def test_temporal_correctness_real_llm() -> None:
         or len(t24.risk_factors) != len(t25.risk_factors)
     )
     # Weak signal 3: first bull claim differs.
-    first_claim_differs = (
-        t24.bull_case[0].claim.strip() != t25.bull_case[0].claim.strip()
-    )
+    first_claim_differs = t24.bull_case[0].claim.strip() != t25.bull_case[0].claim.strip()
     assert confidence_differs or lengths_differ or first_claim_differs, (
         "Theses for same ticker with different as_of_dates look identical -- "
         "temporal controls may be leaking. 2024 confidence="

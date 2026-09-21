@@ -109,8 +109,4 @@ def format_debate_for_final(
     else:
         rebuttal_section = "REBUTTAL:\n" + json.dumps(rebuttal, indent=2)
 
-    return (
-        f"{bull_section}\n\n---\n\n"
-        f"{bear_section}\n\n---\n\n"
-        f"{rebuttal_section}"
-    )
+    return f"{bull_section}\n\n---\n\n{bear_section}\n\n---\n\n{rebuttal_section}"

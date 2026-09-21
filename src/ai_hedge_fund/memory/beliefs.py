@@ -121,9 +121,7 @@ def belief_path_for_sector(beliefs_dir: Path, sector: str) -> Path:
             ``[A-Za-z][A-Za-z0-9 \\-_]{0,49}``.
     """
     if not _SECTOR_RE.fullmatch(sector):
-        raise ValueError(
-            f"Invalid sector {sector!r} (expected [A-Za-z][A-Za-z0-9 \\-_]{{0,49}})"
-        )
+        raise ValueError(f"Invalid sector {sector!r} (expected [A-Za-z][A-Za-z0-9 \\-_]{{0,49}})")
     return beliefs_dir / "sectors" / f"{sector}.yaml"
 
 

@@ -132,9 +132,7 @@ def _stubbed_stack(confidence: int = 85) -> ExitStack:
         stack.enter_context(agent.override(model=TestModel(call_tools=[])))
     stack.enter_context(manager_agent.override(model=TestModel()))
     stack.enter_context(bull_agent.override(model=TestModel()))
-    stack.enter_context(
-        bear_agent.override(model=TestModel(custom_output_args=_valid_bear_case()))
-    )
+    stack.enter_context(bear_agent.override(model=TestModel(custom_output_args=_valid_bear_case())))
     stack.enter_context(rebuttal_agent.override(model=TestModel()))
     stack.enter_context(final_arguments_agent.override(model=TestModel()))
     stack.enter_context(
@@ -178,9 +176,7 @@ def _wide_open_risk_policy() -> RiskPolicy:
     )
 
 
-def _build(
-    session: Session, beliefs: Path, review_policy: ReviewPolicy
-) -> CompiledStateGraph:
+def _build(session: Session, beliefs: Path, review_policy: ReviewPolicy) -> CompiledStateGraph:
     return build_debate_pipeline(
         checkpointer=InMemorySaver(),
         with_memory=True,
@@ -231,9 +227,7 @@ def _run_with_decision(
 # =====================================================================
 
 
-def test_same_policy_same_review_sha(
-    memory_db_session: Session, beliefs_tmp_dir: Path
-) -> None:
+def test_same_policy_same_review_sha(memory_db_session: Session, beliefs_tmp_dir: Path) -> None:
     policy = ReviewPolicy(conviction_threshold=70, reviewer_id_default="test")
     with _stubbed_stack():
         g1 = _build(memory_db_session, beliefs_tmp_dir, policy)
@@ -241,9 +235,7 @@ def test_same_policy_same_review_sha(
         g2 = _build(memory_db_session, beliefs_tmp_dir, policy)
         _run_with_decision(g2, 70, _decision_for(policy), "sha-same-2")
 
-    rows = (
-        memory_db_session.query(EpisodicMemory).filter_by(record_type="review").all()
-    )
+    rows = memory_db_session.query(EpisodicMemory).filter_by(record_type="review").all()
     assert len(rows) == 2
     sha = compute_review_policy_sha(policy)
     for row in rows:
@@ -283,9 +275,7 @@ def test_different_policy_different_review_sha(
 # =====================================================================
 
 
-def test_idempotent_revert(
-    memory_db_session: Session, beliefs_tmp_dir: Path
-) -> None:
+def test_idempotent_revert(memory_db_session: Session, beliefs_tmp_dir: Path) -> None:
     """Run A, B, A -> review rows 1 and 3 share a SHA; row 2 differs."""
     p_a = ReviewPolicy(conviction_threshold=70, reviewer_id_default="test")
     p_b = ReviewPolicy(conviction_threshold=71, reviewer_id_default="test")
@@ -326,9 +316,7 @@ def test_idempotent_revert(
 # =====================================================================
 
 
-def test_sha_format_on_approved(
-    memory_db_session: Session, beliefs_tmp_dir: Path
-) -> None:
+def test_sha_format_on_approved(memory_db_session: Session, beliefs_tmp_dir: Path) -> None:
     policy = ReviewPolicy(conviction_threshold=70, reviewer_id_default="test")
     with _stubbed_stack():
         _run_with_decision(
@@ -338,9 +326,7 @@ def test_sha_format_on_approved(
             "sha-fmt-a",
         )
 
-    row = (
-        memory_db_session.query(EpisodicMemory).filter_by(record_type="review").one()
-    )
+    row = memory_db_session.query(EpisodicMemory).filter_by(record_type="review").one()
     sha = row.payload["review_policy_sha"]
     assert SHA_RE.fullmatch(sha)
     # Defense-in-depth: pure lowercase hex
@@ -353,9 +339,7 @@ def test_sha_format_on_approved(
 # =====================================================================
 
 
-def test_sha_format_on_rejected(
-    memory_db_session: Session, beliefs_tmp_dir: Path
-) -> None:
+def test_sha_format_on_rejected(memory_db_session: Session, beliefs_tmp_dir: Path) -> None:
     policy = ReviewPolicy(conviction_threshold=70, reviewer_id_default="test")
     with _stubbed_stack():
         _run_with_decision(
@@ -365,9 +349,7 @@ def test_sha_format_on_rejected(
             "sha-fmt-r",
         )
 
-    row = (
-        memory_db_session.query(EpisodicMemory).filter_by(record_type="review").one()
-    )
+    row = memory_db_session.query(EpisodicMemory).filter_by(record_type="review").one()
     sha = row.payload["review_policy_sha"]
     assert SHA_RE.fullmatch(sha)
     assert row.payload["review_status"] == "REJECTED"
@@ -378,9 +360,7 @@ def test_sha_format_on_rejected(
 # =====================================================================
 
 
-def test_three_way_sha_equality(
-    memory_db_session: Session, beliefs_tmp_dir: Path
-) -> None:
+def test_three_way_sha_equality(memory_db_session: Session, beliefs_tmp_dir: Path) -> None:
     """T-08-02 / T-08-22: state -> row -> recomputed SHAs all agree.
 
     Any silent rewriting layer between the resume decision, the persistence
@@ -413,9 +393,7 @@ def test_three_way_sha_equality(
     # Leg 1: state-side (what the pipeline emits)
     assert final["review_decision"]["review_policy_sha"] == expected_sha
     # Leg 2: row-payload side (what actually lands in episodic_memory)
-    row = (
-        memory_db_session.query(EpisodicMemory).filter_by(record_type="review").one()
-    )
+    row = memory_db_session.query(EpisodicMemory).filter_by(record_type="review").one()
     assert row.payload["review_policy_sha"] == expected_sha
     # Leg 3: recomputed from policy (attribution from first principles)
     assert compute_review_policy_sha(policy) == expected_sha

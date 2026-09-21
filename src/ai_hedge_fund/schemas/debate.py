@@ -124,7 +124,7 @@ class BearCase(BaseModel):
         description=(
             "Verbatim text of at least 2 bull claims that this bear case "
             "directly rebuts -- per DEBATE-02. Element type is NonEmptyStr "
-            "so `[\"\", \"\"]` is rejected (WR-02)."
+            'so `["", ""]` is rejected (WR-02).'
         ),
     )
     headline: str = Field(min_length=1)
@@ -142,9 +142,7 @@ class BearCase(BaseModel):
         threat-model intent).
         """
         rebutters = {
-            c.addresses_bull_claim
-            for c in self.claims
-            if c.addresses_bull_claim is not None
+            c.addresses_bull_claim for c in self.claims if c.addresses_bull_claim is not None
         }
         missing = [text for text in self.addressed_bull_claims if text not in rebutters]
         if missing:

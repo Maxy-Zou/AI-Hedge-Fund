@@ -245,9 +245,7 @@ def test_review_store_terminates_graph(
         review_deps=rdeps,
     )
     edges = {(e.source, e.target) for e in graph.get_graph().edges}
-    assert any(
-        src == "review_store" and tgt in {END, "__end__"} for src, tgt in edges
-    )
+    assert any(src == "review_store" and tgt in {END, "__end__"} for src, tgt in edges)
 
 
 def test_vetoed_path_short_circuits_before_interrupt(

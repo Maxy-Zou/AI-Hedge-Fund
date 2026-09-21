@@ -92,17 +92,11 @@ def compute_quality_score(
         ValueError: if any sub-score is outside [0, 100].
     """
     if not (0 <= evidence_strength <= 100):
-        raise ValueError(
-            f"evidence_strength out of range [0,100]: {evidence_strength}"
-        )
+        raise ValueError(f"evidence_strength out of range [0,100]: {evidence_strength}")
     if not (0 <= logical_consistency <= 100):
-        raise ValueError(
-            f"logical_consistency out of range [0,100]: {logical_consistency}"
-        )
+        raise ValueError(f"logical_consistency out of range [0,100]: {logical_consistency}")
     if not (0 <= risk_coverage <= 100):
-        raise ValueError(
-            f"risk_coverage out of range [0,100]: {risk_coverage}"
-        )
+        raise ValueError(f"risk_coverage out of range [0,100]: {risk_coverage}")
     score = (
         EVIDENCE_WEIGHT * evidence_strength
         + LOGIC_WEIGHT * logical_consistency
@@ -139,7 +133,7 @@ DEBATE_SYNTHESIS_SYSTEM_PROMPT = (
     "High = bear_case surfaced material risks the manager missed; low = "
     "debate did not expose new risk.\n"
     "6. pre_debate_confidence: this field will be overwritten by the "
-    "pipeline from state[\"thesis\"][\"confidence\"] -- fill with your best "
+    'pipeline from state["thesis"]["confidence"] -- fill with your best '
     "estimate but do not rely on it.\n"
     "7. quality_score: this field will be overwritten by the pipeline's "
     "compute_quality_score() function -- fill with 0 as a placeholder.\n"

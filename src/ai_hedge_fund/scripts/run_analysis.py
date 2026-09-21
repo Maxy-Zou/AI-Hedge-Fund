@@ -102,9 +102,7 @@ def _default_reviewer_io(
     elif answer.startswith("n"):
         status = "REJECTED"
     else:
-        raise ValueError(
-            f"Reviewer input must start with y or n (got: {answer!r})"
-        )
+        raise ValueError(f"Reviewer input must start with y or n (got: {answer!r})")
 
     # Enforce the documented 1-2000 char cap at prompt time so the reviewer
     # can correct an over-long paste BEFORE the pipeline fires its Pydantic
@@ -117,9 +115,7 @@ def _default_reviewer_io(
             note = f"{status.lower()} without note"
         if len(note) <= 2000:
             break
-        print(
-            f"Note too long ({len(note)} chars; limit 2000). Try again."
-        )
+        print(f"Note too long ({len(note)} chars; limit 2000). Try again.")
 
     sha = compute_review_policy_sha(review_policy)
     return {
@@ -197,8 +193,7 @@ async def run_analysis(
 
     as_of = datetime.fromisoformat(as_of_date).date()
     portfolio_tickers = [
-        row[0]
-        for row in session.execute(select(PortfolioPosition.ticker).distinct()).all()
+        row[0] for row in session.execute(select(PortfolioPosition.ticker).distinct()).all()
     ]
     universe = sorted({ticker, *portfolio_tickers})
     price_rows = session.execute(
@@ -273,9 +268,7 @@ async def run_analysis(
         direction=final_signal.get("direction"),
         conviction=final_signal.get("conviction"),
         review_status=(
-            final_signal.get("review_status")
-            or review_decision.get("status")
-            or "NOT_REQUIRED"
+            final_signal.get("review_status") or review_decision.get("status") or "NOT_REQUIRED"
         ),
         episodic_stored_id=final.get("episodic_stored_id"),
         review_stored_id=final.get("review_stored_id"),
@@ -396,9 +389,7 @@ def _main(argv: list[str] | None = None) -> int:
             )
         except Exception as exc:  # noqa: BLE001 -- CLI boundary; surface broadly
             print(f"ERROR: {exc}", file=sys.stderr)
-            logger.error(
-                "run_analysis_failed", error=str(exc), ticker=args.ticker
-            )
+            logger.error("run_analysis_failed", error=str(exc), ticker=args.ticker)
             return 1
         print(_format_output(final, as_json=args.as_json))
         return 0

@@ -218,9 +218,13 @@ def test_ingest_outcome_missing_belief_file(
     (beliefs_dir / "tickers").mkdir(parents=True)
     _seed_analysis(memory_db_session, "AAPL", date(2026, 1, 10))
 
-    with capture_logs() as logs, self_critique_agent.override(
-        model=TestModel(custom_output_args={"rationale": STUB_RATIONALE})
-    ), pytest.raises(FileNotFoundError, match="AAPL"):
+    with (
+        capture_logs() as logs,
+        self_critique_agent.override(
+            model=TestModel(custom_output_args={"rationale": STUB_RATIONALE})
+        ),
+        pytest.raises(FileNotFoundError, match="AAPL"),
+    ):
         asyncio.run(
             ingest_outcome(
                 session=memory_db_session,
@@ -242,9 +246,7 @@ def test_ingest_outcome_missing_belief_file(
     # WR-02: structured warning log was emitted BEFORE re-raising. Operators
     # can grep for this event to recover orphan outcome rows.
     warning_events = [
-        entry
-        for entry in logs
-        if entry.get("event") == "self_critique_missing_belief"
+        entry for entry in logs if entry.get("event") == "self_critique_missing_belief"
     ]
     assert len(warning_events) == 1
     warning = warning_events[0]

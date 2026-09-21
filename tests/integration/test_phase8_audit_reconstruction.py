@@ -121,15 +121,11 @@ def _stack(conf: int = 85) -> ExitStack:
         stack.enter_context(agent.override(model=TestModel(call_tools=[])))
     stack.enter_context(manager_agent.override(model=TestModel()))
     stack.enter_context(bull_agent.override(model=TestModel()))
-    stack.enter_context(
-        bear_agent.override(model=TestModel(custom_output_args=_bear()))
-    )
+    stack.enter_context(bear_agent.override(model=TestModel(custom_output_args=_bear())))
     stack.enter_context(rebuttal_agent.override(model=TestModel()))
     stack.enter_context(final_arguments_agent.override(model=TestModel()))
     stack.enter_context(
-        debate_synthesis_agent.override(
-            model=TestModel(custom_output_args=_synth(conf))
-        )
+        debate_synthesis_agent.override(model=TestModel(custom_output_args=_synth(conf)))
     )
     stack.enter_context(
         risk_manager_agent.override(model=TestModel(custom_output_args={"rationale": "r"}))
@@ -167,9 +163,7 @@ def _wide_open_risk_policy() -> RiskPolicy:
     )
 
 
-def _build(
-    session: Session, beliefs: Path, policy: ReviewPolicy
-) -> CompiledStateGraph:
+def _build(session: Session, beliefs: Path, policy: ReviewPolicy) -> CompiledStateGraph:
     return build_debate_pipeline(
         checkpointer=InMemorySaver(),
         with_memory=True,
@@ -208,9 +202,7 @@ def _initial(threshold: int = 70) -> dict:
 # =====================================================================
 
 
-def test_reconstruct_after_approved_run(
-    memory_db_session: Session, beliefs_tmp_dir: Path
-) -> None:
+def test_reconstruct_after_approved_run(memory_db_session: Session, beliefs_tmp_dir: Path) -> None:
     """SIG-04: compliance reviewer can rebuild the trail for any finalized signal."""
     policy = ReviewPolicy(conviction_threshold=70, reviewer_id_default="test")
     graph = _build(memory_db_session, beliefs_tmp_dir, policy)
@@ -218,9 +210,7 @@ def test_reconstruct_after_approved_run(
 
     with _stack(85):
         asyncio.run(graph.ainvoke(_initial(threshold=70), config=cfg))
-        final = asyncio.run(
-            graph.ainvoke(Command(resume=_decision(policy)), config=cfg)
-        )
+        final = asyncio.run(graph.ainvoke(Command(resume=_decision(policy)), config=cfg))
 
     episodic_id = final["episodic_stored_id"]
     trail = reconstruct_audit_trail(memory_db_session, episodic_id)
@@ -277,9 +267,7 @@ def test_reconstruct_shows_both_policy_shas(
 
     with _stack(85):
         asyncio.run(graph.ainvoke(_initial(threshold=70), config=cfg))
-        final = asyncio.run(
-            graph.ainvoke(Command(resume=_decision(policy)), config=cfg)
-        )
+        final = asyncio.run(graph.ainvoke(Command(resume=_decision(policy)), config=cfg))
 
     trail = reconstruct_audit_trail(memory_db_session, final["episodic_stored_id"])
     # Risk policy_sha on the analysis row (Phase 6 -> 7 audit linkage)

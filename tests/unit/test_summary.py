@@ -197,9 +197,7 @@ class TestFormatNewsSummary:
         )
         assert "AAPL" in result
         has_content = (
-            "Apple beats earnings" in result
-            or "Reuters" in result
-            or "sentiment" in result.lower()
+            "Apple beats earnings" in result or "Reuters" in result or "sentiment" in result.lower()
         )
         assert has_content
 

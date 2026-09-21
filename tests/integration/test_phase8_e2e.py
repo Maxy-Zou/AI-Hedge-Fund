@@ -152,9 +152,7 @@ def _stubbed_stack(*, thesis_confidence: int = 85) -> ExitStack:
     stack.enter_context(technical_agent.override(model=TestModel(call_tools=[])))
     stack.enter_context(manager_agent.override(model=TestModel()))
     stack.enter_context(bull_agent.override(model=TestModel()))
-    stack.enter_context(
-        bear_agent.override(model=TestModel(custom_output_args=_valid_bear_case()))
-    )
+    stack.enter_context(bear_agent.override(model=TestModel(custom_output_args=_valid_bear_case())))
     stack.enter_context(rebuttal_agent.override(model=TestModel()))
     stack.enter_context(final_arguments_agent.override(model=TestModel()))
     stack.enter_context(
@@ -217,9 +215,7 @@ def _build_pipeline(
             with_memory=True,
             memory_deps=MemoryDeps(db_session=session, beliefs_path=beliefs_dir),
             with_risk=True,
-            risk_deps=RiskDeps(
-                db_session=session, returns=_golden_returns(), policy=risk_policy
-            ),
+            risk_deps=RiskDeps(db_session=session, returns=_golden_returns(), policy=risk_policy),
             with_output=True,
             with_review=True,
             review_deps=ReviewDeps(db_session=session, policy=review_policy),
@@ -229,9 +225,7 @@ def _build_pipeline(
         with_memory=True,
         memory_deps=MemoryDeps(db_session=session, beliefs_path=beliefs_dir),
         with_risk=True,
-        risk_deps=RiskDeps(
-            db_session=session, returns=_golden_returns(), policy=risk_policy
-        ),
+        risk_deps=RiskDeps(db_session=session, returns=_golden_returns(), policy=risk_policy),
         with_output=True,
         with_review=False,
         review_deps=ReviewDeps(db_session=session, policy=review_policy),
@@ -343,9 +337,7 @@ def test_approved_resume_completes(
 
     assert final["review_decision"]["status"] == "APPROVED"
     assert final["review_stored_id"] is not None
-    review_rows = (
-        memory_db_session.query(EpisodicMemory).filter_by(record_type="review").all()
-    )
+    review_rows = memory_db_session.query(EpisodicMemory).filter_by(record_type="review").all()
     assert len(review_rows) == 1
     assert review_rows[0].payload["review_status"] == "APPROVED"
 
@@ -397,9 +389,7 @@ def test_rejected_resume_persists_row_and_analysis_unchanged(
     assert after_row.record_type == before_snapshot["record_type"]
     assert after_row.policy_sha == before_snapshot["policy_sha"]
 
-    review_rows = (
-        memory_db_session.query(EpisodicMemory).filter_by(record_type="review").all()
-    )
+    review_rows = memory_db_session.query(EpisodicMemory).filter_by(record_type="review").all()
     assert len(review_rows) == 1
     assert review_rows[0].payload["review_status"] == "REJECTED"
 
@@ -417,9 +407,7 @@ def test_vetoed_never_reaches_review(
     (no signal); human_review_node short-circuits on error; review_store_node
     short-circuits on error -- no review row written.
     """
-    vetoed_policy = _wide_open_risk_policy().model_copy(
-        update={"excluded_sectors": ["Technology"]}
-    )
+    vetoed_policy = _wide_open_risk_policy().model_copy(update={"excluded_sectors": ["Technology"]})
 
     graph = _build_pipeline(
         session=memory_db_session,
@@ -431,9 +419,7 @@ def test_vetoed_never_reaches_review(
     with _stubbed_stack(thesis_confidence=85):
         result = asyncio.run(
             graph.ainvoke(
-                _initial_state(
-                    ticker="AAPL", sector="Technology", threshold=70
-                ),
+                _initial_state(ticker="AAPL", sector="Technology", threshold=70),
                 config=cfg,
             )
         )
@@ -442,15 +428,11 @@ def test_vetoed_never_reaches_review(
     assert result.get("review_decision") is None
     assert result.get("final_signal") is None  # output_node short-circuited
 
-    review_rows = (
-        memory_db_session.query(EpisodicMemory).filter_by(record_type="review").all()
-    )
+    review_rows = memory_db_session.query(EpisodicMemory).filter_by(record_type="review").all()
     assert len(review_rows) == 0
 
     # Analysis (VETOED) row still written by Phase-7 episodic_store_node
-    analysis_rows = (
-        memory_db_session.query(EpisodicMemory).filter_by(record_type="analysis").all()
-    )
+    analysis_rows = memory_db_session.query(EpisodicMemory).filter_by(record_type="analysis").all()
     assert len(analysis_rows) == 1
     assert analysis_rows[0].payload["risk_assessment"]["status"] == "VETOED"
 
@@ -472,9 +454,7 @@ def test_not_required_path_writes_review_row_uniform_audit(
     with _stubbed_stack(thesis_confidence=50):
         asyncio.run(graph.ainvoke(_initial_state(threshold=70), config=cfg))
 
-    review_rows = (
-        memory_db_session.query(EpisodicMemory).filter_by(record_type="review").all()
-    )
+    review_rows = memory_db_session.query(EpisodicMemory).filter_by(record_type="review").all()
     assert len(review_rows) == 1
     assert review_rows[0].payload["review_status"] == "NOT_REQUIRED"
 

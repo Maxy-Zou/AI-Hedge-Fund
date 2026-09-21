@@ -245,9 +245,7 @@ def format_news_summary(
 
     avg_sentiment = sum(a["sentiment_score"] for a in articles) / len(articles)
     sentiment_label = (
-        "positive" if avg_sentiment > 0.2
-        else "negative" if avg_sentiment < -0.2
-        else "neutral"
+        "positive" if avg_sentiment > 0.2 else "negative" if avg_sentiment < -0.2 else "neutral"
     )
 
     headlines = []

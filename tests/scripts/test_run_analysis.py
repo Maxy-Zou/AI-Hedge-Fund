@@ -126,9 +126,7 @@ class _FakeGraph:
         self._results = list(results)
         self.invocations: list[tuple[Any, Any]] = []
 
-    async def ainvoke(
-        self, state: Any, config: dict[str, Any] | None = None
-    ) -> dict[str, Any]:
+    async def ainvoke(self, state: Any, config: dict[str, Any] | None = None) -> dict[str, Any]:
         self.invocations.append((state, config))
         if not self._results:
             raise AssertionError("_FakeGraph called more times than canned results")
@@ -274,9 +272,7 @@ def test_malformed_reviewer_io_bubbles(deps: dict[str, Any]) -> None:
         def __init__(self) -> None:
             self.first_call = True
 
-        async def ainvoke(
-            self, state: Any, config: dict[str, Any] | None = None
-        ) -> dict[str, Any]:
+        async def ainvoke(self, state: Any, config: dict[str, Any] | None = None) -> dict[str, Any]:
             if self.first_call:
                 self.first_call = False
                 return _mk_interrupt_state()
@@ -332,9 +328,7 @@ def test_format_output_markdown_default() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_thread_id_uuid_suffix(
-    deps: dict[str, Any], monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_thread_id_uuid_suffix(deps: dict[str, Any], monkeypatch: pytest.MonkeyPatch) -> None:
     """thread_id MUST match ^AAPL-2026-04-20-[0-9a-f]{8}$."""
     factory = _fake_factory([_mk_final_state(conviction=50)])
     fake_hex = "deadbeefcafef00dba5eba11feedface"  # 32-char hex
@@ -342,9 +336,7 @@ def test_thread_id_uuid_suffix(
     class _FakeUUID:
         hex = fake_hex
 
-    monkeypatch.setattr(
-        "ai_hedge_fund.scripts.run_analysis.uuid.uuid4", lambda: _FakeUUID()
-    )
+    monkeypatch.setattr("ai_hedge_fund.scripts.run_analysis.uuid.uuid4", lambda: _FakeUUID())
 
     asyncio.run(
         run_analysis(
@@ -381,9 +373,7 @@ def test_vetoed_no_signal_formats_blocked(deps: dict[str, Any]) -> None:
         "episodic_stored_id": 5,
     }
     factory = _fake_factory([vetoed_state])
-    reviewer_io = MagicMock(
-        side_effect=AssertionError("reviewer_io must not fire on VETOED path")
-    )
+    reviewer_io = MagicMock(side_effect=AssertionError("reviewer_io must not fire on VETOED path"))
 
     final = asyncio.run(
         run_analysis(
@@ -419,10 +409,7 @@ def test_review_threshold_injected(deps: dict[str, Any]) -> None:
         )
     )
     initial_state = factory.graph.invocations[0][0]
-    assert (
-        initial_state["_review_threshold"]
-        == deps["review_policy"].conviction_threshold
-    )
+    assert initial_state["_review_threshold"] == deps["review_policy"].conviction_threshold
 
 
 # ---------------------------------------------------------------------------
@@ -486,8 +473,6 @@ def test_structlog_run_analysis_complete_emitted(deps: dict[str, Any]) -> None:
         )
     event_names = [e.get("event") for e in events]
     assert "run_analysis_complete" in event_names
-    complete_event = next(
-        e for e in events if e.get("event") == "run_analysis_complete"
-    )
+    complete_event = next(e for e in events if e.get("event") == "run_analysis_complete")
     assert complete_event.get("ticker") == "AAPL"
     assert complete_event.get("conviction") == 50

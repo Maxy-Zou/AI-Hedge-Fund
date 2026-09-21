@@ -293,9 +293,7 @@ class TestBearCase:
         with pytest.raises(ValidationError):
             BearCase(
                 ticker="AAPL",
-                claims=self._valid_claims(
-                    3, addresses=["Revenue grew 20% YoY", None, None]
-                ),
+                claims=self._valid_claims(3, addresses=["Revenue grew 20% YoY", None, None]),
                 addressed_bull_claims=["Revenue grew 20% YoY", ""],
                 headline="h",
             )
@@ -329,9 +327,7 @@ class TestBearCase:
         with pytest.raises(ValidationError) as exc_info:
             BearCase(
                 ticker="AAPL",
-                claims=self._valid_claims(
-                    3, addresses=["Revenue grew 20% YoY", None, None]
-                ),
+                claims=self._valid_claims(3, addresses=["Revenue grew 20% YoY", None, None]),
                 addressed_bull_claims=[
                     "Revenue grew 20% YoY",
                     "Services margin expanding",

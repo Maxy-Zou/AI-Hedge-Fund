@@ -44,10 +44,7 @@ class ReviewPolicy(BaseModel):
         description="Signals with conviction >= this value require human review",
     )
     review_prompt_template: str = Field(
-        default=(
-            "Review required: {ticker} conviction {conviction}. "
-            "Approve (y) or reject (n)?"
-        ),
+        default=("Review required: {ticker} conviction {conviction}. Approve (y) or reject (n)?"),
         min_length=1,
         description="stdin prompt shown to the CLI reviewer",
     )
