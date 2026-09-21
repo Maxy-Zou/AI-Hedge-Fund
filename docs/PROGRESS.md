@@ -1,4 +1,35 @@
-## 2026-04-24 — Fix: risk_score=0 on every APPROVED signal (debug session: risk-score-zero-on-approved)
+## 2026-09-21 — Fix: pydantic-ai 2.x API drift broke 84 tests on fresh clone
+
+Third instance of the vendor-drift class flagged in the 2026-04-24 entry — this time in a *direct* dependency, not a data vendor. A clean clone + `uv sync --extra dev` resolved `pydantic-ai==2.46.0` (pyproject pins only `>=1.0.0`), and 84 of 1134 tests failed immediately.
+
+**Two breaking renames across the 1.x → 2.x major bump:**
+- `AgentRunResult.usage()` became a property, not a method → `TypeError: 'RunUsage' object is not callable` (72 failures, all downstream of one module).
+- `Agent._max_result_retries` → `Agent._max_output_retries` (12 failures, test-side assertions only).
+
+**Files changed:**
+- `src/ai_hedge_fund/graph/nodes.py` — 15 call sites, `result.usage()` → `result.usage`.
+- `tests/unit/test_{bull,bear,research,manager,fundamental,sentiment,technical,signal,rebuttal,final_arguments,debate_synthesis}_agent.py` — 12 assertions renamed to `_max_output_retries`.
+
+27 lines total, no behavior change: `usage` returns the same `RunUsage`, so every downstream `.input_tokens` / `.output_tokens` read is unaffected. Token-budget enforcement and Langfuse span attributes verified intact by the existing suites.
+
+**Verification:**
+- Full suite: **1134 passed, 9 skipped** (was 84 failed / 1050 passed). Runtime 26s.
+- `ruff check` clean on all 12 touched files.
+- Pre-existing and NOT introduced here: 19 `ruff check` errors + 64 files failing `ruff format --check` at pristine HEAD, caused by ruff resolving to 0.16.8 against a `>=0.15.0` pin. Left untouched — a formatting sweep would bury this fix in a 64-file diff.
+
+**Root cause closed in the same session (not just the symptom).** `uv.lock` was in `.gitignore` and every dependency in `pyproject.toml` was an open-ended `>=` floor, so a fresh clone resolved to whatever was newest on PyPI that day -- every clone was a fresh drift roll. This is the same failure mode as the 2026-04-24 edgartools entry, and the "weekly live-API smoke test" proposed there would not have caught it: this break is at import/unit-test level with no network involved.
+
+Three changes close the class:
+- **`uv.lock` is now committed** (removed from `.gitignore`). 167 packages pinned; `uv sync --frozen --extra dev` verified reproducible.
+- **Every direct dependency carries an upper bound** (`>=floor,<next-major`). Two floors were raised because they were actively wrong, not merely loose: `pydantic-ai>=1.0.0` -> `>=2.0.0` (1.x would now fail against the migrated call sites; annotated inline in pyproject.toml) and `anthropic>=0.94.0` -> `>=1.0.0` (that dep had silently crossed 0.x -> 1.x too, so far without breaking). All other floors left as-is -- they encode "minimum known-good", and the lock pins the actual resolve.
+- **ruff unified and capped** at `>=0.16.8,<0.17`. It previously appeared twice with conflicting floors (`>=0.15.0` in optional-dependencies, `>=0.15.10` in dependency-groups), so formatter output was not deterministic across environments.
+- **`### Dependency Policy` added to CLAUDE.md** so the convention outlives this session: frozen installs, deliberate per-package upgrades, lockfile deltas in their own commit.
+
+Suite re-verified green (1134 passed, 9 skipped) after re-resolving from scratch against the new bounds.
+
+**Pre-existing, deliberately not swept here:** `ruff format --check` reports 64 unformatted files under 0.16.8 -- but also 28 under 0.15.x, the version this code was written against. So this is genuine formatting debt, not pure version drift, and a 64-file reformat would have buried a 27-line fix. Worth its own commit.
+
+**Also spotted, not addressed:** `CLAUDE.md` has 12 duplicated section headings (`## Conventions`, `## Architecture`, `### Code Style`, `### Layers`, and 8 more each appear twice) -- roughly half the 408-line file is duplicated content, likely a bad merge. And GitHub's default branch is `main`, a 2-commit stub; all 539 commits of real work live on `shared/backtest-framework`, so a fresh clone lands on an effectively empty repo.
 
 Second drift surfaced from the first end-to-end AAPL run: APPROVED risk assessments shipped with `risk_score: 0/100`. Root cause: `derive_risk_score` (output/signal.py) read `observed`/`limit` off `RiskAssessment`, but those fields are only populated when a check fires a `Violation` -- i.e. only on VETOED. APPROVED runs collapsed `or 0.0` / `or 1.0` fallbacks to ratio=0.
 

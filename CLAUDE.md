@@ -107,6 +107,25 @@ Priority order for agent consumption:
 - Functions under 50 lines, files under 800 lines
 - ruff for formatting and linting: `ruff format . && ruff check . --fix`
 
+### Dependency Policy
+Vendor/library drift has broken this project three times (edgartools 5.x, then
+pydantic-ai 1.x -> 2.x). The cause was open-ended `>=` floors with no committed
+lockfile, so every clone resolved to whatever was newest on PyPI that day.
+
+- **`uv.lock` is committed.** It is the source of truth for what actually works.
+  Never add it back to `.gitignore`.
+- **Install with `uv sync --frozen --extra dev`** for any reproducible context
+  (CI, a fresh clone, debugging someone else's failure). Plain `uv sync` may
+  re-resolve.
+- **Every direct dependency carries an upper bound** (`>=floor,<next-major`) in
+  `pyproject.toml`. A major bump must be a deliberate, reviewed change.
+- **Upgrade deliberately:** `uv sync --upgrade-package <name>`, run the full
+  suite, and commit the lockfile delta in its own commit so the diff is
+  reviewable. Never blanket `uv sync --upgrade` as a side effect of other work.
+- **Floors encode "known-good", not "whatever installed".** Raise a floor only
+  when the code genuinely requires the newer API, and say why in a comment
+  (see the `pydantic-ai` entry in `pyproject.toml`).
+
 ### Agent Development Rules
 - **Tool-first for quantitative work.** LLMs NEVER compute financial ratios, run backtests, or calculate position sizes directly. They orchestrate tools that do this deterministically.
 - **Strict temporal controls.** Every data input must have a timestamp. RAG retrieval must filter by "available as of analysis date." This prevents look-ahead bias.
