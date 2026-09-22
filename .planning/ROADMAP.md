@@ -47,7 +47,7 @@
   3. Every `paper_trades` row carries both `as_of_date` and `observed_date`; an insert missing either one fails rather than defaulting
   4. `paper_trades.signal_id` foreign-keys to `episodic_memory.id` -- inserting a trade whose signal does not exist is rejected, so every order traces back to a thesis
   5. A FUTUREX-style regression seed dated 2099-01-01 is invisible to every recall query filtering `as_of_date <= target`, proving the temporal guarantee holds on the new tables
-**Plans:** to be created by `/gsd-execute-phase`
+**Plans:** written during the Plan -> Spec -> Pre-mortem stages (CLAUDE.md, Development Workflow) before any code
 
 ### Phase 10: Paper Execution Surface
 **Goal**: A signal becomes a submitted paper order, sized deterministically and refused when risk vetoes -- so the track record reflects only orders the pipeline actually sanctioned
@@ -59,7 +59,7 @@
   3. A signal whose `risk_assessment.status == VETOED` is refused before any broker call is made, verified by asserting zero outbound HTTP requests rather than by inspecting a return value
   4. Missing any of `ALPACA_PAPER_API_KEY` / `ALPACA_PAPER_SECRET` / `ALPACA_PAPER_HOST` fails at startup with an error naming the absent variable -- not at first order submission
   5. An order submitted against the Alpaca paper endpoint returns a broker order id that is persisted to `paper_trades`, closing the loop between intent and broker state
-**Plans:** to be created by `/gsd-execute-phase`
+**Plans:** written during the Plan -> Spec -> Pre-mortem stages (CLAUDE.md, Development Workflow) before any code
 
 ### Phase 11: Mark-to-Market and Attribution
 **Goal**: A daily job that turns fills into an append-only P&L series decomposed by analyst, debate side, and conviction -- so performance can be attributed rather than merely totaled
@@ -70,7 +70,7 @@
   2. Re-running the job for an already-processed date adds zero rows and issues zero UPDATEs -- idempotency is achieved by skip-or-insert, never by mutation
   3. The attribution rollup decomposes total P&L by analyst (fundamental / sentiment / technical), by debate-side winner (bull / bear), and by conviction bucket, and the components sum to the total within rounding tolerance
   4. `paper_pnl_daily` holds exactly one row per (signal, date), and rows written on previous runs are byte-identical after a re-run
-**Plans:** to be created by `/gsd-execute-phase`
+**Plans:** written during the Plan -> Spec -> Pre-mortem stages (CLAUDE.md, Development Workflow) before any code
 
 ### Phase 12: Promotion Gate
 **Goal**: A SHA-pinned policy that decides whether a signal has earned live capital, joined to the existing audit chain so any verdict is reconstructible after the fact
@@ -82,7 +82,7 @@
   3. The gate maps a signal to exactly one of `{paper-only, eligible-for-live, rejected}` in pure Python; the LLM contributes rationale prose only and cannot alter the verdict
   4. Three-way equality holds end-to-end: `promotion_policy_sha` in graph state == the persisted DB column == the value in the output payload
   5. Every gate decision appends a new row with `record_type='promotion'` -- re-deciding a signal leaves the prior decision row untouched and readable
-**Plans:** to be created by `/gsd-execute-phase`
+**Plans:** written during the Plan -> Spec -> Pre-mortem stages (CLAUDE.md, Development Workflow) before any code
 
 ### Phase 13: Track-Record Reporting
 **Goal**: An LP/YC-shareable record of what the fund actually did, verifiable by a reader against the exact policy it was gated by
@@ -93,7 +93,7 @@
   2. The markdown output contains no absolute filesystem paths and no raw SHAs, and leads with headline metrics (Sharpe, max drawdown, hit rate, total return) before any detail
   3. The JSON output includes `promotion_policy_sha` and validates against a published schema, so a consumer can verify which gate the report was built against
   4. Report generation emits a Langfuse trace, letting cost-per-report be correlated with the existing token-budget telemetry
-**Plans:** to be created by `/gsd-execute-phase`
+**Plans:** written during the Plan -> Spec -> Pre-mortem stages (CLAUDE.md, Development Workflow) before any code
 
 ## Progress
 
