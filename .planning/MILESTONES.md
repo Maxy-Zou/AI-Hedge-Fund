@@ -54,8 +54,8 @@ None are code defects. All are external-integration or subjective-quality items 
 
 ### Next Up
 
-`v1.1` / `v2.0` to be defined via `/gsd-new-milestone`. Candidate themes (per PROJECT.md constraints):
-- Paper trading integration + live-data smoke tests.
+`v1.1` — Paper Trading + Promotion Gate — defined 2026-09-21: Phases 9-13 in `ROADMAP.md`, 23 requirements in `REQUIREMENTS.md`. Candidate themes for v1.2+ (per PROJECT.md constraints):
+- Live-data smoke tests against real vendor APIs (paper trading itself became v1.1).
 - Rich review UI (web or TUI) replacing the CLI blocking stdin.
 - Portfolio optimization on top of the ranked signals.
 - Automated compliance report generation (Langfuse trace → PDF).

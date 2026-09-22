@@ -1,3 +1,24 @@
+## 2026-09-22 — GSD retired: workflow replaced, all tooling references stripped
+
+User reported the GSD planning/execution tooling is compromised (founder rug-pull, suspected backdoors) and is removing it from their machine. This commit removes every GSD dependency from the repo and replaces the mandated workflow with a plain, tool-free one.
+
+**Security audit (nothing malicious found):**
+- Repo `.claude/settings.json` has one `PostToolUse` hook -- `chflags nohidden` on venv `.pth` files. Benign, predates GSD (commit 1180d4f "env hardening"; workaround for a macOS uv bug when the project path had a space -- the path no longer does, so the hook is now dead weight; left for a separate cleanup).
+- Global `~/.claude/settings.json`: no hooks. No GSD plugin installed or enabled; the disabled `everything-claude-code` plugin cache contains no GSD code.
+- `gsd` in Claude Code shell snapshots is the oh-my-zsh alias `git svn dcommit` -- unrelated.
+- `src/`, `tests/`, `alembic/`, `config/`: zero GSD references. Only markdown docs and one JSON config carried them.
+- `.planning/config.json` was pure GSD runtime config, including `"mode": "yolo"` (auto-approve) -- deleted.
+
+**CLAUDE.md:** removed the `<!-- GSD:* -->` marker scaffolding (project/stack content kept verbatim), the empty "Project Skills" and "Developer Profile" stubs, and the "GSD Workflow Enforcement" section that required `/gsd-*` commands before edits. Added **Development Workflow**: `main` as sole trunk, one `phase/<NN>-<slug>` branch per phase, six stages per phase (Plan -> Spec -> Pre-mortem -> TDD -> Code review -> Merge via PR), verification gates on every PR. Fix-as-you-find escalation now points at plan+spec+pre-mortem instead of `/gsd-debug`.
+
+**Planning docs:** `ROADMAP.md` (5x `/gsd-execute-phase` -> workflow stages), `PROJECT.md` (`/gsd-transition` / `/gsd-complete-milestone` parentheticals dropped), `STATE.md` (`gsd_state_version` key removed; stale "defining requirements" focus corrected), `MILESTONES.md` (v1.1 recorded as defined; "Next Up" now lists v1.2+ candidates), `docs/V1.1_PAPER_TRADING_PLAN.md` (status line updated; open questions now owned by phase specs). `.planning/` directory kept -- its content is the project's own requirements, roadmap, and research; only the tooling references were GSD's.
+
+**Deliberately not rewritten:** historical v1.0 phase records under `.planning/phases/01-08`, `.planning/milestones/`, `.planning-archive/`, `archive/`, and older PROGRESS.md entries still say things like "ready for `/gsd-verify-work`". They are past-tense records of what happened, contain no executables, and rewriting them would falsify history.
+
+**Also noticed, not addressed:** `.planning/phases/01-08` and `.planning/milestones/v1.0-phases/01-08` are byte-identical duplicates (the v1.0 archive step copied without removing the originals). Same class of issue as the CLAUDE.md duplication fixed 2026-09-21.
+
+No code changed. Suite untouched at 1134 passed, 9 skipped.
+
 ## 2026-09-21 — v1.1 roadmap: Phases 9-13 defined, 23/23 requirements mapped
 
 `.planning/STATE.md` claimed "REQUIREMENTS.md + ROADMAP.md pending". Only half true: `REQUIREMENTS.md` already held all 23 v1.1 requirements (EXEC/PT/MTM/PROMO/TRACK) from the 2026-04-25 bootstrap, but its traceability table read `TBD -- pending roadmap` for every row, and `ROADMAP.md` still said "No next milestone defined yet." So the requirements were real and the roadmap genuinely was not.
