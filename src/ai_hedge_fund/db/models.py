@@ -27,6 +27,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB as _JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
+from ai_hedge_fund.db.append_only import AppendOnlyGuard
 from ai_hedge_fund.db.base import Base, DualTimestampMixin
 
 
@@ -241,7 +242,7 @@ class EpisodicMemory(Base, DualTimestampMixin):
     payload: Mapped[dict] = mapped_column(_JSONB().with_variant(JSON, "sqlite"), nullable=False)
 
 
-class PaperTrade(Base, DualTimestampMixin):
+class PaperTrade(Base, DualTimestampMixin, AppendOnlyGuard):
     """One order *intent* and its synchronous broker response (Phase 9, PT-01/03).
 
     Append-only: a row is written once at submission time and never updated.
@@ -309,7 +310,7 @@ class PaperTrade(Base, DualTimestampMixin):
     )
 
 
-class PaperFill(Base, DualTimestampMixin):
+class PaperFill(Base, DualTimestampMixin, AppendOnlyGuard):
     """One fill event reported by the broker for a :class:`PaperTrade` (Phase 9, PT-02).
 
     Append-only. A partially-filled order produces several rows.
