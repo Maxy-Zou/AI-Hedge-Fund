@@ -21,6 +21,11 @@ from ai_hedge_fund.paper.records import (
     PaperFillRecord,
     PaperTradeRecord,
 )
+from ai_hedge_fund.paper.seed import (
+    resolve_signal_id,
+    seed_paper_fills_from_csv,
+    seed_paper_trades_from_csv,
+)
 from ai_hedge_fund.paper.store import insert_paper_fill, insert_paper_trade
 
 __all__ = [
@@ -38,4 +43,7 @@ __all__ = [
     "TradeNotFound",
     "insert_paper_fill",
     "insert_paper_trade",
+    "resolve_signal_id",
+    "seed_paper_fills_from_csv",
+    "seed_paper_trades_from_csv",
 ]
