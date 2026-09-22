@@ -6,7 +6,7 @@ delivered: 2026-09-22
 branch: phase/09-paper-data-layer
 pr: 2
 requirements: [PT-01, PT-02, PT-03, PT-04, PT-05]
-tests_added: 79 functions (1134 -> 1263 passed incl. parametrized; 11 skipped, 2 of them PostgreSQL-gated)
+tests_added: 94 functions (1134 -> 1283 passed incl. parametrized; 11 skipped, 2 of them PostgreSQL-gated)
 ---
 
 # Phase 9 -- Paper-Trading Data Layer: Summary
@@ -61,6 +61,17 @@ tests_added: 79 functions (1134 -> 1263 passed incl. parametrized; 11 skipped, 2
 
 Two findings the pre-mortem did not predict surfaced during TDD and are in TECH-DEBT.md: SQLAlchemy's JSON type stores `None` as the string `'null'` (the paper tables now use `none_as_null=True`; `EpisodicMemory.payload` has the same latent gap), and the suite had never executed an alembic migration before this phase.
 
+## Code review (T9)
+
+Reviewed at high effort against the spec, the pre-mortem, and CLAUDE.md before un-drafting. **Ten findings, all fixed in `07104d8`, each with a RED test first.** The two that mattered most:
+
+- **The payload secret tripwire rejected `tokens_used`** -- a key every v1.0 pipeline event already emits. Phase 10's first real order would have failed validation. The regex is now anchored on underscore/edge.
+- **The L3 trigger existed only in the migration.** A database bootstrapped with `Base.metadata.create_all` -- exactly what was done on 2026-04-24 -- would have had no trigger and no error. The idempotent DDL is now also attached to the `Table` objects, so either path produces it.
+
+The rest: L2 was blind to `update(Model.__table__)` (now keyed on table name as well as mapper; legacy `Query.update()` covered too); the parity test silently dropped FK diff kinds and never compared CHECKs (both now covered); `limit` accepted negatives (unbounded on SQLite); unique-violation detection was a substring match on driver text (now SQLSTATE / `sqlite_errorname`); seed CSV headers were never validated and `attempt_no=0` became 1; three modules still imported the private `_normalise_as_of` alias; migration `upgrade()` was 75 lines; and the `RAISE` message carried a bare `%` through two formatting layers (now `USING MESSAGE`, no `%` at all).
+
+**What the review could not verify:** the PostgreSQL trigger has still never executed against PostgreSQL in this environment. The DDL is now the lowest-risk shape available, but the three `@slow` tests must run once against docker-compose Postgres before migration 004 touches a real database.
+
 ## Handoff to Phase 10
 
 - Write orders through `ai_hedge_fund.paper.insert_paper_trade(session, NewPaperTrade(...))`. It validates lineage and raises typed `PaperStoreError`s; after any of them the session is already rolled back.
@@ -71,4 +82,4 @@ Two findings the pre-mortem did not predict surfaced during TDD and are in TECH-
 
 ## Commits (in order)
 
-`195befe` merge main · `e8aaad3` remove dead AppendOnlyMixin · `976a14b` promote normalise_as_of · `aa88072` SQLite FK pragma · `b867d26` models · `0a42ecc` append-only guard · `969819c` migration 004 + round-trip · `1791d3e` records + store · `b8b7a79` seeders + fixtures · `95ccc89` recall · (this commit) docs.
+`195befe` merge main · `e8aaad3` remove dead AppendOnlyMixin · `976a14b` promote normalise_as_of · `aa88072` SQLite FK pragma · `b867d26` models · `0a42ecc` append-only guard · `969819c` migration 004 + round-trip · `1791d3e` records + store · `b8b7a79` seeders + fixtures · `95ccc89` recall · `e1a72fe` docs · `07104d8` review fixes (10/10) · (this commit) summary.
