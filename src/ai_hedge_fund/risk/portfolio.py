@@ -23,12 +23,13 @@ string concatenation. The loader's filter is fully parameterised.
 from __future__ import annotations
 
 import csv
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
+from ai_hedge_fund.db.dates import normalise_as_of as _normalise_as_of
 from ai_hedge_fund.db.models import PortfolioPosition
 
 
@@ -85,20 +86,6 @@ class PortfolioSnapshot(BaseModel):
         if self.total_value_cents == 0:
             return {}
         return {p.ticker: p.current_value_cents / self.total_value_cents for p in self.positions}
-
-
-def _normalise_as_of(value: str | date | datetime) -> datetime:
-    """Convert loose date/datetime/string inputs to a UTC datetime.
-
-    Naive datetimes are treated as UTC. Plain dates become midnight UTC.
-    Strings are parsed via ``datetime.fromisoformat`` (ISO-8601 only).
-    """
-    if isinstance(value, datetime):
-        return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
-    if isinstance(value, date):
-        return datetime(value.year, value.month, value.day, tzinfo=UTC)
-    parsed = datetime.fromisoformat(value)
-    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
 
 
 def load_portfolio(db_session: Session, as_of_date: str | date | datetime) -> PortfolioSnapshot:
