@@ -1,12 +1,11 @@
 ---
-gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Paper Trading + Promotion Gate
 current_plan: —
 status: ready_to_execute
 stopped_at: v1.1 roadmap complete — Phases 9-13 defined, 23/23 requirements mapped; Phase 9 not started
 last_updated: "2026-09-21T00:00:00.000Z"
-last_activity: "2026-09-21 -- v1.1 roadmap written by hand (GSD tooling not installed); Phases 9-13 defined, traceability filled 23/23"
+last_activity: "2026-09-21 -- v1.1 roadmap written by hand (GSD retired); Phases 9-13 defined, traceability filled 23/23"
 progress:
   total_phases: 5
   completed_phases: 0
@@ -22,7 +21,7 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-25)
 
 **Core value:** Produce institutional-quality investment research at scale -- structured theses with quantitative signals that are rigorous enough to trade on and transparent enough to show investors.
-**Current focus:** v1.1 — Paper Trading + Promotion Gate (defining requirements)
+**Current focus:** v1.1 — Paper Trading + Promotion Gate (Phase 9 not started)
 
 ## Current Position
 
