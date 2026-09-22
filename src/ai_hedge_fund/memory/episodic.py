@@ -12,13 +12,13 @@ concatenation.
 from __future__ import annotations
 
 import csv
-from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
+from ai_hedge_fund.db.dates import normalise_as_of as _normalise_as_of
 from ai_hedge_fund.db.models import EpisodicMemory
 
 
@@ -43,21 +43,6 @@ class EpisodicHit(BaseModel):
     linked_analysis_id: int | None = None
     policy_sha: str | None = None
     payload: dict[str, Any] = Field(default_factory=dict)
-
-
-def _normalise_as_of(value: str | date | datetime) -> datetime:
-    """Convert loose date/datetime/string inputs to a UTC datetime.
-
-    Mirrors the helper in :mod:`ai_hedge_fund.risk.portfolio`. Naive
-    datetimes are treated as UTC. Plain dates become midnight UTC. Strings
-    are parsed via :func:`datetime.fromisoformat` (ISO-8601 only).
-    """
-    if isinstance(value, datetime):
-        return value if value.tzinfo is not None else value.replace(tzinfo=UTC)
-    if isinstance(value, date):
-        return datetime(value.year, value.month, value.day, tzinfo=UTC)
-    parsed = datetime.fromisoformat(value)
-    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
 
 
 def seed_episodic_from_csv(db_session: Session, csv_path: str | Path) -> int:
