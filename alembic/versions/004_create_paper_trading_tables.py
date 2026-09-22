@@ -7,12 +7,17 @@ Create Date: 2026-09-22
 Phase 9 paper-trading ledger (PT-01..04). Both tables are append-only:
 the ORM guard (db/append_only.py) refuses UPDATE/DELETE at the session,
 and on PostgreSQL a BEFORE UPDATE OR DELETE trigger refuses them at the
-database -- the only layer that can see raw SQL. The trigger is skipped on
-SQLite (test dialect).
+database -- the only layer that can see raw SQL. Skipped on SQLite.
 
-DDL here must match the ORM models byte-for-byte in structure;
-tests/paper/test_migration_roundtrip.py::test_migration_matches_models
-enforces it with alembic's compare_metadata.
+The trigger DDL is deliberately duplicated from db/append_only.py rather
+than imported: a migration must be a frozen snapshot, and every statement
+is idempotent (CREATE OR REPLACE / DROP ... IF EXISTS) so the same trigger
+being attached by ``Base.metadata.create_all`` is harmless. The RAISE uses
+``USING MESSAGE`` so the text contains no '%' for psycopg to misread.
+
+DDL here must match the ORM models in structure;
+tests/paper/test_migration_roundtrip.py enforces it (compare_metadata for
+tables/columns/indexes/uniques/FKs, plus an explicit CHECK comparison).
 
 paper_pnl_daily is deliberately NOT created here; it belongs to Phase 11
 (migration 005), which defines its write semantics.
@@ -33,41 +38,48 @@ depends_on = None
 
 _JSON = postgresql.JSONB().with_variant(sa.JSON, "sqlite")
 
-_TRIGGER_SQL = """
-CREATE FUNCTION paper_append_only_guard() RETURNS trigger AS $$
+_PG_FUNCTION = """
+CREATE OR REPLACE FUNCTION paper_append_only_guard() RETURNS trigger AS $$
 BEGIN
-    RAISE EXCEPTION 'append-only table %: % not permitted; write a new row instead',
-        TG_TABLE_NAME, TG_OP;
+    RAISE EXCEPTION USING
+        MESSAGE = 'append-only table ' || TG_TABLE_NAME || ': ' || TG_OP
+                  || ' not permitted; write a new row instead',
+        ERRCODE = 'restrict_violation';
 END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_paper_trades_append_only
-    BEFORE UPDATE OR DELETE ON paper_trades
-    FOR EACH ROW EXECUTE FUNCTION paper_append_only_guard();
-
-CREATE TRIGGER trg_paper_fills_append_only
-    BEFORE UPDATE OR DELETE ON paper_fills
-    FOR EACH ROW EXECUTE FUNCTION paper_append_only_guard();
+$$ LANGUAGE plpgsql
 """
 
-_DROP_TRIGGER_SQL = """
-DROP TRIGGER IF EXISTS trg_paper_fills_append_only ON paper_fills;
-DROP TRIGGER IF EXISTS trg_paper_trades_append_only ON paper_trades;
-DROP FUNCTION IF EXISTS paper_append_only_guard();
-"""
+
+def _pg_trigger(table: str) -> tuple[str, str]:
+    trg = f"trg_{table}_append_only"
+    return (
+        f"DROP TRIGGER IF EXISTS {trg} ON {table}",
+        f"CREATE TRIGGER {trg} BEFORE UPDATE OR DELETE ON {table} "
+        "FOR EACH ROW EXECUTE FUNCTION paper_append_only_guard()",
+    )
 
 
 def _is_postgres() -> bool:
     return op.get_bind().dialect.name == "postgresql"
 
 
-def upgrade() -> None:
+def _timestamps() -> tuple[sa.Column, sa.Column]:
+    return (
+        sa.Column("as_of_date", sa.DateTime(timezone=True), nullable=False),
+        sa.Column(
+            "observed_date",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
+    )
+
+
+def _create_paper_trades() -> None:
     op.create_table(
         "paper_trades",
         sa.Column("id", sa.Integer(), primary_key=True),
-        sa.Column(
-            "signal_id", sa.Integer(), sa.ForeignKey("episodic_memory.id"), nullable=False
-        ),
+        sa.Column("signal_id", sa.Integer(), sa.ForeignKey("episodic_memory.id"), nullable=False),
         sa.Column("attempt_no", sa.Integer(), nullable=False, server_default="1"),
         sa.Column("ticker", sa.String(10), nullable=False),
         sa.Column("side", sa.String(4), nullable=False),
@@ -80,21 +92,13 @@ def upgrade() -> None:
         sa.Column("policy_sha", sa.String(64), nullable=False),
         sa.Column("review_policy_sha", sa.String(64), nullable=False),
         sa.Column("payload", _JSON, nullable=False),
-        sa.Column("as_of_date", sa.DateTime(timezone=True), nullable=False),
-        sa.Column(
-            "observed_date",
-            sa.DateTime(timezone=True),
-            server_default=sa.func.now(),
-            nullable=False,
-        ),
+        *_timestamps(),
         sa.UniqueConstraint("signal_id", "attempt_no", name="uq_paper_trades_signal_attempt"),
         sa.UniqueConstraint("broker_order_id", name="uq_paper_trades_broker_order_id"),
         sa.CheckConstraint("attempt_no >= 1", name="ck_paper_trades_attempt_no"),
         sa.CheckConstraint("quantity > 0", name="ck_paper_trades_quantity"),
         sa.CheckConstraint("side IN ('buy', 'sell')", name="ck_paper_trades_side"),
-        sa.CheckConstraint(
-            "order_type IN ('market', 'limit')", name="ck_paper_trades_order_type"
-        ),
+        sa.CheckConstraint("order_type IN ('market', 'limit')", name="ck_paper_trades_order_type"),
         sa.CheckConstraint(
             "submit_status IN ('submitted', 'rejected', 'refused_veto')",
             name="ck_paper_trades_submit_status",
@@ -111,6 +115,8 @@ def upgrade() -> None:
     op.create_index("ix_paper_trades_signal_id", "paper_trades", ["signal_id"])
     op.create_index("ix_paper_trades_ticker_asof", "paper_trades", ["ticker", "as_of_date"])
 
+
+def _create_paper_fills() -> None:
     op.create_table(
         "paper_fills",
         sa.Column("id", sa.Integer(), primary_key=True),
@@ -120,13 +126,7 @@ def upgrade() -> None:
         sa.Column("fill_price_cents", sa.BigInteger(), nullable=False),
         sa.Column("filled_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("payload", _JSON, nullable=False),
-        sa.Column("as_of_date", sa.DateTime(timezone=True), nullable=False),
-        sa.Column(
-            "observed_date",
-            sa.DateTime(timezone=True),
-            server_default=sa.func.now(),
-            nullable=False,
-        ),
+        *_timestamps(),
         sa.UniqueConstraint("broker_fill_id", name="uq_paper_fills_broker_fill_id"),
         sa.CheckConstraint("filled_qty > 0", name="ck_paper_fills_filled_qty"),
         sa.CheckConstraint("fill_price_cents > 0", name="ck_paper_fills_fill_price"),
@@ -134,13 +134,22 @@ def upgrade() -> None:
     op.create_index("ix_paper_fills_trade_id", "paper_fills", ["trade_id"])
     op.create_index("ix_paper_fills_asof", "paper_fills", ["as_of_date"])
 
+
+def upgrade() -> None:
+    _create_paper_trades()
+    _create_paper_fills()
     if _is_postgres():
-        op.execute(_TRIGGER_SQL)
+        op.execute(_PG_FUNCTION)
+        for table in ("paper_trades", "paper_fills"):
+            for stmt in _pg_trigger(table):
+                op.execute(stmt)
 
 
 def downgrade() -> None:
     if _is_postgres():
-        op.execute(_DROP_TRIGGER_SQL)
+        op.execute("DROP TRIGGER IF EXISTS trg_paper_fills_append_only ON paper_fills")
+        op.execute("DROP TRIGGER IF EXISTS trg_paper_trades_append_only ON paper_trades")
+        op.execute("DROP FUNCTION IF EXISTS paper_append_only_guard()")
     op.drop_index("ix_paper_fills_asof", table_name="paper_fills")
     op.drop_index("ix_paper_fills_trade_id", table_name="paper_fills")
     op.drop_table("paper_fills")

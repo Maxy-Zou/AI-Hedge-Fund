@@ -100,6 +100,15 @@ def test_recall_limit(db_session: Session, seeded_ledger: tuple[int, int]) -> No
     assert [h.broker_order_id for h in hits] == ["ord-aapl-2"]
 
 
+@pytest.mark.parametrize("bad_limit", [0, -1])
+def test_recall_rejects_non_positive_limit(db_session: Session, bad_limit: int) -> None:
+    """Review F6: SQLite treats LIMIT -1 as unbounded; the guard must reject it."""
+    with pytest.raises(ValueError, match="limit"):
+        query_paper_trades(db_session, as_of_date="2026-04-30", ticker="AAPL", limit=bad_limit)
+    with pytest.raises(ValueError, match="limit"):
+        query_paper_fills(db_session, as_of_date="2026-04-30", limit=bad_limit)
+
+
 def test_recall_requires_ticker_or_signal_id(db_session: Session) -> None:
     with pytest.raises(ValueError, match="ticker or signal_id"):
         query_paper_trades(db_session, as_of_date="2026-04-30")

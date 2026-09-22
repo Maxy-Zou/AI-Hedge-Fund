@@ -72,7 +72,21 @@ def to_fill_record(row: PaperFill) -> PaperFillRecord:
 
 
 def _is_unique_violation(exc: IntegrityError) -> bool:
-    return "unique" in str(exc.orig).lower()
+    """Classify by driver error code, never by message text.
+
+    psycopg exposes SQLSTATE (``23505`` = unique_violation); sqlite3 exposes the
+    extended error name (``SQLITE_CONSTRAINT_UNIQUE``). An unrecognised driver
+    returns False so the raw ``IntegrityError`` propagates rather than being
+    mis-typed as a duplicate.
+    """
+    orig = exc.orig
+    sqlstate = getattr(orig, "sqlstate", None)
+    if sqlstate is not None:
+        return sqlstate == "23505"
+    errorname = getattr(orig, "sqlite_errorname", None)
+    if errorname is not None:
+        return errorname == "SQLITE_CONSTRAINT_UNIQUE"
+    return False
 
 
 def insert_paper_trade(db_session: Session, new: NewPaperTrade) -> PaperTradeRecord:

@@ -90,6 +90,7 @@ from ai_hedge_fund.agents.risk_manager import (
 from ai_hedge_fund.agents.sentiment import get_sentiment_limits, sentiment_agent
 from ai_hedge_fund.agents.signal import get_signal_limits, signal_agent
 from ai_hedge_fund.agents.technical import get_technical_limits, technical_agent
+from ai_hedge_fund.db.dates import normalise_as_of
 from ai_hedge_fund.db.models import EpisodicMemory
 from ai_hedge_fund.graph.memory_deps import MemoryDeps
 from ai_hedge_fund.graph.review_deps import ReviewDeps
@@ -99,7 +100,6 @@ from ai_hedge_fund.memory.beliefs import (
     belief_path_for_ticker,
     load_belief,
 )
-from ai_hedge_fund.memory.episodic import _normalise_as_of
 from ai_hedge_fund.memory.recall import query_episodic
 from ai_hedge_fund.output.signal import assemble_final_signal
 from ai_hedge_fund.review.decision import ReviewDecision
@@ -1161,10 +1161,10 @@ async def episodic_store_node(state: DebatePipelineState, deps: MemoryDeps) -> d
     # contract -- JSON-serialisable for LangGraph checkpoints). The
     # EpisodicMemory.as_of_date column is DateTime(timezone=True) (from
     # DualTimestampMixin); SQLite's DateTime binder rejects strings.
-    # _normalise_as_of is the same helper the episodic CSV seeder uses
+    # normalise_as_of is the same helper the episodic CSV seeder uses
     # (ai_hedge_fund.memory.episodic) and converts str|date|datetime to
     # a tz-aware UTC datetime.
-    as_of_dt = _normalise_as_of(state["as_of_date"])
+    as_of_dt = normalise_as_of(state["as_of_date"])
     row = EpisodicMemory(
         ticker=state["ticker"],
         sector=meta.get("sector") or "Unknown",
@@ -1343,7 +1343,7 @@ async def review_store_node(state: DebatePipelineState, deps: ReviewDeps) -> dic
     decision = state.get("review_decision")
     linked_id = state.get("episodic_stored_id")
     status = (decision or {}).get("status") or "NOT_REQUIRED"
-    as_of_dt = _normalise_as_of(state["as_of_date"])
+    as_of_dt = normalise_as_of(state["as_of_date"])
     final_signal_dict = state.get("final_signal") or {}
 
     row = EpisodicMemory(

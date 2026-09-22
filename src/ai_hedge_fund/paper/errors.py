@@ -28,6 +28,10 @@ class SignalTickerMismatch(PaperStoreError):
     """The denormalized ticker does not match the episodic row's ticker."""
 
 
+class SeedFormatError(PaperStoreError):
+    """A seed CSV does not have the expected header."""
+
+
 class AmbiguousSignal(PaperStoreError):
     """Seeder: more than one analysis row matches ``(ticker, as_of_date)``."""
 

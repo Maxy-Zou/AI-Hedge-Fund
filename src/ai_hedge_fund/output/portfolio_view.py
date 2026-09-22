@@ -40,8 +40,8 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ai_hedge_fund.db.dates import normalise_as_of
 from ai_hedge_fund.db.models import EpisodicMemory
-from ai_hedge_fund.memory.episodic import _normalise_as_of
 
 
 def query_portfolio_view(
@@ -75,7 +75,7 @@ def query_portfolio_view(
     between two calls WILL appear on the second call without any explicit
     refresh (Pitfall C mitigation).
     """
-    target = _normalise_as_of(as_of_date)
+    target = normalise_as_of(as_of_date)
 
     q = (
         select(EpisodicMemory)
@@ -109,7 +109,7 @@ def query_portfolio_view(
             "thesis_summary": thesis_summary,
             # Always render as date-only (YYYY-MM-DD). The column is ``Date``
             # but some dialects (and some historical rows written via
-            # ``_normalise_as_of``) surface as ``datetime``; slicing to the
+            # ``normalise_as_of``) surface as ``datetime``; slicing to the
             # first 10 chars normalises both forms to the stable ISO date.
             "as_of_date": (
                 row.as_of_date.isoformat()[:10]

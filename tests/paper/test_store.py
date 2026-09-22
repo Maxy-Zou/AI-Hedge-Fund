@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 from pydantic import ValidationError
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ai_hedge_fund.paper import (
@@ -23,6 +24,7 @@ from ai_hedge_fund.paper import (
     insert_paper_fill,
     insert_paper_trade,
 )
+from ai_hedge_fund.paper.store import _is_unique_violation
 from tests.paper.conftest import SHA, seed_signal
 
 
@@ -202,6 +204,47 @@ def test_payload_allows_idempotency_key_and_nested_keys() -> None:
     """'idempotency_key' is not a secret; nested keys are Phase 10's job to redact."""
     t = _new_trade(1, payload={"idempotency_key": "sig-1", "broker": {"token": "x"}})
     assert t.payload["idempotency_key"] == "sig-1"
+
+
+@pytest.mark.parametrize("key", ["tokens_used", "tokenizer", "secretary", "passwords_rotated_at"])
+def test_payload_allows_keys_that_merely_contain_a_secret_word(key: str) -> None:
+    """Review F1: 'tokens_used' is emitted by every pipeline event and must pass."""
+    t = _new_trade(1, payload={"schema_version": 1, key: 1})
+    assert key in t.payload
+
+
+# ---------------------------------------------------------------------------- F7 unique detection
+
+
+def _integrity(orig: Exception) -> IntegrityError:
+    return IntegrityError("stmt", {}, orig)
+
+
+def test_unique_violation_uses_sqlstate_for_psycopg() -> None:
+    dup = type("PgErr", (Exception,), {"sqlstate": "23505"})(
+        "duplicate key value violates unique constraint"
+    )
+    fk = type("PgErr", (Exception,), {"sqlstate": "23503"})(
+        "violates foreign key constraint uq_unique_ish"
+    )
+    assert _is_unique_violation(_integrity(dup)) is True
+    assert _is_unique_violation(_integrity(fk)) is False
+
+
+def test_unique_violation_uses_errorname_for_sqlite() -> None:
+    uq = type("SqErr", (Exception,), {"sqlite_errorname": "SQLITE_CONSTRAINT_UNIQUE"})(
+        "UNIQUE constraint failed: x"
+    )
+    fk = type("SqErr", (Exception,), {"sqlite_errorname": "SQLITE_CONSTRAINT_FOREIGNKEY"})(
+        "FOREIGN KEY constraint failed"
+    )
+    assert _is_unique_violation(_integrity(uq)) is True
+    assert _is_unique_violation(_integrity(fk)) is False
+
+
+def test_unknown_driver_is_not_classified_as_unique() -> None:
+    """Conservative: without a recognisable code the raw IntegrityError propagates."""
+    assert _is_unique_violation(_integrity(Exception("something unique happened"))) is False
 
 
 @pytest.mark.parametrize(
