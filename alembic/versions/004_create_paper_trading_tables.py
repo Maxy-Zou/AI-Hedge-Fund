@@ -1,0 +1,149 @@
+"""Create paper_trades and paper_fills.
+
+Revision ID: 004
+Revises: 003
+Create Date: 2026-09-22
+
+Phase 9 paper-trading ledger (PT-01..04). Both tables are append-only:
+the ORM guard (db/append_only.py) refuses UPDATE/DELETE at the session,
+and on PostgreSQL a BEFORE UPDATE OR DELETE trigger refuses them at the
+database -- the only layer that can see raw SQL. The trigger is skipped on
+SQLite (test dialect).
+
+DDL here must match the ORM models byte-for-byte in structure;
+tests/paper/test_migration_roundtrip.py::test_migration_matches_models
+enforces it with alembic's compare_metadata.
+
+paper_pnl_daily is deliberately NOT created here; it belongs to Phase 11
+(migration 005), which defines its write semantics.
+"""
+
+from __future__ import annotations
+
+import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
+
+from alembic import op
+
+# revision identifiers, used by Alembic.
+revision = "004"
+down_revision = "003"
+branch_labels = None
+depends_on = None
+
+_JSON = postgresql.JSONB().with_variant(sa.JSON, "sqlite")
+
+_TRIGGER_SQL = """
+CREATE FUNCTION paper_append_only_guard() RETURNS trigger AS $$
+BEGIN
+    RAISE EXCEPTION 'append-only table %: % not permitted; write a new row instead',
+        TG_TABLE_NAME, TG_OP;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_paper_trades_append_only
+    BEFORE UPDATE OR DELETE ON paper_trades
+    FOR EACH ROW EXECUTE FUNCTION paper_append_only_guard();
+
+CREATE TRIGGER trg_paper_fills_append_only
+    BEFORE UPDATE OR DELETE ON paper_fills
+    FOR EACH ROW EXECUTE FUNCTION paper_append_only_guard();
+"""
+
+_DROP_TRIGGER_SQL = """
+DROP TRIGGER IF EXISTS trg_paper_fills_append_only ON paper_fills;
+DROP TRIGGER IF EXISTS trg_paper_trades_append_only ON paper_trades;
+DROP FUNCTION IF EXISTS paper_append_only_guard();
+"""
+
+
+def _is_postgres() -> bool:
+    return op.get_bind().dialect.name == "postgresql"
+
+
+def upgrade() -> None:
+    op.create_table(
+        "paper_trades",
+        sa.Column("id", sa.Integer(), primary_key=True),
+        sa.Column(
+            "signal_id", sa.Integer(), sa.ForeignKey("episodic_memory.id"), nullable=False
+        ),
+        sa.Column("attempt_no", sa.Integer(), nullable=False, server_default="1"),
+        sa.Column("ticker", sa.String(10), nullable=False),
+        sa.Column("side", sa.String(4), nullable=False),
+        sa.Column("order_type", sa.String(6), nullable=False),
+        sa.Column("quantity", sa.Integer(), nullable=False),
+        sa.Column("limit_price_cents", sa.BigInteger(), nullable=True),
+        sa.Column("submit_status", sa.String(12), nullable=False),
+        sa.Column("broker_order_id", sa.String(64), nullable=True),
+        sa.Column("risk_status_at_submit", sa.String(10), nullable=False),
+        sa.Column("policy_sha", sa.String(64), nullable=False),
+        sa.Column("review_policy_sha", sa.String(64), nullable=False),
+        sa.Column("payload", _JSON, nullable=False),
+        sa.Column("as_of_date", sa.DateTime(timezone=True), nullable=False),
+        sa.Column(
+            "observed_date",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
+        sa.UniqueConstraint("signal_id", "attempt_no", name="uq_paper_trades_signal_attempt"),
+        sa.UniqueConstraint("broker_order_id", name="uq_paper_trades_broker_order_id"),
+        sa.CheckConstraint("attempt_no >= 1", name="ck_paper_trades_attempt_no"),
+        sa.CheckConstraint("quantity > 0", name="ck_paper_trades_quantity"),
+        sa.CheckConstraint("side IN ('buy', 'sell')", name="ck_paper_trades_side"),
+        sa.CheckConstraint(
+            "order_type IN ('market', 'limit')", name="ck_paper_trades_order_type"
+        ),
+        sa.CheckConstraint(
+            "submit_status IN ('submitted', 'rejected', 'refused_veto')",
+            name="ck_paper_trades_submit_status",
+        ),
+        sa.CheckConstraint(
+            "(order_type = 'limit') = (limit_price_cents IS NOT NULL)",
+            name="ck_paper_trades_limit_price",
+        ),
+        sa.CheckConstraint(
+            "(submit_status = 'submitted') = (broker_order_id IS NOT NULL)",
+            name="ck_paper_trades_broker_id",
+        ),
+    )
+    op.create_index("ix_paper_trades_signal_id", "paper_trades", ["signal_id"])
+    op.create_index("ix_paper_trades_ticker_asof", "paper_trades", ["ticker", "as_of_date"])
+
+    op.create_table(
+        "paper_fills",
+        sa.Column("id", sa.Integer(), primary_key=True),
+        sa.Column("trade_id", sa.Integer(), sa.ForeignKey("paper_trades.id"), nullable=False),
+        sa.Column("broker_fill_id", sa.String(64), nullable=False),
+        sa.Column("filled_qty", sa.Integer(), nullable=False),
+        sa.Column("fill_price_cents", sa.BigInteger(), nullable=False),
+        sa.Column("filled_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("payload", _JSON, nullable=False),
+        sa.Column("as_of_date", sa.DateTime(timezone=True), nullable=False),
+        sa.Column(
+            "observed_date",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
+        sa.UniqueConstraint("broker_fill_id", name="uq_paper_fills_broker_fill_id"),
+        sa.CheckConstraint("filled_qty > 0", name="ck_paper_fills_filled_qty"),
+        sa.CheckConstraint("fill_price_cents > 0", name="ck_paper_fills_fill_price"),
+    )
+    op.create_index("ix_paper_fills_trade_id", "paper_fills", ["trade_id"])
+    op.create_index("ix_paper_fills_asof", "paper_fills", ["as_of_date"])
+
+    if _is_postgres():
+        op.execute(_TRIGGER_SQL)
+
+
+def downgrade() -> None:
+    if _is_postgres():
+        op.execute(_DROP_TRIGGER_SQL)
+    op.drop_index("ix_paper_fills_asof", table_name="paper_fills")
+    op.drop_index("ix_paper_fills_trade_id", table_name="paper_fills")
+    op.drop_table("paper_fills")
+    op.drop_index("ix_paper_trades_ticker_asof", table_name="paper_trades")
+    op.drop_index("ix_paper_trades_signal_id", table_name="paper_trades")
+    op.drop_table("paper_trades")
