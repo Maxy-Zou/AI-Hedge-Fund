@@ -15,6 +15,7 @@ from ai_hedge_fund.paper.errors import (
     SignalWrongRecordType,
     TradeNotFound,
 )
+from ai_hedge_fund.paper.recall import query_paper_fills, query_paper_trades
 from ai_hedge_fund.paper.records import (
     NewPaperFill,
     NewPaperTrade,
@@ -43,6 +44,8 @@ __all__ = [
     "TradeNotFound",
     "insert_paper_fill",
     "insert_paper_trade",
+    "query_paper_fills",
+    "query_paper_trades",
     "resolve_signal_id",
     "seed_paper_fills_from_csv",
     "seed_paper_trades_from_csv",
