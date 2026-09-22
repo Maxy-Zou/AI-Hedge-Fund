@@ -1,3 +1,17 @@
+## 2026-09-22 — Phase 9 delivered: Paper-Trading Data Layer (PT-01..05), PR #2
+
+First phase executed under the new Development Workflow: Plan -> Spec -> Pre-mortem (signed off) -> TDD -> code review -> PR. Branch `phase/09-paper-data-layer`, 11 commits, every implementation commit preceded by a RED test.
+
+**Shipped:** `PaperTrade` / `PaperFill` models + migration 004 (reversible; PostgreSQL `BEFORE UPDATE OR DELETE` trigger, skipped on SQLite); a three-layer append-only guard (`db/append_only.py` -- ORM flush + ORM-enabled Core statements, opt-in per table, `episodic_memory` untouched); SQLite FK enforcement (`db/sqlite_compat.py`); `db/dates.normalise_as_of` promoted from two duplicate private copies; the `ai_hedge_fund.paper` package (validated inputs, frozen read views, typed errors, append-only writers, temporal recall, CSV seeders). Two fix-as-you-find commits landed first (dead `AppendOnlyMixin` removed; helper promotion).
+
+**Tests:** 79 new functions across `tests/paper/` (6 modules + self-contained fixtures) and `tests/unit/test_db_dates.py`. Suite 1134 -> **1263 passed, 11 skipped** (2 new skips are PostgreSQL-gated; they refuse any database whose name lacks `test`). ruff clean. First alembic migration the suite has ever executed; `compare_metadata` proves migration DDL == ORM with zero structural diffs.
+
+**Decisions executed (all six approved):** `paper_pnl_daily` deferred to Phase 11; DELETE forbidden alongside UPDATE; whole-share quantities; idempotency on `(signal_id, attempt_no)` so a broker rejection is recoverable under append-only; guard opt-in; two fix-as-you-find commits.
+
+**Found during TDD, not predicted by the pre-mortem:** SQLAlchemy's `JSON` type stores Python `None` as the JSON string `'null'`, defeating `NOT NULL` -- paper tables now use `none_as_null=True`; `EpisodicMemory.payload` has the same latent gap (TECH-DEBT). Also: a `pytest | tail` gate pattern was masking pytest's exit status; caught when it let 2 failures through, fixed with `pipefail`, commit amended before push.
+
+**Docs:** `09-SUMMARY.md` (per-criterion evidence, handoff to Phase 10), ROADMAP (Phase 9 complete, 9.1 amended, Phase 11 owns migration 005), REQUIREMENTS (PT-01..05 Complete), STATE (20%), TECH-DEBT (+4 entries: guard retrofit, episodic JSON null, migration 002 nullability drift, 001-003 untested).
+
 ## 2026-09-22 — GSD retired: workflow replaced, all tooling references stripped
 
 User reported the GSD planning/execution tooling is compromised (founder rug-pull, suspected backdoors) and is removing it from their machine. This commit removes every GSD dependency from the repo and replaces the mandated workflow with a plain, tool-free one.

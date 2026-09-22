@@ -29,7 +29,7 @@
 
 **Phase numbering:** Continues from v1.0 (last phase was 8).
 
-- [ ] **Phase 9: Paper-Trading Data Layer** - Append-only `paper_trades` / `paper_fills` / `paper_pnl_daily` with dual timestamps, thesis lineage, and temporal-leakage regression
+- [x] **Phase 9: Paper-Trading Data Layer** - Append-only `paper_trades` / `paper_fills` with a mechanical UPDATE/DELETE guard, dual timestamps, thesis lineage, and temporal-leakage regression (completed 2026-09-22, PR #2; `paper_pnl_daily` moved to Phase 11 per 09-PLAN D1)
 - [ ] **Phase 10: Paper Execution Surface** - Alpaca paper client, deterministic sizing tool, idempotent submit, VETOED circuit breaker
 - [ ] **Phase 11: Mark-to-Market and Attribution** - Daily EOD P&L job, append-only series, attribution by analyst / debate-side / conviction
 - [ ] **Phase 12: Promotion Gate** - SHA-pinned `promotion_policy.yaml`, pure-Python gate verdict, audit-chain round-trip
@@ -42,12 +42,13 @@
 **Depends on**: Phase 8 (`episodic_memory.id` is the FK target)
 **Requirements**: PT-01, PT-02, PT-03, PT-04, PT-05
 **Success Criteria** (what must be TRUE):
-  1. An Alembic migration creates `paper_trades`, `paper_fills`, and `paper_pnl_daily` with their indexes, and `downgrade -1` followed by `upgrade head` round-trips cleanly leaving no orphaned tables, indexes, or constraints
+  1. An Alembic migration creates `paper_trades` and `paper_fills` with their indexes, and `downgrade -1` followed by `upgrade head` round-trips cleanly leaving no orphaned tables, indexes, or constraints
   2. An attempted UPDATE against any row in those three tables is rejected mechanically (DB constraint or repository chokepoint) -- append-only is enforced by the system, not by convention
   3. Every `paper_trades` row carries both `as_of_date` and `observed_date`; an insert missing either one fails rather than defaulting
   4. `paper_trades.signal_id` foreign-keys to `episodic_memory.id` -- inserting a trade whose signal does not exist is rejected, so every order traces back to a thesis
   5. A FUTUREX-style regression seed dated 2099-01-01 is invisible to every recall query filtering `as_of_date <= target`, proving the temporal guarantee holds on the new tables
 **Plans:** written during the Plan -> Spec -> Pre-mortem stages (CLAUDE.md, Development Workflow) before any code
+**Delivered:** 2026-09-22 -- migration 004, `PaperTrade` / `PaperFill` models, three-layer append-only guard, `ai_hedge_fund.paper` package (records, store, recall, seed), 79 test functions. Per-criterion evidence in `phases/09-paper-data-layer/09-SUMMARY.md`.
 
 ### Phase 10: Paper Execution Surface
 **Goal**: A signal becomes a submitted paper order, sized deterministically and refused when risk vetoes -- so the track record reflects only orders the pipeline actually sanctioned
@@ -64,7 +65,7 @@
 ### Phase 11: Mark-to-Market and Attribution
 **Goal**: A daily job that turns fills into an append-only P&L series decomposed by analyst, debate side, and conviction -- so performance can be attributed rather than merely totaled
 **Depends on**: Phase 10
-**Requirements**: MTM-01, MTM-02, MTM-03, MTM-04
+**Requirements**: MTM-01, MTM-02, MTM-03, MTM-04 -- also owns migration 005 (`paper_pnl_daily`), deferred from Phase 9 per 09-PLAN D1
 **Success Criteria** (what must be TRUE):
   1. The EOD job computes realized and unrealized P&L per position from fills plus adjusted-close prices, entirely in Python, with no LLM in the path
   2. Re-running the job for an already-processed date adds zero rows and issues zero UPDATEs -- idempotency is achieved by skip-or-insert, never by mutation
@@ -107,7 +108,7 @@
 | 6. Risk Management | v1.0 | 6/6 | Complete | 2026-04-22 |
 | 7. Memory and Learning | v1.0 | 6/6 | Complete | 2026-04-22 |
 | 8. Signal and Output | v1.0 | 6/6 | Complete | 2026-04-23 |
-| 9. Paper-Trading Data Layer | v1.1 | 0/- | Not started | - |
+| 9. Paper-Trading Data Layer | v1.1 | 1/1 | Complete (PR #2) | 2026-09-22 |
 | 10. Paper Execution Surface | v1.1 | 0/- | Not started | - |
 | 11. Mark-to-Market and Attribution | v1.1 | 0/- | Not started | - |
 | 12. Promotion Gate | v1.1 | 0/- | Not started | - |

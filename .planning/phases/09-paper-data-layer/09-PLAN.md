@@ -6,7 +6,10 @@ milestone: v1.1
 requirements: [PT-01, PT-02, PT-03, PT-04, PT-05]
 depends_on: [Phase 8]
 branch: phase/09-paper-data-layer
-status: awaiting-signoff
+status: complete
+signed_off: 2026-09-22
+delivered: 2026-09-22
+pr: 2
 companion_docs: [09-SPEC.md, 09-PREMORTEM.md]
 written: 2026-09-22
 ---
@@ -43,9 +46,9 @@ Each of these changes what gets built. Approve, amend, or reject before the TDD 
 
 | # | ROADMAP criterion | Proven by |
 |---|---|---|
-| 9.1 | Migration creates the tables + indexes; `downgrade -1` then `upgrade head` round-trips cleanly | `tests/paper/test_migration_roundtrip.py::test_sqlite_roundtrip`, `::test_migration_matches_models` (autogenerate diff is empty) |
+| 9.1 | Migration creates the tables + indexes; `downgrade -1` then `upgrade head` round-trips cleanly | `tests/paper/test_migration_roundtrip.py::test_sqlite_upgrade_head_creates_paper_tables + test_sqlite_downgrade_removes_only_paper_tables_and_is_reversible`, `::test_migration_matches_models` (autogenerate diff is empty) |
 | 9.2 | UPDATE against any paper row is rejected mechanically | `tests/paper/test_append_only.py` (L1 ORM update + delete, L2 Core `update()` + `delete()`, guard NOT applied to `episodic_memory`), Postgres-gated `test_pg_trigger_blocks_raw_sql` |
-| 9.3 | Every `paper_trades` row carries both timestamps; insert missing either fails | `tests/paper/test_models.py::test_as_of_date_required`, `::test_observed_date_server_default` |
+| 9.3 | Every `paper_trades` row carries both timestamps; insert missing either fails | `tests/paper/test_models.py::test_as_of_date_required`, `::test_observed_date_server_default_and_not_nullable` |
 | 9.4 | `signal_id` FK to `episodic_memory.id`; unknown signal rejected | `tests/paper/test_models.py::test_sqlite_fk_pragma_enabled` (guard), `::test_fk_rejects_unknown_signal`, `tests/paper/test_store.py::test_insert_raises_signal_not_found` |
 | 9.5 | FUTUREX row (2099-01-01) invisible to every `as_of_date <= target` recall | `tests/paper/test_recall.py::test_recall_excludes_future_trades`, `::test_recall_excludes_future_fills`, `::test_boundary_row_at_target_is_included` |
 

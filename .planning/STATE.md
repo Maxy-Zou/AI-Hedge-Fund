@@ -3,15 +3,15 @@ milestone: v1.1
 milestone_name: Paper Trading + Promotion Gate
 current_plan: —
 status: ready_to_execute
-stopped_at: v1.1 roadmap complete — Phases 9-13 defined, 23/23 requirements mapped; Phase 9 not started
-last_updated: "2026-09-21T00:00:00.000Z"
-last_activity: "2026-09-21 -- v1.1 roadmap written by hand (GSD retired); Phases 9-13 defined, traceability filled 23/23"
+stopped_at: Phase 9 complete (PR #2) — Phase 10 Paper Execution Surface not started
+last_updated: "2026-09-22T00:00:00.000Z"
+last_activity: "2026-09-22 -- Phase 9 delivered: migration 004, models, append-only guard, paper/ package; 79 tests; suite 1263 passed / 11 skipped"
 progress:
   total_phases: 5
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 1
+  total_plans: 1
+  completed_plans: 1
+  percent: 20
 ---
 
 # Project State
@@ -21,17 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-25)
 
 **Core value:** Produce institutional-quality investment research at scale -- structured theses with quantitative signals that are rigorous enough to trade on and transparent enough to show investors.
-**Current focus:** v1.1 — Paper Trading + Promotion Gate (Phase 9 not started)
+**Current focus:** v1.1 — Paper Trading + Promotion Gate (Phase 9 complete; Phase 10 not started)
 
 ## Current Position
 
 Milestone: v1.1 — Paper Trading + Promotion Gate
-Phase: Phase 9 — Paper-Trading Data Layer (not started)
+Phase: Phase 10 — Paper Execution Surface (not started). Phase 9 complete 2026-09-22 on `phase/09-paper-data-layer`, PR #2.
 Plan: —
-Status: Roadmap complete, ready to execute Phase 9 (source: docs/V1.1_PAPER_TRADING_PLAN.md)
-Last activity: 2026-09-21 -- v1.1 roadmap written; Phases 9-13 defined with success criteria; REQUIREMENTS.md traceability 23/23 mapped
+Status: Phase 9 delivered; next is the Phase 10 Plan -> Spec -> Pre-mortem (needs Alpaca paper credentials for the live path)
+Last activity: 2026-09-22 -- Phase 9 complete: 11 commits, 79 test functions, all 5 ROADMAP criteria proven (09-SUMMARY.md)
 
-Progress: [          ] 0%
+Progress: [==        ] 20%
 
 ## Performance Metrics
 

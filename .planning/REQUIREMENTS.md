@@ -87,11 +87,11 @@ These are not numbered requirements — they are invariants every v1.1 phase mus
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
-| PT-01 | Phase 9 | Pending |
-| PT-02 | Phase 9 | Pending |
-| PT-03 | Phase 9 | Pending |
-| PT-04 | Phase 9 | Pending |
-| PT-05 | Phase 9 | Pending |
+| PT-01 | Phase 9 | Complete (PaperTrade + migration 004; L1/L2 guard `db/append_only.py`, L3 PG trigger; `tests/paper/test_append_only.py`, `test_models.py`; PR #2) |
+| PT-02 | Phase 9 | Complete (PaperFill, FK paper_trades.id, UNIQUE broker_fill_id; `test_models.py`, `test_store.py`; PR #2) |
+| PT-03 | Phase 9 | Complete (FK episodic_memory.id -- enforced on SQLite via `db/sqlite_compat.py`; store validates record_type='analysis' + ticker; `test_models.py::test_fk_rejects_unknown_signal`, `test_store.py`; PR #2) |
+| PT-04 | Phase 9 | Complete (`alembic/versions/004`; SQLite round-trip + `compare_metadata` parity; PG-gated trigger tests; `test_migration_roundtrip.py`; PR #2) |
+| PT-05 | Phase 9 | Complete (FUTUREX trade + fill @ 2099-01-01 in `tests/paper/fixtures`; `test_recall.py::test_recall_excludes_future_trades` / `_fills`, boundary `<=` proof; PR #2) |
 | EXEC-01 | Phase 10 | Pending |
 | EXEC-02 | Phase 10 | Pending |
 | EXEC-03 | Phase 10 | Pending |
@@ -120,4 +120,4 @@ These are not numbered requirements — they are invariants every v1.1 phase mus
 
 ---
 *Requirements defined: 2026-04-25*
-*Last updated: 2026-09-21 after roadmap creation (traceability verified, 23/23 mapped)*
+*Last updated: 2026-09-22 -- Phase 9 complete (PT-01..05), 5/23 requirements delivered*

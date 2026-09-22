@@ -1,7 +1,8 @@
 ---
 phase: 09
 slug: paper-data-layer
-status: awaiting-signoff
+status: implemented
+delivered: 2026-09-22
 written: 2026-09-22
 ---
 
