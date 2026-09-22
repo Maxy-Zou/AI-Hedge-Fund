@@ -1,9 +1,11 @@
 """SQLAlchemy models for data ingestion tables.
 
-Six models covering all data sources: SEC filings, XBRL facts, daily prices,
-insider trades, news articles, and macro indicators. All models use
-DualTimestampMixin for temporal tracking (as_of_date / observed_date).
-Monetary values are stored as BigInteger cents to avoid floating-point errors.
+Data-source models (SEC filings, XBRL facts, daily prices, insider trades,
+news articles, macro indicators), the Phase-6 portfolio snapshot, the Phase-7
+episodic memory, and the Phase-9 paper-trading ledger (paper_trades,
+paper_fills). All models use DualTimestampMixin for temporal tracking
+(as_of_date / observed_date). Monetary values are stored as BigInteger cents
+to avoid floating-point errors.
 """
 
 from __future__ import annotations
@@ -11,9 +13,11 @@ from __future__ import annotations
 from sqlalchemy import (
     JSON,
     BigInteger,
+    CheckConstraint,
     Date,
     DateTime,
     Float,
+    ForeignKey,
     Index,
     Integer,
     String,
@@ -235,3 +239,100 @@ class EpisodicMemory(Base, DualTimestampMixin):
     # fallback for the in-memory test DB; the .with_variant() call binds
     # both dialects. Nullable=False to prevent half-written audit rows.
     payload: Mapped[dict] = mapped_column(_JSONB().with_variant(JSON, "sqlite"), nullable=False)
+
+
+class PaperTrade(Base, DualTimestampMixin):
+    """One order *intent* and its synchronous broker response (Phase 9, PT-01/03).
+
+    Append-only: a row is written once at submission time and never updated.
+    A broker rejection is recoverable by inserting a new row with
+    ``attempt_no + 1`` -- the ``(signal_id, attempt_no)`` UniqueConstraint is
+    the idempotency grain (a network retry of the same attempt is deduplicated
+    at the DB; a deliberate retry is a new immutable row). ``signal_id``
+    foreign-keys to the ``episodic_memory`` analysis row the order executes,
+    so every trade traces back to its thesis. ``ticker`` is denormalized
+    from that row for join-free recall and validated on insert
+    (:mod:`ai_hedge_fund.paper.store`).
+
+    The two paired CHECKs encode structural facts, not policy: a limit
+    price exists iff the order is a limit order; a broker order id exists
+    iff the broker accepted. ``risk_status_at_submit`` is an audit snapshot
+    of the risk verdict at submit time; the circuit breaker that acts on it
+    lives in Phase 10.
+    """
+
+    __tablename__ = "paper_trades"
+    __table_args__ = (
+        UniqueConstraint("signal_id", "attempt_no", name="uq_paper_trades_signal_attempt"),
+        UniqueConstraint("broker_order_id", name="uq_paper_trades_broker_order_id"),
+        CheckConstraint("attempt_no >= 1", name="ck_paper_trades_attempt_no"),
+        CheckConstraint("quantity > 0", name="ck_paper_trades_quantity"),
+        CheckConstraint("side IN ('buy', 'sell')", name="ck_paper_trades_side"),
+        CheckConstraint("order_type IN ('market', 'limit')", name="ck_paper_trades_order_type"),
+        CheckConstraint(
+            "submit_status IN ('submitted', 'rejected', 'refused_veto')",
+            name="ck_paper_trades_submit_status",
+        ),
+        CheckConstraint(
+            "(order_type = 'limit') = (limit_price_cents IS NOT NULL)",
+            name="ck_paper_trades_limit_price",
+        ),
+        CheckConstraint(
+            "(submit_status = 'submitted') = (broker_order_id IS NOT NULL)",
+            name="ck_paper_trades_broker_id",
+        ),
+        Index("ix_paper_trades_ticker_asof", "ticker", "as_of_date"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    signal_id: Mapped[int] = mapped_column(
+        ForeignKey("episodic_memory.id"), nullable=False, index=True
+    )
+    attempt_no: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    ticker: Mapped[str] = mapped_column(String(10), nullable=False)
+    side: Mapped[str] = mapped_column(String(4), nullable=False)  # "buy" | "sell"
+    order_type: Mapped[str] = mapped_column(String(6), nullable=False)  # "market" | "limit"
+    quantity: Mapped[int] = mapped_column(Integer, nullable=False)  # whole shares (D3)
+    limit_price_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    submit_status: Mapped[str] = mapped_column(String(12), nullable=False)
+    broker_order_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    risk_status_at_submit: Mapped[str] = mapped_column(String(10), nullable=False)
+    policy_sha: Mapped[str] = mapped_column(String(64), nullable=False)
+    review_policy_sha: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    # Full FinalSignalOutput snapshot + broker request/response. none_as_null
+    # makes a Python None a SQL NULL (rejected by NOT NULL) instead of the JSON
+    # string 'null', which SQLAlchemy's JSON type would otherwise store silently.
+    payload: Mapped[dict] = mapped_column(
+        _JSONB(none_as_null=True).with_variant(JSON(none_as_null=True), "sqlite"),
+        nullable=False,
+    )
+
+
+class PaperFill(Base, DualTimestampMixin):
+    """One fill event reported by the broker for a :class:`PaperTrade` (Phase 9, PT-02).
+
+    Append-only. A partially-filled order produces several rows.
+    ``broker_fill_id`` is unique so repeated polling of the broker cannot
+    double-record the same fill. ``as_of_date`` is the trade date of the
+    fill; ``filled_at`` is the broker's own timestamp.
+    """
+
+    __tablename__ = "paper_fills"
+    __table_args__ = (
+        UniqueConstraint("broker_fill_id", name="uq_paper_fills_broker_fill_id"),
+        CheckConstraint("filled_qty > 0", name="ck_paper_fills_filled_qty"),
+        CheckConstraint("fill_price_cents > 0", name="ck_paper_fills_fill_price"),
+        Index("ix_paper_fills_asof", "as_of_date"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    trade_id: Mapped[int] = mapped_column(ForeignKey("paper_trades.id"), nullable=False, index=True)
+    broker_fill_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    filled_qty: Mapped[int] = mapped_column(Integer, nullable=False)
+    fill_price_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    filled_at: Mapped[str] = mapped_column(DateTime(timezone=True), nullable=False)
+    payload: Mapped[dict] = mapped_column(
+        _JSONB(none_as_null=True).with_variant(JSON(none_as_null=True), "sqlite"),
+        nullable=False,
+    )
