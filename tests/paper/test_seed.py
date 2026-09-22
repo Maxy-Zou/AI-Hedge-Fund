@@ -5,10 +5,17 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from ai_hedge_fund.db.models import PaperFill, PaperTrade
-from ai_hedge_fund.paper import AmbiguousSignal, DuplicateSubmission, SignalNotFound, TradeNotFound
+from ai_hedge_fund.paper import (
+    AmbiguousSignal,
+    DuplicateSubmission,
+    SeedFormatError,
+    SignalNotFound,
+    TradeNotFound,
+)
 from ai_hedge_fund.paper.seed import seed_paper_fills_from_csv, seed_paper_trades_from_csv
 from tests.paper.conftest import SHA
 
@@ -121,6 +128,39 @@ def test_fill_for_unknown_broker_order_raises(
     csv = _fill_csv(tmp_path, "ord-nope,fill-x,1,100,2026-04-01T14:00:00+00:00,2026-04-01")
     with pytest.raises(TradeNotFound):
         seed_paper_fills_from_csv(db_session, csv)
+
+
+def test_bad_header_raises_typed_error(db_session: Session, tmp_path: Path) -> None:
+    """Review F8: a malformed fixture must fail with a typed error naming the file, not KeyError."""
+    p = tmp_path / "bad.csv"
+    p.write_text(TRADE_HEADER.replace("quantity", "quantiy"), encoding="utf-8")
+    with pytest.raises(SeedFormatError, match="bad.csv"):
+        seed_paper_trades_from_csv(db_session, p)
+    q = tmp_path / "badfills.csv"
+    q.write_text("broker_order_id,broker_fill_id\n", encoding="utf-8")
+    with pytest.raises(SeedFormatError, match="badfills.csv"):
+        seed_paper_fills_from_csv(db_session, q)
+
+
+def test_attempt_no_zero_is_rejected_not_defaulted(
+    db_session: Session, seeded_signals: int, tmp_path: Path
+) -> None:
+    """Review F8: an explicit 0 must reach NewPaperTrade and be rejected, not become 1."""
+    csv = _trade_csv(
+        tmp_path, f"AAPL,2026-04-01,0,AAPL,buy,market,1,,rejected,,APPROVED,{SHA},{SHA},2026-04-01"
+    )
+    with pytest.raises(ValidationError):
+        seed_paper_trades_from_csv(db_session, csv)
+
+
+def test_blank_attempt_no_defaults_to_1(
+    db_session: Session, seeded_signals: int, tmp_path: Path
+) -> None:
+    csv = _trade_csv(
+        tmp_path, f"AAPL,2026-04-01,,AAPL,buy,market,1,,rejected,,APPROVED,{SHA},{SHA},2026-04-01"
+    )
+    assert seed_paper_trades_from_csv(db_session, csv) == 1
+    assert db_session.query(PaperTrade).one().attempt_no == 1
 
 
 def test_empty_csv_seeds_nothing(db_session: Session, seeded_signals: int, tmp_path: Path) -> None:

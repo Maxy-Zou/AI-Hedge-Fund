@@ -15,6 +15,7 @@ function. They refuse any database whose name does not contain ``test``.
 from __future__ import annotations
 
 import os
+import re
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
@@ -23,13 +24,13 @@ import pytest
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.runtime.migration import MigrationContext
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import CheckConstraint, create_engine, inspect, text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
 from ai_hedge_fund.db.base import Base
 from ai_hedge_fund.db.dates import normalise_as_of
-from ai_hedge_fund.db.models import EpisodicMemory, PaperTrade
+from ai_hedge_fund.db.models import EpisodicMemory, PaperFill, PaperTrade
 from alembic import command
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -44,6 +45,8 @@ STRUCTURAL = (
     "remove_index",
     "add_constraint",
     "remove_constraint",
+    "add_fk",
+    "remove_fk",
 )
 
 
@@ -61,7 +64,14 @@ def _diff_table(diff: tuple) -> str | None:
         return diff[1].name
     if kind in ("add_column", "remove_column"):
         return diff[2]
-    if kind in ("add_index", "remove_index", "add_constraint", "remove_constraint"):
+    if kind in (
+        "add_index",
+        "remove_index",
+        "add_constraint",
+        "remove_constraint",
+        "add_fk",
+        "remove_fk",
+    ):
         return diff[1].table.name
     return None
 
@@ -169,6 +179,38 @@ def test_migration_matches_models(sqlite_cfg: tuple[Config, str]) -> None:
     finally:
         engine.dispose()
     assert diffs == [], "ORM/migration drift on paper tables:\n" + "\n".join(map(str, diffs))
+
+
+def _norm(sql: str) -> str:
+    return re.sub(r"\s+", " ", sql.strip().strip("()")).strip()
+
+
+@pytest.mark.parametrize("model", [PaperTrade, PaperFill])
+def test_check_constraints_match_models(sqlite_cfg: tuple[Config, str], model) -> None:
+    """Review F4: compare_metadata ignores CHECKs, so compare them explicitly."""
+    cfg, url = sqlite_cfg
+    command.upgrade(cfg, "head")
+    engine = create_engine(url)
+    try:
+        reflected = {
+            c["name"]: _norm(c["sqltext"])
+            for c in inspect(engine).get_check_constraints(model.__tablename__)
+        }
+    finally:
+        engine.dispose()
+    declared = {
+        c.name: _norm(str(c.sqltext))
+        for c in model.__table__.constraints
+        if isinstance(c, CheckConstraint)
+    }
+    assert set(reflected) == set(declared), f"CHECK name drift: {set(reflected) ^ set(declared)}"
+    for name, text_ in declared.items():
+        assert reflected[name] == text_, f"{name}: migration {reflected[name]!r} != model {text_!r}"
+
+
+def test_fk_drift_is_detected_by_filter() -> None:
+    """Review F4: the STRUCTURAL filter must not drop foreign-key diff kinds."""
+    assert "add_fk" in STRUCTURAL and "remove_fk" in STRUCTURAL
 
 
 # --------------------------------------------------------------------------- PostgreSQL (L3)

@@ -22,6 +22,12 @@ from ai_hedge_fund.paper.records import PaperFillRecord, PaperTradeRecord
 from ai_hedge_fund.paper.store import to_fill_record, to_trade_record
 
 
+def _check_limit(limit: int) -> None:
+    """SQLite treats ``LIMIT -1`` as unbounded; PostgreSQL raises. Fail early on both."""
+    if limit < 1:
+        raise ValueError(f"limit must be >= 1, got {limit}")
+
+
 def query_paper_trades(
     db_session: Session,
     *,
@@ -40,6 +46,7 @@ def query_paper_trades(
     """
     if ticker is None and signal_id is None:
         raise ValueError("query_paper_trades requires ticker or signal_id")
+    _check_limit(limit)
     target = normalise_as_of(as_of_date)
     q = db_session.query(PaperTrade).filter(PaperTrade.as_of_date <= target)
     if ticker is not None:
@@ -58,6 +65,7 @@ def query_paper_fills(
     limit: int = 200,
 ) -> list[PaperFillRecord]:
     """Fills visible as of ``as_of_date``, newest first; optionally for one trade."""
+    _check_limit(limit)
     target = normalise_as_of(as_of_date)
     q = db_session.query(PaperFill).filter(PaperFill.as_of_date <= target)
     if trade_id is not None:

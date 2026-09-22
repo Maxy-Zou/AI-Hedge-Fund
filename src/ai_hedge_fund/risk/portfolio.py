@@ -29,7 +29,7 @@ from pathlib import Path
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
-from ai_hedge_fund.db.dates import normalise_as_of as _normalise_as_of
+from ai_hedge_fund.db.dates import normalise_as_of
 from ai_hedge_fund.db.models import PortfolioPosition
 
 
@@ -96,7 +96,7 @@ def load_portfolio(db_session: Session, as_of_date: str | date | datetime) -> Po
     ticker by walking the descending-ordered result and keeping the first
     row seen per ticker.
     """
-    target = _normalise_as_of(as_of_date)
+    target = normalise_as_of(as_of_date)
     rows = (
         db_session.query(PortfolioPosition)
         .filter(PortfolioPosition.as_of_date <= target)
@@ -141,7 +141,7 @@ def seed_portfolio_from_csv(
     All rows are written with the single ``as_of_date`` argument (append-only
     per CLAUDE.md). Returns the number of rows inserted.
     """
-    target = _normalise_as_of(as_of_date)
+    target = normalise_as_of(as_of_date)
     path = Path(csv_path)
     rows: list[PortfolioPosition] = []
     with path.open(newline="", encoding="utf-8") as fh:

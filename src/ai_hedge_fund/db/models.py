@@ -27,7 +27,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB as _JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from ai_hedge_fund.db.append_only import AppendOnlyGuard
+from ai_hedge_fund.db.append_only import AppendOnlyGuard, attach_postgres_guard
 from ai_hedge_fund.db.base import Base, DualTimestampMixin
 
 
@@ -337,3 +337,8 @@ class PaperFill(Base, DualTimestampMixin, AppendOnlyGuard):
         _JSONB(none_as_null=True).with_variant(JSON(none_as_null=True), "sqlite"),
         nullable=False,
     )
+
+
+# L3: PostgreSQL append-only trigger, produced by create_all as well as by migration 004.
+attach_postgres_guard(PaperTrade.__table__)
+attach_postgres_guard(PaperFill.__table__)

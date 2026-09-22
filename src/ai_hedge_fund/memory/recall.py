@@ -19,8 +19,9 @@ from typing import Any
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
+from ai_hedge_fund.db.dates import normalise_as_of
 from ai_hedge_fund.db.models import EpisodicMemory
-from ai_hedge_fund.memory.episodic import EpisodicHit, _normalise_as_of
+from ai_hedge_fund.memory.episodic import EpisodicHit
 
 
 def _to_hit(row: EpisodicMemory) -> EpisodicHit:
@@ -77,7 +78,7 @@ def query_episodic(
     """
     if ticker is None and sector is None:
         raise ValueError("query_episodic requires ticker or sector (Pitfall 8 DoS guard)")
-    target = _normalise_as_of(as_of_date)
+    target = normalise_as_of(as_of_date)
     predicates: list[Any] = []
     if ticker is not None:
         predicates.append(EpisodicMemory.ticker == ticker)

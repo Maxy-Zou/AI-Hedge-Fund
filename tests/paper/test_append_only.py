@@ -142,6 +142,45 @@ def test_core_delete_statement_rejected(db_session: Session) -> None:
     assert exc.value.table == "paper_fills" and exc.value.operation == "DELETE"
 
 
+def test_core_update_on_table_object_rejected(db_session: Session) -> None:
+    """Review F5: update(Model.__table__) has no bind_mapper; guard must key on table name too."""
+    _, trade, _ = _seed(db_session)
+    with pytest.raises(AppendOnlyViolation) as exc:
+        db_session.execute(
+            update(PaperTrade.__table__)
+            .where(PaperTrade.__table__.c.id == trade.id)
+            .values(quantity=1)
+        )
+    db_session.rollback()
+    assert exc.value.table == "paper_trades" and exc.value.operation == "UPDATE"
+
+
+def test_core_delete_on_table_object_rejected(db_session: Session) -> None:
+    _, _, fill = _seed(db_session)
+    with pytest.raises(AppendOnlyViolation) as exc:
+        db_session.execute(delete(PaperFill.__table__).where(PaperFill.__table__.c.id == fill.id))
+    db_session.rollback()
+    assert exc.value.table == "paper_fills" and exc.value.operation == "DELETE"
+
+
+def test_legacy_query_update_rejected(db_session: Session) -> None:
+    _, trade, _ = _seed(db_session)
+    with pytest.raises(AppendOnlyViolation):
+        db_session.query(PaperTrade).filter(PaperTrade.id == trade.id).update({"quantity": 1})
+    db_session.rollback()
+
+
+def test_legacy_query_delete_rejected(db_session: Session) -> None:
+    _, _, fill = _seed(db_session)
+    with pytest.raises(AppendOnlyViolation):
+        db_session.query(PaperFill).filter(PaperFill.id == fill.id).delete()
+    db_session.rollback()
+
+
+def test_guarded_table_registry() -> None:
+    assert append_only.guarded_tables() == frozenset({"paper_trades", "paper_fills"})
+
+
 # --------------------------------------------------------------------------- opt-in scope (#5)
 
 

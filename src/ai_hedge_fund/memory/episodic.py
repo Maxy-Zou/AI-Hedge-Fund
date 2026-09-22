@@ -18,7 +18,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
-from ai_hedge_fund.db.dates import normalise_as_of as _normalise_as_of
+from ai_hedge_fund.db.dates import normalise_as_of
 from ai_hedge_fund.db.models import EpisodicMemory
 
 
@@ -75,7 +75,7 @@ def seed_episodic_from_csv(db_session: Session, csv_path: str | Path) -> int:
                     outcome_pct=float(outcome_raw) if outcome_raw else None,
                     policy_sha=policy_raw or None,
                     payload={"schema_version": 1, "source": "csv_seed"},
-                    as_of_date=_normalise_as_of(record["as_of_date"].strip()),
+                    as_of_date=normalise_as_of(record["as_of_date"].strip()),
                 )
             )
     db_session.add_all(rows)

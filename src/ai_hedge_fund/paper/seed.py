@@ -20,7 +20,12 @@ from sqlalchemy.orm import Session
 
 from ai_hedge_fund.db.dates import normalise_as_of
 from ai_hedge_fund.db.models import EpisodicMemory, PaperTrade
-from ai_hedge_fund.paper.errors import AmbiguousSignal, SignalNotFound, TradeNotFound
+from ai_hedge_fund.paper.errors import (
+    AmbiguousSignal,
+    SeedFormatError,
+    SignalNotFound,
+    TradeNotFound,
+)
 from ai_hedge_fund.paper.records import NewPaperFill, NewPaperTrade
 from ai_hedge_fund.paper.store import insert_paper_fill, insert_paper_trade
 
@@ -40,6 +45,16 @@ def _blank_to_none(value: str | None) -> str | None:
 def _opt_int(value: str | None) -> int | None:
     cleaned = _blank_to_none(value)
     return int(cleaned) if cleaned is not None else None
+
+
+def _reader(fh: Any, path: Path, expected: str) -> csv.DictReader:
+    """Validate the header before trusting a single cell (CLAUDE.md: validate at boundaries)."""
+    reader = csv.DictReader(fh)
+    if reader.fieldnames != expected.split(","):
+        raise SeedFormatError(
+            f"{path.name}: expected header {expected!r}, got {reader.fieldnames!r}"
+        )
+    return reader
 
 
 def resolve_signal_id(db_session: Session, ticker: str, as_of_date: str) -> int:
@@ -68,14 +83,17 @@ def _resolve_trade_id(db_session: Session, broker_order_id: str) -> int:
 def seed_paper_trades_from_csv(db_session: Session, csv_path: str | Path) -> int:
     """Seed ``paper_trades`` from a CSV with header ``TRADE_COLUMNS``. Returns rows inserted."""
     inserted = 0
-    with Path(csv_path).open(newline="", encoding="utf-8") as fh:
-        for record in csv.DictReader(fh):
+    path = Path(csv_path)
+    with path.open(newline="", encoding="utf-8") as fh:
+        for record in _reader(fh, path, TRADE_COLUMNS):
             signal_id = resolve_signal_id(
                 db_session, record["signal_ticker"].strip(), record["signal_as_of_date"].strip()
             )
+            attempt_no = _opt_int(record.get("attempt_no"))
             fields: dict[str, Any] = {
                 "signal_id": signal_id,
-                "attempt_no": _opt_int(record.get("attempt_no")) or 1,
+                # Blank -> 1. An explicit 0 is passed through so NewPaperTrade rejects it.
+                "attempt_no": 1 if attempt_no is None else attempt_no,
                 "ticker": record["ticker"].strip(),
                 "side": record["side"].strip(),
                 "order_type": record["order_type"].strip(),
@@ -97,8 +115,9 @@ def seed_paper_trades_from_csv(db_session: Session, csv_path: str | Path) -> int
 def seed_paper_fills_from_csv(db_session: Session, csv_path: str | Path) -> int:
     """Seed ``paper_fills`` from a CSV with header ``FILL_COLUMNS``. Returns rows inserted."""
     inserted = 0
-    with Path(csv_path).open(newline="", encoding="utf-8") as fh:
-        for record in csv.DictReader(fh):
+    path = Path(csv_path)
+    with path.open(newline="", encoding="utf-8") as fh:
+        for record in _reader(fh, path, FILL_COLUMNS):
             trade_id = _resolve_trade_id(db_session, record["broker_order_id"].strip())
             insert_paper_fill(
                 db_session,

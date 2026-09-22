@@ -17,7 +17,9 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-_SECRET_LIKE = re.compile(r"secret|api_key|token|password", re.IGNORECASE)
+# Anchored on underscore/edge so "tokens_used" (emitted by every pipeline event)
+# passes while "access_token" / "client_secret" / "api_key" are still caught.
+_SECRET_LIKE = re.compile(r"(^|_)(secret|api_key|token|password)(_|$)", re.IGNORECASE)
 
 Side = Literal["buy", "sell"]
 OrderType = Literal["market", "limit"]
