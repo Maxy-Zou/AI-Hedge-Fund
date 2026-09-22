@@ -70,7 +70,7 @@ Reviewed at high effort against the spec, the pre-mortem, and CLAUDE.md before u
 
 The rest: L2 was blind to `update(Model.__table__)` (now keyed on table name as well as mapper; legacy `Query.update()` covered too); the parity test silently dropped FK diff kinds and never compared CHECKs (both now covered); `limit` accepted negatives (unbounded on SQLite); unique-violation detection was a substring match on driver text (now SQLSTATE / `sqlite_errorname`); seed CSV headers were never validated and `attempt_no=0` became 1; three modules still imported the private `_normalise_as_of` alias; migration `upgrade()` was 75 lines; and the `RAISE` message carried a bare `%` through two formatting layers (now `USING MESSAGE`, no `%` at all).
 
-**What the review could not verify:** the PostgreSQL trigger has still never executed against PostgreSQL in this environment. The DDL is now the lowest-risk shape available, but the three `@slow` tests must run once against docker-compose Postgres before migration 004 touches a real database.
+**PostgreSQL verification (after review):** all three layers proven on a real PostgreSQL 16 instance (docker container `ai_hedge_fund_postgres`, scratch databases `ai_hedge_fund_test` / `ai_hedge_fund_scratch`). The two `@slow` tests passed: raw `text()` `UPDATE` and `DELETE` are rejected by the trigger with `append-only table paper_trades: UPDATE not permitted; write a new row instead`, and `downgrade` leaves no orphan in `pg_proc`. The `create_all` path was proven separately on a scratch database: both `trg_paper_*_append_only` triggers and the function exist after `Base.metadata.create_all`, raw mutations are blocked, and a second `create_all` is idempotent. Migrations 001-004 also ran end-to-end on PostgreSQL for the first time in the suite's history.
 
 ## Handoff to Phase 10
 
@@ -78,7 +78,7 @@ The rest: L2 was blind to `update(Model.__table__)` (now keyed on table name as 
 - Idempotency is structural: a network retry of the same `(signal_id, attempt_no)` raises `DuplicateSubmission` -- treat it as "already submitted", do not resubmit. A deliberate retry after broker rejection is `attempt_no + 1`. **Phase 10 owns the attempt cap**; the DDL only enforces `>= 1`.
 - **Redact before building `payload`.** The store rejects top-level keys that look like secrets; it does not scan nested dicts. Broker request/response objects must be scrubbed of headers and credentials at the client boundary.
 - `risk_status_at_submit` is an audit snapshot the store does not act on. The EXEC-04 circuit breaker (refuse when VETOED) is Phase 10 logic; when it fires, record the refusal as `submit_status='refused_veto'`, `broker_order_id=None`.
-- To run the three PostgreSQL-gated tests: `docker compose up -d`, then `TEST_DATABASE_URL=postgresql+psycopg://hedge:hedge@localhost:5432/ai_hedge_fund_test uv run pytest tests/paper -m slow`. The database name must contain `test` or the tests refuse to run.
+- To run the PostgreSQL-gated tests: `docker start ai_hedge_fund_postgres` (the container pre-dates the compose project, so `docker compose up` conflicts on the name), then `TEST_DATABASE_URL=postgresql+psycopg://hedge:hedge@localhost:5432/ai_hedge_fund_test uv run pytest tests/paper -m slow`. The database name must contain `test` or the tests refuse to run.
 
 ## Commits (in order)
 
