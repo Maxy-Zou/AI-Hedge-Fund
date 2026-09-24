@@ -6,25 +6,34 @@ analysis + latest review, decides (pure), and appends exactly one append-only
 row -- a submitted/rejected order or a typed refusal. Idempotency is enforced
 twice: ``next_attempt`` refuses to resubmit a settled signal, and the broker
 sees a unique ``client_order_id`` per attempt.
+
+The client_order_id is stable across re-runs of one attempt, so a re-run after
+a lost broker response gets "duplicate" -- and then adopts the order the broker
+already holds (after checking it is the order we would place) instead of
+leaving it unrecorded (review R3). The id is namespaced by the analysis row's
+observed timestamp so a rebuilt database reissuing row id 1 cannot collide with
+the old database's orders in the same long-lived paper account (review R7).
 """
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 import structlog
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ai_hedge_fund.db.models import EpisodicMemory
-from ai_hedge_fund.execution.broker import BrokerClient, BrokerOrderRequest
+from ai_hedge_fund.execution.broker import BrokerClient, BrokerOrderRequest, BrokerOrderResult
 from ai_hedge_fund.execution.decide import Decision, OrderPlan, Refusal, decide
 from ai_hedge_fund.execution.errors import (
     AlreadyDecided,
     AlreadySubmitted,
     AttemptsExhausted,
     BrokerRejected,
+    ClientOrderIdConflict,
     DuplicateClientOrderId,
     NoPriceAvailable,
     SignalNotReviewed,
@@ -60,6 +69,18 @@ class SignalContext:
     final_signal: dict[str, Any] | None
     policy_sha: str
     review_policy_sha: str
+    signal_observed_at: str  # analysis row's observed_date; namespaces client_order_id
+
+
+def client_order_id_for(ctx: SignalContext, attempt: int) -> str:
+    """``sig-<id>-a<attempt>-<tag>``: stable for one attempt, distinct across databases.
+
+    ``tag`` hashes the analysis row's identity *including* its observed timestamp,
+    which a rebuilt database cannot reproduce for a reissued row id.
+    """
+    identity = f"{ctx.signal_id}|{ctx.ticker}|{ctx.signal_observed_at}"
+    tag = hashlib.sha256(identity.encode()).hexdigest()[:10]
+    return f"sig-{ctx.signal_id}-a{attempt}-{tag}"
 
 
 def load_signal_context(db_session: Session, episodic_id: int) -> SignalContext:
@@ -77,6 +98,7 @@ def load_signal_context(db_session: Session, episodic_id: int) -> SignalContext:
     payload = analysis.payload or {}
     risk_status = (payload.get("risk_assessment") or {}).get("status") or "UNKNOWN"
     as_of_str = _as_of_str(analysis.as_of_date)
+    observed = analysis.observed_date.isoformat()
     risk_sha = analysis.policy_sha or NO_REVIEW_POLICY_SHA
 
     review = db_session.scalars(
@@ -98,6 +120,7 @@ def load_signal_context(db_session: Session, episodic_id: int) -> SignalContext:
                 final_signal=None,
                 policy_sha=risk_sha,
                 review_policy_sha=NO_REVIEW_POLICY_SHA,
+                signal_observed_at=observed,
             )
         raise SignalNotReviewed(f"analysis {episodic_id} has no review row")
 
@@ -117,6 +140,7 @@ def load_signal_context(db_session: Session, episodic_id: int) -> SignalContext:
         final_signal=final_signal,
         policy_sha=risk_sha,
         review_policy_sha=review_sha,
+        signal_observed_at=observed,
     )
 
 
@@ -216,7 +240,7 @@ def _record_refusal(
 def _submit_order(
     deps: SubmitDeps, ctx: SignalContext, attempt: int, plan: OrderPlan, price_cents: int | None
 ) -> PaperTradeRecord:
-    client_order_id = f"sig-{ctx.signal_id}-a{attempt}"
+    client_order_id = client_order_id_for(ctx, attempt)
     req = BrokerOrderRequest(
         client_order_id=client_order_id,
         symbol=ctx.ticker,
@@ -232,60 +256,19 @@ def _submit_order(
     try:
         result = deps.broker.submit_order(req)
     except DuplicateClientOrderId:
-        # The broker already has this attempt: treat as already submitted, do not double-record.
-        existing = [
-            r
-            for r in query_paper_trades(
-                deps.db_session, as_of_date=_FAR_FUTURE, signal_id=ctx.signal_id
-            )
-            if r.attempt_no == attempt and r.submit_status == "submitted"
-        ]
-        if existing:
-            return existing[0]
-        raise AlreadySubmitted(f"broker already has client_order_id {client_order_id}") from None
+        result = _adopt_existing_order(deps, req)
+        payload["adopted_existing_order"] = True
     except BrokerRejected as exc:
+        # The adapter scrubs credentials from broker messages before they get here.
         payload["broker_error"] = str(exc)
-        insert_paper_trade(
-            deps.db_session,
-            NewPaperTrade(
-                signal_id=ctx.signal_id,
-                attempt_no=attempt,
-                ticker=ctx.ticker,
-                side=plan.side,
-                order_type=plan.order_type,
-                quantity=plan.quantity,
-                limit_price_cents=plan.limit_price_cents,
-                submit_status="rejected",
-                broker_order_id=None,
-                risk_status_at_submit=ctx.risk_status,
-                policy_sha=ctx.policy_sha,
-                review_policy_sha=ctx.review_policy_sha,
-                as_of_date=ctx.as_of_date,
-                payload=payload,
-            ),
-        )
+        insert_paper_trade(deps.db_session, _trade_row(ctx, attempt, plan, "rejected", payload))
         logger.warning("paper_order_rejected", signal_id=ctx.signal_id, attempt=attempt)
         raise
 
     payload["broker_result"] = result.raw
     rec = insert_paper_trade(
         deps.db_session,
-        NewPaperTrade(
-            signal_id=ctx.signal_id,
-            attempt_no=attempt,
-            ticker=ctx.ticker,
-            side=plan.side,
-            order_type=plan.order_type,
-            quantity=plan.quantity,
-            limit_price_cents=plan.limit_price_cents,
-            submit_status="submitted",
-            broker_order_id=result.broker_order_id,
-            risk_status_at_submit=ctx.risk_status,
-            policy_sha=ctx.policy_sha,
-            review_policy_sha=ctx.review_policy_sha,
-            as_of_date=ctx.as_of_date,
-            payload=payload,
-        ),
+        _trade_row(ctx, attempt, plan, "submitted", payload, result.broker_order_id),
     )
     logger.info(
         "paper_order_submitted",
@@ -293,8 +276,58 @@ def _submit_order(
         attempt=attempt,
         broker_order_id=result.broker_order_id,
         qty=plan.quantity,
+        adopted=payload.get("adopted_existing_order", False),
     )
     return rec
+
+
+def _adopt_existing_order(deps: SubmitDeps, req: BrokerOrderRequest) -> BrokerOrderResult:
+    """The broker already holds ``req.client_order_id`` -- a previous run of this
+    attempt reached the broker but its response was lost (next_attempt found no
+    local row). Adopt that order, but only if it is the order we would place."""
+    held = deps.broker.get_order_by_client_order_id(req.client_order_id)
+    if held is None:
+        raise ClientOrderIdConflict(
+            f"broker reported {req.client_order_id} as a duplicate but cannot find it"
+        )
+    ours = (req.symbol.upper(), req.side, req.qty)
+    theirs = (held.symbol.upper(), held.side, held.qty)
+    if theirs != ours:
+        raise ClientOrderIdConflict(
+            f"broker holds {req.client_order_id} as {theirs}, not the intended {ours}"
+        )
+    logger.warning(
+        "paper_order_adopted",
+        client_order_id=req.client_order_id,
+        broker_order_id=held.broker_order_id,
+    )
+    return held
+
+
+def _trade_row(
+    ctx: SignalContext,
+    attempt: int,
+    plan: OrderPlan,
+    status: Literal["submitted", "rejected"],
+    payload: dict[str, Any],
+    broker_order_id: str | None = None,
+) -> NewPaperTrade:
+    return NewPaperTrade(
+        signal_id=ctx.signal_id,
+        attempt_no=attempt,
+        ticker=ctx.ticker,
+        side=plan.side,
+        order_type=plan.order_type,
+        quantity=plan.quantity,
+        limit_price_cents=plan.limit_price_cents,
+        submit_status=status,
+        broker_order_id=broker_order_id,
+        risk_status_at_submit=ctx.risk_status,
+        policy_sha=ctx.policy_sha,
+        review_policy_sha=ctx.review_policy_sha,
+        as_of_date=ctx.as_of_date,
+        payload=payload,
+    )
 
 
 def _side_hint(ctx: SignalContext) -> str:

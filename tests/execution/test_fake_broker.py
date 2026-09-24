@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from ai_hedge_fund.execution.broker import BrokerOrderRequest
-from ai_hedge_fund.execution.errors import DuplicateClientOrderId
+from ai_hedge_fund.execution.errors import DuplicateClientOrderId, TransientBrokerError
 from tests.execution.fakes import FakeBroker
 
 
@@ -39,3 +39,17 @@ def test_scripted_failure() -> None:
     b = FakeBroker(fail_with=RuntimeError("boom"))
     with pytest.raises(RuntimeError):
         b.submit_order(_req())
+
+
+def test_lookup_by_client_order_id() -> None:
+    b = FakeBroker()
+    r = b.submit_order(_req("sig-1-a1"))
+    assert b.get_order_by_client_order_id("sig-1-a1") == r
+    assert b.get_order_by_client_order_id("missing") is None
+
+
+def test_lose_response_once_keeps_the_order() -> None:
+    b = FakeBroker(lose_response_once=True)
+    with pytest.raises(TransientBrokerError):
+        b.submit_order(_req("sig-1-a1"))
+    assert b.get_order_by_client_order_id("sig-1-a1") is not None  # accepted at the broker

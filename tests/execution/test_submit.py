@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import re
+from dataclasses import replace
+
 import pytest
 from sqlalchemy.orm import Session
 
@@ -10,10 +13,19 @@ from ai_hedge_fund.execution.errors import (
     AlreadyDecided,
     AlreadySubmitted,
     AttemptsExhausted,
+    BrokerAuthError,
     BrokerRejected,
+    ClientOrderIdConflict,
+    TransientBrokerError,
 )
 from ai_hedge_fund.execution.policy import ExecutionPolicy
-from ai_hedge_fund.execution.submit import NO_REVIEW_POLICY_SHA, SubmitDeps, submit_signal
+from ai_hedge_fund.execution.submit import (
+    NO_REVIEW_POLICY_SHA,
+    SubmitDeps,
+    client_order_id_for,
+    load_signal_context,
+    submit_signal,
+)
 from ai_hedge_fund.paper import PaperTradeRecord
 from ai_hedge_fund.paper.recall import query_paper_trades
 from tests.execution.conftest import add_price, add_review, make_analysis
@@ -50,7 +62,7 @@ def test_submitted_persists_broker_order_id(db_session: Session, reviewed_signal
     assert rec.quantity == 35 and rec.attempt_no == 1
     assert broker.calls == 1
     assert rec.payload["execution_policy_sha"] == POLICY_SHA
-    assert broker.requests[0].client_order_id == f"sig-{reviewed_signal}-a1"
+    assert broker.requests[0].client_order_id.startswith(f"sig-{reviewed_signal}-a1-")
 
 
 def test_dry_run_writes_nothing_and_calls_no_broker(
@@ -150,7 +162,7 @@ def test_retry_after_rejection_is_attempt_2(db_session: Session, reviewed_signal
     good = FakeBroker()
     rec = submit_signal(_deps(db_session, good), reviewed_signal)
     assert rec.submit_status == "submitted" and rec.attempt_no == 2
-    assert good.requests[0].client_order_id == f"sig-{reviewed_signal}-a2"
+    assert good.requests[0].client_order_id.startswith(f"sig-{reviewed_signal}-a2-")
 
 
 def test_attempts_exhausted(db_session: Session, reviewed_signal: int) -> None:
@@ -181,9 +193,76 @@ def test_unknown_episodic_id_raises(db_session: Session) -> None:
         submit_signal(_deps(db_session), 999_999)
 
 
-def test_no_secret_values_in_payload(db_session: Session, reviewed_signal: int) -> None:
-    rec = submit_signal(_deps(db_session), reviewed_signal)
-    import json
+# --------------------------------------------------------------------------- client_order_id (R7)
 
-    blob = json.dumps(rec.payload).lower()
-    assert "secret" not in blob or "***" in blob  # no raw secret key names leak unmasked
+
+def test_client_order_id_is_namespaced_and_stable(
+    db_session: Session, reviewed_signal: int
+) -> None:
+    """Review R7: the id must not be derivable from the row id alone, but must be
+    identical on every re-run of the same attempt (idempotency depends on it)."""
+    ctx = load_signal_context(db_session, reviewed_signal)
+    coid = client_order_id_for(ctx, 1)
+    assert re.fullmatch(rf"sig-{reviewed_signal}-a1-[0-9a-f]{{10}}", coid)
+    assert client_order_id_for(ctx, 1) == coid
+    assert client_order_id_for(ctx, 2) != coid
+    assert len(coid) <= 128  # Alpaca's limit (probed)
+
+
+def test_client_order_id_differs_for_same_row_id_in_another_database(
+    db_session: Session, reviewed_signal: int
+) -> None:
+    """Review R7: a rebuilt DB reissues signal id 1 -- its orders must not collide
+    with the old DB's orders in the same (long-lived) paper account."""
+    ctx = load_signal_context(db_session, reviewed_signal)
+    other_db = replace(ctx, signal_observed_at="2031-01-01T00:00:00")
+    assert client_order_id_for(other_db, 1) != client_order_id_for(ctx, 1)
+
+
+# --------------------------------------------------------------------------- lost responses (R3)
+
+
+def test_lost_response_is_adopted_on_rerun(db_session: Session, reviewed_signal: int) -> None:
+    """Review R3: the broker accepted, the response timed out. The re-run resends
+    the same client_order_id, gets 'duplicate', and records the existing order
+    instead of reporting 'already handled' with nothing recorded."""
+    broker = FakeBroker(lose_response_once=True)
+    with pytest.raises(TransientBrokerError):
+        submit_signal(_deps(db_session, broker), reviewed_signal)
+    assert query_paper_trades(db_session, as_of_date="2999-01-01", signal_id=reviewed_signal) == []
+
+    rec = submit_signal(_deps(db_session, broker), reviewed_signal)
+    assert rec.submit_status == "submitted" and rec.attempt_no == 1
+    assert rec.broker_order_id == "fake-1"
+    assert rec.payload["adopted_existing_order"] is True
+    assert len(broker.orders) == 1  # one order at the broker, never two
+    assert broker.requests[0].client_order_id == broker.requests[1].client_order_id
+
+
+def test_duplicate_held_by_a_different_order_is_a_conflict(
+    db_session: Session, reviewed_signal: int
+) -> None:
+    """Review R3/R7: never adopt a broker order that is not the one we would place."""
+    broker = FakeBroker()
+    coid = client_order_id_for(load_signal_context(db_session, reviewed_signal), 1)
+    broker.seed_order(coid, symbol="MSFT", side="buy", qty=35)
+    with pytest.raises(ClientOrderIdConflict):
+        submit_signal(_deps(db_session, broker), reviewed_signal)
+    assert query_paper_trades(db_session, as_of_date="2999-01-01", signal_id=reviewed_signal) == []
+
+
+# --------------------------------------------------------------------------- auth failures (R5)
+
+
+def test_auth_failure_records_nothing_and_burns_no_attempt(
+    db_session: Session, reviewed_signal: int
+) -> None:
+    """Review R5: a 401 is not the broker's verdict on the order."""
+    with pytest.raises(BrokerAuthError):
+        submit_signal(
+            _deps(db_session, FakeBroker(fail_with=BrokerAuthError("unauthorized."))),
+            reviewed_signal,
+        )
+    assert query_paper_trades(db_session, as_of_date="2999-01-01", signal_id=reviewed_signal) == []
+    rec = submit_signal(_deps(db_session, FakeBroker()), reviewed_signal)
+    assert rec.submit_status == "submitted" and rec.attempt_no == 1

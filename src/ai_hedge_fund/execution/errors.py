@@ -17,7 +17,15 @@ class MissingBrokerCredentials(ExecutionError):
 
 
 class LiveEndpointRefused(ExecutionError):
-    """The broker host is not a paper endpoint (does not contain 'paper-api')."""
+    """The broker host is not exactly Alpaca's paper endpoint (https, allow-listed hostname)."""
+
+
+class BrokerAuthError(ExecutionError):
+    """The broker rejected the credentials (401/403).
+
+    Deliberately *not* a :class:`BrokerRejected`: the broker never evaluated the
+    order, so nothing is recorded and no attempt is consumed.
+    """
 
 
 class NoPriceAvailable(ExecutionError):
@@ -48,5 +56,17 @@ class DuplicateClientOrderId(BrokerRejected):
     """The broker has already seen this client_order_id (idempotency hit)."""
 
 
+class ClientOrderIdConflict(ExecutionError):
+    """The broker holds our client_order_id for an order we would not have placed.
+
+    Raised instead of adopting it -- recording a foreign order as ours would
+    corrupt the audit trail.
+    """
+
+
 class TransientBrokerError(ExecutionError):
-    """A retryable broker/transport failure (5xx, timeout)."""
+    """A retryable broker/transport failure (5xx, 429, timeout, connection).
+
+    The order may or may not have reached the broker; a re-run resends the same
+    client_order_id, so it is safe either way.
+    """
