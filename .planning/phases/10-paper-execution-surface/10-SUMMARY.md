@@ -60,6 +60,7 @@ D1 standalone `submit_signal` step (not a graph node) -- done. D2 BrokerClient P
   - **R5** error classification rebuilt from shapes **probed on the real paper API**: the code the adapter keyed duplicates on (40010001) is actually "client_order_id too long"; the real duplicate is 42210000, shared with "asset not found", so it is matched by message. 401/403 are auth errors, not rejections (no attempt burned).
   - **R3** timeouts/connection errors now retry with the same client_order_id; a re-run after a lost response adopts the broker's order after a symbol/side/qty match (closes round-1 F3). **R7** client_order_id namespaced per database so adoption cannot pick up a foreign order.
   - **R4** sizing in exact rational arithmetic (float math dropped a share at exact boundaries). **R6** fail closed on unrecognised statuses/directions ("LONG" used to become a *sell*) and validate the stored signal against `FinalSignalOutput`. **R9** broker messages credential-scrubbed. **R10** deterministic same-day multi-source price. **R8** test gaps above.
+- **Round 2b (fresh re-review of the round-2 fixes):** 7 findings, all fixed RED-first (`aefbbaf`). Most important: **the R3 lost-response fix crashed through the real CLI** -- the lazy broker wrapper did not proxy the new lookup, and every test called `submit_signal` directly. Also: **403 is an order verdict at Alpaca** (probed: "insufficient buying power" = 403/40310000), so only 401 is an auth failure -- an invented "forbidden" test fixture had hidden this; strict signal validation (lax mode let conviction `"80"` reach a terminal refusal); adoption records the broker's own qty/type/price and matches on symbol+side only; dead unfilled held orders recorded as rejections (partial fills as submissions); order id and as-of date computed in UTC (psycopg returns the session time zone). Lesson recorded: every fix got its own review, and tests now exercise the CLI wrapper and cross-session reloads.
 
 ## Handoff to Phase 11 (Mark-to-Market)
 
@@ -71,7 +72,7 @@ D1 standalone `submit_signal` step (not a graph node) -- done. D2 BrokerClient P
 
 ## Verification
 
-- Full suite (after round 2): **1500 passed, 11 skipped, 1 deselected** (the deselected `test_checkpoint_resume` is the pre-existing async-checkpointer bug, fixed separately in PR #5).
+- Full suite (after rounds 2 and 2b): **1513 passed, 11 skipped, 1 deselected** (the deselected `test_checkpoint_resume` is the pre-existing async-checkpointer bug, fixed separately in PR #5).
 - PostgreSQL-gated: `TEST_DATABASE_URL=... pytest tests/paper -m slow` -> 3 passed (incl. every submit_status inserting on real PG), stable across repeated runs.
 - `ruff format --check` / `ruff check` clean; `uv sync --frozen` resolves.
-- Live: `uv run --env-file .env pytest tests/execution/test_alpaca_live.py -m slow` -> 2 passed against Alpaca paper (round trip; duplicate classification + lookup).
+- Live: `uv run --env-file .env pytest tests/execution/test_alpaca_live.py -m slow` -> 2 passed against Alpaca paper (round trip; duplicate classification + lookup, incl. order type / limit price / filled qty mapped from the real Order).

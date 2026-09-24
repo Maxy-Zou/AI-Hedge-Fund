@@ -10,7 +10,9 @@ An independent pre-merge review of PR #4 found a critical defect the first self-
 
 **Files:** `alembic/versions/005_*`, `db/models.py`, `execution/{alpaca,broker,decide,errors,prices,sizing,submit}.py`, `pyproject.toml`/`uv.lock` (`requests` declared), tests across `tests/execution/` and `tests/paper/`, `.planning/{TECH-DEBT.md, phases/10-*/10-SUMMARY.md}`.
 
-**Tests:** 1390 -> **1500 passed** (11 skipped, 1 deselected); PG-gated 3/3; live Alpaca paper 2/2.
+**Re-review of the fixes (round 2b):** a fresh reviewer found 7 more, all fixed: the lost-response adoption crashed through the real CLI (lazy broker wrapper lacked the lookup; tests bypassed the CLI); Alpaca's 403 is "insufficient buying power" (probed), not auth; strict signal validation; adoption records the broker's own order and handles dead/partially-filled held orders; order id and as-of computed in UTC.
+
+**Tests:** 1390 -> **1513 passed** (11 skipped, 1 deselected); PG-gated 3/3; live Alpaca paper 2/2.
 
 ## 2026-09-24 — Phase 10 delivered: Paper Execution Surface (EXEC-01..05), PR #4
 
