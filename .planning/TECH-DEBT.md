@@ -34,22 +34,6 @@ the debt and the expected resolution timing.
   and provides the pattern (file-based SQLite + `alembic.autogenerate.compare_metadata`).
   Extend to the full chain, and add parity checks for every v1.0 table, in a v1.x cleanup.
 
-- **Async pipeline invoked against a sync PostgresSaver (found Phase 10, pre-existing since Phase 1):**
-  `tests/integration/test_checkpointer.py::test_checkpoint_resume` calls `graph.ainvoke(...)` on a
-  pipeline built with `create_checkpointer()`, which yields a synchronous
-  `langgraph.checkpoint.postgres.PostgresSaver`. Under the current langgraph, the async loop calls
-  `aget_tuple()` on the sync saver -> `NotImplementedError`. The test has been skipped its entire life
-  (its `requires_db` guard skips when Docker is down, which was always the case until Phase 9 started
-  Postgres), so this never ran. Fix needs a decision: yield `AsyncPostgresSaver` from an async
-  `create_checkpointer` path, or invoke synchronously in the test. Touches `graph/checkpointer.py`,
-  `graph/pipeline.py`, and how production runs the graph -> its own session, not a mid-phase patch.
-  Filed 2026-09-24. (Secondary: module-level `create_agent()` in `agents/analysis.py` /
-  `extraction.py` makes graph imports need `ANTHROPIC_API_KEY` at import; isolated collection of any
-  graph-importing test errors unless a dummy key is set. A session-scoped conftest
-  `os.environ.setdefault` would fix isolated runs.) **Fixed in PR #5** (`fix/checkpointer-async`):
-  the test uses the existing `create_async_checkpointer`; conftest defaults a dummy key. Move to
-  Closed, and drop the Phase 10 gate's `--deselect`, once PR #5 merges.
-
 - **submit_signal has no concurrency guard (Phase 10 review F6; narrowed by review round 2):**
   two concurrent runs for one signal compute the same attempt and therefore the same deterministic
   client_order_id, so the broker accepts only one order (the other gets "duplicate" and adopts it).
@@ -64,6 +48,15 @@ the debt and the expected resolution timing.
   recorded in the trade payload. Filed 2026-09-24.
 
 ## Closed
+
+- **Async pipeline invoked against a sync PostgresSaver (found Phase 10, pre-existing since Phase 1):**
+  `test_checkpoint_resume` drove `ainvoke` through the sync `PostgresSaver` (no `aget_tuple` ->
+  `NotImplementedError`), hidden because its `requires_db` guard skipped while Docker was down.
+  Closed by PR #5: the test uses the existing `create_async_checkpointer`, agents are stubbed with
+  `TestModel`, five docstrings that pointed `ainvoke` graphs at the sync saver are corrected, and
+  `tests/conftest.py` defaults a `test-key` dummy API key so isolated runs collect. No production
+  path used the Postgres checkpointer (`run_analysis.py` uses `InMemorySaver`). Full suite now runs
+  with no deselect. Closed 2026-09-25.
 
 - **Duplicate-client-order-id with no local row left a broker order untracked (Phase 10 review F3):**
   closed by review round 2 (R3). On "duplicate", `_submit_order` now looks the order up by
