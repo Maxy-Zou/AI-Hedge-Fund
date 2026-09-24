@@ -1,3 +1,17 @@
+## 2026-09-24 — Phase 10 code review round 2: 10 findings fixed before merge (PR #4)
+
+An independent pre-merge review of PR #4 found a critical defect the first self-review missed, plus nine more. All addressed RED-first on the phase branch; nothing merged in between.
+
+**Critical:** `paper_trades.submit_status` was VARCHAR(12) but `refused_review`/`refused_policy` are 14 chars -- on PostgreSQL 5 of 6 refusal paths crashed with an uncaught DataError and wrote no audit row (SQLite ignores VARCHAR length, so the suite was green). Migration 005 amended in place to VARCHAR(20); dev DB re-migrated (paper tables were empty). New SQLite-level guards catch this class without Postgres.
+
+**Broker adapter:** paper-host guard parsed and allow-listed (a `paper-api@api.alpaca.markets` URL used to reach the live API). Error classification rebuilt from shapes **probed on the real paper API** -- the assumed duplicate code was wrong (40010001 is "client_order_id too long"; duplicates are 42210000, shared with "asset not found", so matched by message). 401/403 no longer recorded as rejections. Timeouts retried with the same client_order_id; a re-run after a lost response adopts the broker's order after a symbol/side/qty check (closes the untracked-order debt); client_order_id namespaced per database. Broker messages credential-scrubbed.
+
+**Decision/sizing:** fail closed on unrecognised statuses/directions ("LONG" used to become a sell); stored signal validated against `FinalSignalOutput`; sizing in exact rational arithmetic (float math dropped a share at boundaries); deterministic same-day multi-source price. Missing/vacuous pre-mortem tests replaced; 10-SUMMARY's coverage claim corrected.
+
+**Files:** `alembic/versions/005_*`, `db/models.py`, `execution/{alpaca,broker,decide,errors,prices,sizing,submit}.py`, `pyproject.toml`/`uv.lock` (`requests` declared), tests across `tests/execution/` and `tests/paper/`, `.planning/{TECH-DEBT.md, phases/10-*/10-SUMMARY.md}`.
+
+**Tests:** 1390 -> **1500 passed** (11 skipped, 1 deselected); PG-gated 3/3; live Alpaca paper 2/2.
+
 ## 2026-09-24 — Phase 10 delivered: Paper Execution Surface (EXEC-01..05), PR #4
 
 Second phase under the Development Workflow. Branch `phase/10-paper-execution-surface`; every implementation commit preceded by a RED test; D1-D9 signed off before any code.
