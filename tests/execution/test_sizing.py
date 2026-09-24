@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+from fractions import Fraction
+
+import pytest
+
 from ai_hedge_fund.execution.policy import ExecutionPolicy
 from ai_hedge_fund.execution.sizing import SizeResult, conviction_scale, size_order
 
@@ -64,9 +68,41 @@ def test_deterministic_same_inputs_same_output() -> None:
     assert a == b
 
 
-def test_integer_arithmetic_no_float_drift() -> None:
-    # Pick values where float multiplication would drift: 0.05 * conviction scaling.
-    r = size_order(conviction=90, price_cents=3_333, policy=POLICY)
-    # exact: floor(500_000 / 3_333) = 150
-    assert r.shares == 150
-    assert isinstance(r.shares, int) and isinstance(r.notional_cents, int)
+def _policy(pct: str, lo: int, hi: int) -> ExecutionPolicy:
+    return POLICY.model_copy(
+        update={"max_position_pct": float(pct), "min_conviction": lo, "full_conviction": hi}
+    )
+
+
+def _exact_budget(pct: str, lo: int, hi: int, conviction: int) -> Fraction:
+    """Reference: the budget in exact rational arithmetic, from the decimal as written."""
+    if conviction < lo:
+        return Fraction(0)
+    scale = Fraction(1) if conviction >= hi else Fraction(conviction - lo, hi - lo)
+    return POLICY.nav_cents * Fraction(pct) * scale
+
+
+def test_boundary_budget_is_exact_not_float() -> None:
+    """Review R4 counterexample: 10_000_000 * 0.01 * 29/50 is exactly 58_000 cents,
+    but float math gives 57999.999... and truncates a whole share away."""
+    assert (
+        size_order(conviction=79, price_cents=58_000, policy=_policy("0.01", 50, 100)).shares == 1
+    )
+
+
+@pytest.mark.parametrize("pct", ["0.01", "0.02", "0.03", "0.05", "0.07", "0.1", "0.15", "0.3"])
+@pytest.mark.parametrize("lo,hi", [(50, 100), (55, 90), (60, 85), (40, 95), (70, 71)])
+def test_size_matches_exact_rational_reference(pct: str, lo: int, hi: int) -> None:
+    """09-PREMORTEM #10: integer arithmetic only. At every exact-cent budget, a share
+    priced at the budget must fit; at every other price the share count is the
+    exact floor."""
+    policy = _policy(pct, lo, hi)
+    for conviction in range(lo - 1, hi + 2):
+        exact = _exact_budget(pct, lo, hi, conviction)
+        prices = [1_234, 9_999, 58_000]
+        if exact.denominator == 1 and exact > 0:
+            prices.append(int(exact))  # the boundary: exactly one share
+        for price in prices:
+            got = size_order(conviction=conviction, price_cents=price, policy=policy)
+            assert got.shares == exact // price, (pct, lo, hi, conviction, price)
+            assert isinstance(got.shares, int) and isinstance(got.notional_cents, int)
