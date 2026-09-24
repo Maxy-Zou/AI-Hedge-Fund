@@ -224,6 +224,42 @@ def test_client_order_id_is_namespaced_and_stable(
     assert len(coid) <= 128  # Alpaca's limit (probed)
 
 
+def test_client_order_id_is_stable_across_sessions(
+    sqlite_engine, reviewed_signal: int, db_session: Session
+) -> None:
+    """Round-2 re-review: stability must hold across a reload in a new session,
+    not just for one in-memory context -- a re-run is always a new process."""
+    from sqlalchemy.orm import sessionmaker
+
+    first = client_order_id_for(load_signal_context(db_session, reviewed_signal), 1)
+    with sessionmaker(bind=sqlite_engine)() as fresh:
+        assert client_order_id_for(load_signal_context(fresh, reviewed_signal), 1) == first
+
+
+def test_observed_key_is_timezone_independent() -> None:
+    """Round-2 re-review: psycopg returns timestamptz in the *session* time zone.
+    The same instant must give the same id under TimeZone=UTC and under PGTZ."""
+    from datetime import UTC, datetime, timedelta, timezone
+
+    from ai_hedge_fund.execution.submit import _utc_iso
+
+    instant = datetime(2026, 4, 18, 12, 0, 0, 123456, tzinfo=UTC)
+    ny = instant.astimezone(timezone(timedelta(hours=-4)))
+    naive_utc = instant.replace(tzinfo=None)  # SQLite hands back naive UTC
+    assert _utc_iso(instant) == _utc_iso(ny) == _utc_iso(naive_utc)
+
+
+def test_as_of_date_is_timezone_independent() -> None:
+    """Same class, pre-existing: midnight-UTC as_of read in a UTC-4 session is
+    20:00 the previous day -- isoformat()[:10] would shift the trading date."""
+    from datetime import UTC, datetime, timedelta, timezone
+
+    from ai_hedge_fund.execution.submit import _as_of_str
+
+    midnight = datetime(2026, 4, 18, tzinfo=UTC)
+    assert _as_of_str(midnight.astimezone(timezone(timedelta(hours=-4)))) == "2026-04-18"
+
+
 def test_client_order_id_differs_for_same_row_id_in_another_database(
     db_session: Session, reviewed_signal: int
 ) -> None:
@@ -252,6 +288,53 @@ def test_lost_response_is_adopted_on_rerun(db_session: Session, reviewed_signal:
     assert rec.payload["adopted_existing_order"] is True
     assert len(broker.orders) == 1  # one order at the broker, never two
     assert broker.requests[0].client_order_id == broker.requests[1].client_order_id
+
+
+def test_adoption_records_the_broker_order_not_a_resized_plan(
+    db_session: Session, reviewed_signal: int
+) -> None:
+    """Round-2 re-review: between the lost response and the re-run the price or
+    policy may change, so today's plan can differ from the order already placed.
+    The order under our (per-attempt, per-database) id is ours: adopt it and record
+    what the broker actually holds."""
+    broker = FakeBroker()
+    coid = client_order_id_for(load_signal_context(db_session, reviewed_signal), 1)
+    broker.seed_order(
+        coid, symbol="AAPL", side="buy", qty=12, order_type="limit", limit_price_cents=9_950
+    )
+    rec = submit_signal(_deps(db_session, broker), reviewed_signal)
+    assert rec.submit_status == "submitted" and rec.payload["adopted_existing_order"] is True
+    assert (rec.quantity, rec.order_type, rec.limit_price_cents) == (12, "limit", 9_950)
+    assert rec.payload["decision"]["quantity"] == 35  # the re-run's plan, kept for audit
+
+
+@pytest.mark.parametrize("dead", ["canceled", "expired", "rejected"])
+def test_adopting_a_dead_order_records_a_rejection_not_a_submission(
+    db_session: Session, reviewed_signal: int, dead: str
+) -> None:
+    """Round-2 re-review: a held order that is canceled/expired/rejected never
+    traded. Recording it as 'submitted' would block any retry forever."""
+    broker = FakeBroker()
+    coid = client_order_id_for(load_signal_context(db_session, reviewed_signal), 1)
+    broker.seed_order(coid, symbol="AAPL", side="buy", qty=35, status=dead)
+    with pytest.raises(BrokerRejected):
+        submit_signal(_deps(db_session, broker), reviewed_signal)
+    rows = query_paper_trades(db_session, as_of_date="2999-01-01", signal_id=reviewed_signal)
+    assert [r.submit_status for r in rows] == ["rejected"]
+    assert dead in rows[0].payload["broker_error"]
+    assert next_attempt(db_session, reviewed_signal, POLICY) == 2  # a retry is still possible
+
+
+def test_adopting_a_canceled_but_partially_filled_order_records_the_submission(
+    db_session: Session, reviewed_signal: int
+) -> None:
+    """A canceled order that filled 10 of 35 shares *did* trade -- recording it as a
+    rejection would erase a real position and invite a second order."""
+    broker = FakeBroker()
+    coid = client_order_id_for(load_signal_context(db_session, reviewed_signal), 1)
+    broker.seed_order(coid, symbol="AAPL", side="buy", qty=35, status="canceled", filled_qty=10)
+    rec = submit_signal(_deps(db_session, broker), reviewed_signal)
+    assert rec.submit_status == "submitted" and rec.payload["adopted_existing_order"] is True
 
 
 def test_duplicate_held_by_a_different_order_is_a_conflict(
@@ -294,8 +377,18 @@ def test_auth_failure_records_nothing_and_burns_no_attempt(
         {"episodic_id": 424242},  # review row describes a different analysis
         {"ticker": "MSFT"},  # ...or a different ticker than the analysis row
         {"thesis_summary": None},
+        {"conviction": "80"},  # lax pydantic would coerce these; decide() would then
+        {"conviction": 80.0},  # record a *terminal* refusal (round-2 re-review)
     ],
-    ids=["direction", "conviction", "episodic_id", "ticker", "null-field"],
+    ids=[
+        "direction",
+        "conviction",
+        "episodic_id",
+        "ticker",
+        "null-field",
+        "str-conv",
+        "float-conv",
+    ],
 )
 def test_malformed_stored_signal_raises_and_records_nothing(
     db_session: Session, overrides: dict

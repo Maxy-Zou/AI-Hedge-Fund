@@ -128,3 +128,32 @@ def test_unknown_id_exit_one(session_factory: Callable[[], Session]) -> None:
         FakeBroker(),
     )
     assert rc == 1
+
+
+def test_lost_response_is_adopted_through_the_cli(
+    session_factory: Callable[[], Session],
+) -> None:
+    """Round-2 re-review: adoption must work through the real CLI wrapper, not only
+    when submit_signal is handed a FakeBroker directly."""
+    with session_factory() as s:
+        aid = make_analysis(s)
+        add_review(s, aid)
+        add_price(s)
+    broker = FakeBroker(lose_response_once=True)
+    argv = ["--episodic-id", "1", "--policy", "config/execution_policy.yaml"]
+    assert _main(argv, session_factory=session_factory, broker_factory=lambda _s: broker) == 1
+    assert _main(argv, session_factory=session_factory, broker_factory=lambda _s: broker) == 0
+    with session_factory() as s:
+        rows = query_paper_trades(s, as_of_date="2999-01-01", signal_id=1)
+    assert [r.submit_status for r in rows] == ["submitted"] and len(broker.orders) == 1
+
+
+def test_lazy_broker_implements_the_whole_broker_protocol() -> None:
+    """The wrapper forgot a method once (round-2 re-review); keep it complete."""
+    from ai_hedge_fund.execution.broker import BrokerClient
+    from ai_hedge_fund.scripts.submit_signal import _LazyBroker
+
+    wanted = {n for n in vars(BrokerClient) if not n.startswith("_")}
+    assert wanted, "protocol has no public methods?"
+    missing = {n for n in wanted if not callable(getattr(_LazyBroker, n, None))}
+    assert not missing, f"_LazyBroker lacks {sorted(missing)}"

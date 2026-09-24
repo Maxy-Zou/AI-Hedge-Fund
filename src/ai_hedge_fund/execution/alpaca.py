@@ -7,8 +7,9 @@ an order), and every credential must be present and named if missing.
 
 Broker errors are classified from shapes observed on the real paper API
 (review R5): a duplicate client_order_id is identified by its message, because
-its code (42210000) is shared with other 422s such as an unknown symbol; 401/403
-are credential failures, not order rejections; 429, 5xx, timeouts and
+its code (42210000) is shared with other 422s such as an unknown symbol; 401 is
+a credential failure, not an order rejection -- but 403 is (Alpaca returns
+"insufficient buying power" as 403/40310000); 429, 5xx, timeouts and
 connection errors are transient and retried with the *same* client_order_id,
 which makes the retry idempotent. Every message leaving the adapter -- and the
 stored ``raw`` -- is scrubbed of the configured credentials.
@@ -17,6 +18,7 @@ stored ``raw`` -- is scrubbed of the configured credentials.
 from __future__ import annotations
 
 import json
+from decimal import Decimal
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -98,7 +100,7 @@ def _classify_api_error(exc: APIError, secret_values: list[str] | None = None) -
     raw_message = _message(exc)
     # Classify on the raw text; only the scrubbed text leaves the adapter.
     message = f"HTTP {status}: {redact(raw_message, secret_values)}"
-    if status in (401, 403):
+    if status == 401:  # 403 is an order verdict at Alpaca (e.g. buying power)
         return BrokerAuthError(message)
     if status == 429 or (status is not None and status >= 500):
         return TransientBrokerError(message)
@@ -198,6 +200,9 @@ class AlpacaPaperBroker:
             symbol=str(order.symbol),
             side=_enum_value(order.side),
             qty=int(float(order.qty)),
+            order_type=_enum_value(order.order_type),
+            limit_price_cents=_dollars_to_cents(order.limit_price),
+            filled_qty=int(float(order.filled_qty or 0)),
             raw=redact(_as_dict(order), secret_values=self._secret_values),
         )
 
@@ -205,6 +210,13 @@ class AlpacaPaperBroker:
 def _enum_value(value: Any) -> str:
     """alpaca-py returns enums (``OrderSide.BUY``); store their wire value (``buy``)."""
     return str(getattr(value, "value", value))
+
+
+def _dollars_to_cents(value: Any) -> int | None:
+    """Alpaca reports prices as decimal-dollar strings; convert exactly, no float."""
+    if value is None:
+        return None
+    return int((Decimal(str(value)) * 100).to_integral_value())
 
 
 def _as_dict(order: Any) -> dict[str, Any]:

@@ -67,6 +67,8 @@ def test_duplicate_is_classified_and_lookup_finds_the_order() -> None:
         held = broker.get_order_by_client_order_id(coid)
         assert held is not None and held.broker_order_id == first.broker_order_id
         assert (held.symbol, held.side, held.qty) == ("SPY", "buy", 1)
+        # adoption records these from the real Order object (enum/decimal-string mapping)
+        assert (held.order_type, held.limit_price_cents, held.filled_qty) == ("limit", 100, 0)
         assert broker.get_order_by_client_order_id(f"smoke-missing-{uuid.uuid4().hex[:8]}") is None
     finally:
         broker.cancel_order(first.broker_order_id)

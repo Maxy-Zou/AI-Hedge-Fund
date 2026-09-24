@@ -67,6 +67,9 @@ class _LazyBroker:
     def submit_order(self, req: BrokerOrderRequest) -> BrokerOrderResult:
         return self._get().submit_order(req)
 
+    def get_order_by_client_order_id(self, client_order_id: str) -> BrokerOrderResult | None:
+        return self._get().get_order_by_client_order_id(client_order_id)
+
     def cancel_order(self, broker_order_id: str) -> None:
         self._get().cancel_order(broker_order_id)
 

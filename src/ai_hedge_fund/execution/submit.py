@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 import structlog
@@ -26,6 +27,7 @@ from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ai_hedge_fund.db.dates import normalise_as_of
 from ai_hedge_fund.db.models import EpisodicMemory
 from ai_hedge_fund.execution.broker import BrokerClient, BrokerOrderRequest, BrokerOrderResult
 from ai_hedge_fund.execution.decide import (
@@ -114,7 +116,7 @@ def load_signal_context(db_session: Session, episodic_id: int) -> SignalContext:
     if risk_status not in (RISK_APPROVED, RISK_VETOED):
         raise InvalidSignal(f"analysis {episodic_id} has unrecognised risk status {risk_status!r}")
     as_of_str = _as_of_str(analysis.as_of_date)
-    observed = analysis.observed_date.isoformat()
+    observed = _utc_iso(analysis.observed_date)
     risk_sha = analysis.policy_sha or NO_REVIEW_POLICY_SHA
 
     review = db_session.scalars(
@@ -169,7 +171,9 @@ def _validate_final_signal(final_signal: Any, episodic_id: int, ticker: str) -> 
     """Spec 3.8: a signal that may trade must be a well-formed FinalSignalOutput
     about *this* analysis -- never trade on a review row describing another one."""
     try:
-        sig = FinalSignalOutput.model_validate(final_signal)
+        # strict: lax mode would coerce "80"/80.0 here, and decide() would then
+        # record a *terminal* invalid_signal refusal instead of raising.
+        sig = FinalSignalOutput.model_validate(final_signal, strict=True)
     except ValidationError as exc:
         fields = sorted({".".join(map(str, e["loc"])) or "<root>" for e in exc.errors()})
         raise InvalidSignal(
@@ -275,6 +279,30 @@ def _record_refusal(
     return rec
 
 
+# A held order in one of these states, with nothing filled, never traded.
+_DEAD_ORDER_STATUSES = frozenset({"canceled", "expired", "rejected"})
+_SUPPORTED_ORDER_TYPES = frozenset({"market", "limit"})
+
+
+@dataclass(frozen=True)
+class _OrderFacts:
+    """What a paper_trades row records about the order: our plan, or -- when an
+    existing broker order is adopted -- what the broker actually holds."""
+
+    side: str
+    order_type: str
+    quantity: int
+    limit_price_cents: int | None
+
+    @classmethod
+    def of_plan(cls, plan: OrderPlan) -> _OrderFacts:
+        return cls(plan.side, plan.order_type, plan.quantity, plan.limit_price_cents)
+
+    @classmethod
+    def of_held(cls, held: BrokerOrderResult) -> _OrderFacts:
+        return cls(held.side, held.order_type, held.qty, held.limit_price_cents)
+
+
 def _submit_order(
     deps: SubmitDeps, ctx: SignalContext, attempt: int, plan: OrderPlan, price_cents: int | None
 ) -> PaperTradeRecord:
@@ -294,58 +322,104 @@ def _submit_order(
     try:
         result = deps.broker.submit_order(req)
     except DuplicateClientOrderId:
-        result = _adopt_existing_order(deps, req)
-        payload["adopted_existing_order"] = True
+        return _record_adopted(deps, ctx, attempt, req, payload)
     except BrokerRejected as exc:
         # The adapter scrubs credentials from broker messages before they get here.
-        payload["broker_error"] = str(exc)
-        insert_paper_trade(deps.db_session, _trade_row(ctx, attempt, plan, "rejected", payload))
-        logger.warning("paper_order_rejected", signal_id=ctx.signal_id, attempt=attempt)
+        _record_rejection(deps, ctx, attempt, _OrderFacts.of_plan(plan), payload, str(exc))
         raise
+    return _record_submitted(deps, ctx, attempt, _OrderFacts.of_plan(plan), payload, result)
 
+
+def _record_adopted(
+    deps: SubmitDeps,
+    ctx: SignalContext,
+    attempt: int,
+    req: BrokerOrderRequest,
+    payload: dict[str, Any],
+) -> PaperTradeRecord:
+    """The broker already holds ``req.client_order_id``: a previous run of this
+    attempt reached the broker but its response was lost (next_attempt found no
+    local row). Record the order the broker holds -- its quantity, type and price,
+    which may differ from today's re-sized plan (kept in ``payload['decision']``).
+    A held order that died unfilled is recorded as a rejection so a retry remains
+    possible."""
+    held = _find_held_order(deps, req)
+    facts = _OrderFacts.of_held(held)
+    payload["adopted_existing_order"] = True
+    payload["broker_result"] = held.raw
+    if held.status in _DEAD_ORDER_STATUSES and held.filled_qty == 0:
+        error = f"adopted order {held.broker_order_id} is {held.status} with nothing filled"
+        _record_rejection(deps, ctx, attempt, facts, payload, error)
+        raise BrokerRejected(error)
+    return _record_submitted(deps, ctx, attempt, facts, payload, held)
+
+
+def _find_held_order(deps: SubmitDeps, req: BrokerOrderRequest) -> BrokerOrderResult:
+    """The order under our id, if it is plausibly ours. The id is per-attempt and
+    per-database (R7), so identity is checked on what cannot change between runs:
+    symbol and side. Quantity and price legitimately can (re-sizing)."""
+    held = deps.broker.get_order_by_client_order_id(req.client_order_id)
+    if held is None:
+        raise ClientOrderIdConflict(
+            f"broker reported {req.client_order_id} as a duplicate but cannot find it"
+        )
+    ours = (req.symbol.upper(), req.side)
+    theirs = (held.symbol.upper(), held.side)
+    if theirs != ours or held.order_type not in _SUPPORTED_ORDER_TYPES:
+        raise ClientOrderIdConflict(
+            f"broker holds {req.client_order_id} as {theirs} {held.order_type!r}, "
+            f"not the intended {ours}"
+        )
+    logger.warning(
+        "paper_order_adopted",
+        client_order_id=req.client_order_id,
+        broker_order_id=held.broker_order_id,
+        held_status=held.status,
+    )
+    return held
+
+
+def _record_submitted(
+    deps: SubmitDeps,
+    ctx: SignalContext,
+    attempt: int,
+    facts: _OrderFacts,
+    payload: dict[str, Any],
+    result: BrokerOrderResult,
+) -> PaperTradeRecord:
     payload["broker_result"] = result.raw
     rec = insert_paper_trade(
         deps.db_session,
-        _trade_row(ctx, attempt, plan, "submitted", payload, result.broker_order_id),
+        _trade_row(ctx, attempt, facts, "submitted", payload, result.broker_order_id),
     )
     logger.info(
         "paper_order_submitted",
         signal_id=ctx.signal_id,
         attempt=attempt,
         broker_order_id=result.broker_order_id,
-        qty=plan.quantity,
+        qty=facts.quantity,
         adopted=payload.get("adopted_existing_order", False),
     )
     return rec
 
 
-def _adopt_existing_order(deps: SubmitDeps, req: BrokerOrderRequest) -> BrokerOrderResult:
-    """The broker already holds ``req.client_order_id`` -- a previous run of this
-    attempt reached the broker but its response was lost (next_attempt found no
-    local row). Adopt that order, but only if it is the order we would place."""
-    held = deps.broker.get_order_by_client_order_id(req.client_order_id)
-    if held is None:
-        raise ClientOrderIdConflict(
-            f"broker reported {req.client_order_id} as a duplicate but cannot find it"
-        )
-    ours = (req.symbol.upper(), req.side, req.qty)
-    theirs = (held.symbol.upper(), held.side, held.qty)
-    if theirs != ours:
-        raise ClientOrderIdConflict(
-            f"broker holds {req.client_order_id} as {theirs}, not the intended {ours}"
-        )
-    logger.warning(
-        "paper_order_adopted",
-        client_order_id=req.client_order_id,
-        broker_order_id=held.broker_order_id,
-    )
-    return held
+def _record_rejection(
+    deps: SubmitDeps,
+    ctx: SignalContext,
+    attempt: int,
+    facts: _OrderFacts,
+    payload: dict[str, Any],
+    error: str,
+) -> None:
+    payload["broker_error"] = error
+    insert_paper_trade(deps.db_session, _trade_row(ctx, attempt, facts, "rejected", payload))
+    logger.warning("paper_order_rejected", signal_id=ctx.signal_id, attempt=attempt)
 
 
 def _trade_row(
     ctx: SignalContext,
     attempt: int,
-    plan: OrderPlan,
+    facts: _OrderFacts,
     status: Literal["submitted", "rejected"],
     payload: dict[str, Any],
     broker_order_id: str | None = None,
@@ -354,10 +428,10 @@ def _trade_row(
         signal_id=ctx.signal_id,
         attempt_no=attempt,
         ticker=ctx.ticker,
-        side=plan.side,
-        order_type=plan.order_type,
-        quantity=plan.quantity,
-        limit_price_cents=plan.limit_price_cents,
+        side=facts.side,
+        order_type=facts.order_type,
+        quantity=facts.quantity,
+        limit_price_cents=facts.limit_price_cents,
         submit_status=status,
         broker_order_id=broker_order_id,
         risk_status_at_submit=ctx.risk_status,
@@ -373,7 +447,14 @@ def _side_hint(ctx: SignalContext) -> str:
     return "sell" if direction == "short" else "buy"
 
 
+def _utc_iso(value: datetime) -> str:
+    """ISO text of an instant in UTC. psycopg returns timestamptz in the *session*
+    time zone and SQLite returns naive UTC; hashing either raw would make the
+    client_order_id depend on connection settings (round-2 re-review)."""
+    return normalise_as_of(value).astimezone(UTC).isoformat()
+
+
 def _as_of_str(value: Any) -> str:
-    if hasattr(value, "isoformat"):
-        return value.isoformat()[:10]
-    return str(value)[:10]
+    """Business date (YYYY-MM-DD) of an as-of value, read in UTC -- a midnight-UTC
+    as_of seen in a UTC-4 session is 20:00 the previous day."""
+    return normalise_as_of(value).astimezone(UTC).date().isoformat()
