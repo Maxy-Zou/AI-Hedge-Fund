@@ -25,6 +25,7 @@ from ai_hedge_fund.execution.submit import (
     SubmitDeps,
     client_order_id_for,
     load_signal_context,
+    next_attempt,
     submit_signal,
 )
 from ai_hedge_fund.paper import PaperTradeRecord
@@ -164,6 +165,19 @@ def test_retry_after_rejection_is_attempt_2(db_session: Session, reviewed_signal
     rec = submit_signal(_deps(db_session, good), reviewed_signal)
     assert rec.submit_status == "submitted" and rec.attempt_no == 2
     assert good.requests[0].client_order_id.startswith(f"sig-{reviewed_signal}-a2-")
+
+
+def test_next_attempt_sees_all_prior_rows(db_session: Session) -> None:
+    """09-PREMORTEM #11: attempt numbering must count every prior row, including
+    rows dated after today -- a recall bounded by today's as_of (or a small
+    limit) would reuse attempt 1 and collide on (signal_id, attempt_no)."""
+    aid = make_analysis(db_session, as_of="2031-06-02")
+    add_review(db_session, aid, as_of="2031-06-02")
+    add_price(db_session, d="2031-06-01")
+    for _ in range(2):
+        with pytest.raises(BrokerRejected):
+            submit_signal(_deps(db_session, FakeBroker(fail_with=BrokerRejected("no"))), aid)
+    assert next_attempt(db_session, aid, POLICY) == 3
 
 
 def test_attempts_exhausted(db_session: Session, reviewed_signal: int) -> None:

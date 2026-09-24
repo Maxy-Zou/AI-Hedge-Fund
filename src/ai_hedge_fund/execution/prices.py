@@ -23,6 +23,8 @@ def latest_adj_close_cents(
 ) -> int:
     """Return the most recent ``adj_close_cents`` with ``trade_date <= as_of_date``.
 
+    Ties on ``trade_date`` (several sources) resolve to the latest ``observed_date``.
+
     Raises:
         NoPriceAvailable: no cached row for the ticker on or before that date.
     """
@@ -31,7 +33,12 @@ def latest_adj_close_cents(
         select(DailyPrice.adj_close_cents)
         .where(DailyPrice.ticker == ticker)
         .where(DailyPrice.trade_date <= cutoff)
-        .order_by(DailyPrice.trade_date.desc())
+        # One day may hold several sources (unique per ticker/date/source): the
+        # most recently collected row wins, so a dry run and the real submit
+        # always see the same price (review R10). No source is preferred yet.
+        .order_by(
+            DailyPrice.trade_date.desc(), DailyPrice.observed_date.desc(), DailyPrice.id.desc()
+        )
         .limit(1)
     ).first()
     if row is None:
