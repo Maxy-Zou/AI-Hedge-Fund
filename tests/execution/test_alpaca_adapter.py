@@ -3,14 +3,16 @@
 Guards: paper-only host (09-PREMORTEM #1), credentials named at construction
 (#17), error classification (#2 no retry on rejection). No network.
 
-Error bodies below are the real shapes Alpaca's paper API returned on
-2026-09-24 (probe recorded in review R5), not guesses:
+Error bodies marked PROBED are the real shapes Alpaca's paper API returned on
+2026-09-24 (review R5 / round-2 re-review); the rest are illustrative:
 
-    duplicate client_order_id   422  code 42210000  "client_order_id must be unique"
-    unknown symbol              422  code 42210000  'asset "X" not found'
-    client_order_id too long    422  code 40010001  "client_order_id must be no more than ..."
-    wrong secret                401  (no code)      {"message": "unauthorized."}
-    lookup of unknown order     404  code 40410000  "order not found for ..."
+    PROBED  duplicate client_order_id   422  code 42210000  "client_order_id must be unique"
+    PROBED  unknown symbol              422  code 42210000  'asset "X" not found'
+    PROBED  client_order_id too long    422  code 40010001  "client_order_id must be no more ..."
+    PROBED  wrong secret                401  (no code)      {"message": "unauthorized."}
+    PROBED  insufficient buying power   403  code 40310000  "insufficient buying power"
+    PROBED  lookup of unknown order     404  code 40410000  "order not found for ..."
+            rate limited / server error 429 / 503           (illustrative bodies)
 """
 
 from __future__ import annotations
@@ -42,7 +44,7 @@ COID_TOO_LONG = (
     '{"code":40010001,"message":"client_order_id must be no more than 128 characters"}',
 )
 UNAUTHORIZED = (401, '{"message": "unauthorized."}\n')
-FORBIDDEN = (403, '{"code":40310000,"message":"forbidden"}')
+BUYING_POWER = (403, '{"code":40310000,"message":"insufficient buying power"}')
 NOT_FOUND = (404, '{"code":40410000,"message":"order not found for sig-1-a1"}')
 RATE_LIMITED = (429, '{"code":42910000,"message":"rate limit exceeded"}')
 SERVER_ERROR = (503, '{"message":"internal"}')
@@ -73,6 +75,9 @@ def _order(order_id: str = "brk-9", symbol: str = "AAPL", side: str = "buy", qty
     order.symbol = symbol
     order.side = side
     order.qty = qty
+    order.order_type = "market"
+    order.limit_price = None
+    order.filled_qty = "0"  # set explicitly: MagicMock's __float__ would silently be 1.0
     order.client_order_id = "sig-1-a1"
     order.submitted_at = datetime(2026, 4, 18, tzinfo=UTC)
     order.model_dump.return_value = {"id": order_id, "client_order_id": "sig-1-a1"}
@@ -250,12 +255,18 @@ def test_classify_other_422_is_plain_rejection(shape) -> None:
     assert isinstance(out, BrokerRejected) and not isinstance(out, DuplicateClientOrderId)
 
 
-@pytest.mark.parametrize("shape", [UNAUTHORIZED, FORBIDDEN], ids=["401", "403"])
-def test_classify_auth_failure_is_not_an_order_rejection(shape) -> None:
+def test_classify_401_is_an_auth_failure_not_an_order_rejection() -> None:
     """Review R5: bad credentials are not a broker verdict on the order -- they
     must not be recorded as 'rejected' and burn an attempt."""
-    out = _classify_api_error(_api_error(shape))
+    out = _classify_api_error(_api_error(UNAUTHORIZED))
     assert isinstance(out, BrokerAuthError) and not isinstance(out, BrokerRejected)
+
+
+def test_classify_403_buying_power_is_an_order_rejection() -> None:
+    """Round-2 re-review: Alpaca uses 403 for 'insufficient buying power' (probed).
+    That *is* the broker's verdict on the order -- record it, don't treat it as auth."""
+    out = _classify_api_error(_api_error(BUYING_POWER))
+    assert isinstance(out, BrokerRejected) and not isinstance(out, DuplicateClientOrderId)
 
 
 @pytest.mark.parametrize("shape", [SERVER_ERROR, RATE_LIMITED], ids=["503", "429"])
@@ -268,3 +279,14 @@ def test_cancel_delegates() -> None:
         broker = AlpacaPaperBroker(api_key="PK", secret="s", host=PAPER)
         broker.cancel_order("brk-9")
         tc.return_value.cancel_order_by_id.assert_called_once_with("brk-9")
+
+
+def test_result_maps_order_type_and_limit_price_cents() -> None:
+    """Adoption records the broker's own order type and limit price (round-2 re-review)."""
+    with patch("ai_hedge_fund.execution.alpaca.TradingClient") as tc:
+        held = _order()
+        held.order_type, held.limit_price = "limit", "187.25"
+        tc.return_value.get_order_by_client_id.return_value = held
+        broker = AlpacaPaperBroker(api_key="PK", secret="s", host=PAPER)
+        res = broker.get_order_by_client_order_id("sig-1-a1")
+        assert res is not None and (res.order_type, res.limit_price_cents) == ("limit", 18_725)

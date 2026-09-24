@@ -21,7 +21,10 @@ class LiveEndpointRefused(ExecutionError):
 
 
 class BrokerAuthError(ExecutionError):
-    """The broker rejected the credentials (401/403).
+    """The broker rejected the credentials (HTTP 401).
+
+    Not 403: Alpaca uses 403 for order verdicts such as "insufficient buying
+    power" (probed), which are real rejections.
 
     Deliberately *not* a :class:`BrokerRejected`: the broker never evaluated the
     order, so nothing is recorded and no attempt is consumed.

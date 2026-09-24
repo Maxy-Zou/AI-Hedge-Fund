@@ -34,6 +34,9 @@ class BrokerOrderResult:
     symbol: str
     side: str
     qty: int
+    order_type: str
+    limit_price_cents: int | None
+    filled_qty: int  # a canceled order may still have traded (partial fill)
     raw: dict[str, Any]  # already redacted by the adapter
 
 
