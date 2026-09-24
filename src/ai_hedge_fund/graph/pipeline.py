@@ -82,7 +82,8 @@ def build_pipeline(
 
     Args:
         checkpointer: Optional checkpoint saver for PostgreSQL state
-            persistence. Pass a PostgresSaver for durable execution.
+            persistence. Pass an AsyncPostgresSaver (from
+            ``create_async_checkpointer``) for durable execution.
 
     Returns:
         Compiled StateGraph ready for invocation.
@@ -113,7 +114,8 @@ def build_research_pipeline(
 
     Args:
         checkpointer: Optional checkpoint saver for PostgreSQL state
-            persistence. Pass a PostgresSaver for durable execution.
+            persistence. Pass an AsyncPostgresSaver (from
+            ``create_async_checkpointer``) for durable execution.
 
     Returns:
         Compiled StateGraph ready for invocation via ``ainvoke``.
@@ -158,7 +160,8 @@ def build_multi_agent_pipeline(
 
     Args:
         checkpointer: Optional LangGraph checkpoint saver for durable
-            state persistence. Pass a ``PostgresSaver`` in production.
+            state persistence. Pass an ``AsyncPostgresSaver`` (from
+            ``create_async_checkpointer``) in production.
 
     Returns:
         Compiled ``StateGraph`` ready for invocation via ``ainvoke``.
@@ -256,7 +259,8 @@ def build_debate_pipeline(
 
     Args:
         checkpointer: Optional LangGraph checkpoint saver for durable state
-            persistence. Pass a ``PostgresSaver`` in production.
+            persistence. Pass an ``AsyncPostgresSaver`` (from
+            ``create_async_checkpointer``) in production.
         with_risk: When True, wires the Phase-6 risk gate. When False
             (default), builds the Phase-5 topology (for regression
             testing).

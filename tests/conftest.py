@@ -2,7 +2,16 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Generator
+
+# Agent modules call create_agent() at import time, which requires a key, so any
+# module importing the graph fails collection without one. Default it here so an
+# isolated run (e.g. one file) collects like the full suite. The value must keep
+# the "test-key" prefix: _has_real_api_key() in test_graph.py and
+# test_research_pipeline.py treats any other value as a real key and would
+# attempt live LLM calls.
+os.environ.setdefault("ANTHROPIC_API_KEY", "test-key-for-unit-tests")
 
 import pytest
 from sqlalchemy import Engine, create_engine

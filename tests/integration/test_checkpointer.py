@@ -2,16 +2,25 @@
 
 All tests require a running PostgreSQL instance (via docker-compose).
 Tests are skipped if PostgreSQL is not available.
+
+The pipeline runs via ``ainvoke``, so a run with Postgres persistence must use
+``create_async_checkpointer`` (``AsyncPostgresSaver``): the sync
+``PostgresSaver`` does not implement ``aget_tuple`` and raises
+``NotImplementedError`` inside the async loop.
 """
 
 from __future__ import annotations
 
 import os
 import subprocess
+import uuid
 
 import pytest
+from pydantic_ai.models.test import TestModel
 
-from ai_hedge_fund.graph.checkpointer import create_checkpointer
+from ai_hedge_fund.agents.analysis import analysis_agent
+from ai_hedge_fund.agents.extraction import extraction_agent
+from ai_hedge_fund.graph.checkpointer import create_async_checkpointer, create_checkpointer
 from ai_hedge_fund.graph.pipeline import build_pipeline
 
 
@@ -53,36 +62,47 @@ def test_build_pipeline_with_checkpointer():
         assert hasattr(graph, "ainvoke")
 
 
-requires_db_and_api = pytest.mark.skipif(
-    (not os.environ.get("DATABASE_URL") and not docker_available())
-    or not os.environ.get("ANTHROPIC_API_KEY"),
-    reason="PostgreSQL or ANTHROPIC_API_KEY not available",
-)
+@requires_db
+async def test_create_async_checkpointer_yields_async_postgres_saver():
+    """create_async_checkpointer() yields the AsyncPostgresSaver ainvoke needs."""
+    from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+
+    async with create_async_checkpointer() as checkpointer:
+        assert isinstance(checkpointer, AsyncPostgresSaver)
 
 
-@requires_db_and_api
-@pytest.mark.asyncio
+@requires_db
 async def test_checkpoint_resume():
-    """Graph with checkpointer persists state and can be queried after run."""
-    with create_checkpointer() as checkpointer:
-        graph = build_pipeline(checkpointer=checkpointer)
+    """Graph with checkpointer persists state and can be queried after run.
 
-        thread_id = "test-checkpoint-resume-001"
-        config = {"configurable": {"thread_id": thread_id}}
+    Agents are stubbed with ``TestModel`` -- this test covers Postgres
+    checkpoint persistence, not LLM output (real-LLM runs of the same pipeline
+    live in ``test_graph.py`` behind a real-key guard).
+    """
+    with (
+        extraction_agent.override(model=TestModel(call_tools=[])),
+        analysis_agent.override(model=TestModel(call_tools=[])),
+    ):
+        async with create_async_checkpointer() as checkpointer:
+            graph = build_pipeline(checkpointer=checkpointer)
 
-        state = await graph.ainvoke(
-            {
-                "ticker": "MSFT",
-                "raw_text": "Revenue: $211B, Net Income: $72B",
-            },
-            config,
-        )
+            thread_id = f"test-checkpoint-resume-{uuid.uuid4()}"
+            config = {"configurable": {"thread_id": thread_id}}
 
-        # Verify state was populated
-        assert "extraction" in state
-        assert "analysis" in state
+            state = await graph.ainvoke(
+                {
+                    "ticker": "MSFT",
+                    "raw_text": "Revenue: $211B, Net Income: $72B",
+                },
+                config,
+            )
 
-        # Verify checkpoint was stored by checking state via get_state
-        stored = await graph.aget_state(config)
-        assert stored is not None
-        assert stored.values.get("ticker") == "MSFT"
+            # Verify state was populated
+            assert "extraction" in state
+            assert "analysis" in state
+
+            # Verify checkpoint was stored by checking state via get_state
+            stored = await graph.aget_state(config)
+            assert stored is not None
+            assert stored.values.get("ticker") == "MSFT"
+            assert stored.values.get("analysis") == state["analysis"]
