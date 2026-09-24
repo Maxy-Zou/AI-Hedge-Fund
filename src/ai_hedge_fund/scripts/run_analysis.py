@@ -169,7 +169,7 @@ async def run_analysis(
         reviewer_id_override: Value for ``--reviewer-id`` CLI override.
         checkpointer: Override; defaults to a fresh :class:`InMemorySaver`
             (interrupt+resume within one process only). Production
-            deployments should pass a :class:`PostgresSaver` so a reviewer
+            deployments should pass an :class:`AsyncPostgresSaver` so a reviewer
             can resume across process restarts.
 
     Returns:

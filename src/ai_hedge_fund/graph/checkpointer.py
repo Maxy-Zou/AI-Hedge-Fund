@@ -26,6 +26,10 @@ from ai_hedge_fund.config import get_settings
 def create_checkpointer(database_url: str | None = None) -> Iterator[PostgresSaver]:
     """Create a sync PostgresSaver checkpointer with automatic table setup.
 
+    Only for graphs driven by sync ``invoke``. Every pipeline here runs via
+    ``ainvoke``, which calls ``aget_tuple`` -- unimplemented on the sync saver
+    (``NotImplementedError``) -- so use :func:`create_async_checkpointer` there.
+
     Use as a context manager to ensure proper connection cleanup.
     Converts SQLAlchemy-style URLs to psycopg format automatically.
 
