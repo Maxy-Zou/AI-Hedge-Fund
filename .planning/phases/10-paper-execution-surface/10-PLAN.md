@@ -6,7 +6,8 @@ milestone: v1.1
 requirements: [EXEC-01, EXEC-02, EXEC-03, EXEC-04, EXEC-05]
 depends_on: [Phase 9]
 branch: phase/10-paper-execution-surface
-status: awaiting-signoff
+status: signed-off
+signed_off: 2026-09-24
 companion_docs: [10-SPEC.md, 10-PREMORTEM.md]
 written: 2026-09-22
 ---

@@ -19,12 +19,12 @@ Threat mitigations:
 
 from __future__ import annotations
 
-import hashlib
-import json
 from pathlib import Path
 
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
+
+from ai_hedge_fund.policy_sha import fingerprint
 
 DEFAULT_POLICY_PATH: Path = Path("config/risk_policy.yaml")
 
@@ -162,9 +162,4 @@ def compute_policy_sha(policy: RiskPolicy) -> str:
     Returns:
         Lowercase 64-character SHA-256 hex digest.
     """
-    canonical = json.dumps(
-        policy.model_dump(mode="json"),
-        sort_keys=True,
-        separators=(",", ":"),
-    )
-    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+    return fingerprint(policy)

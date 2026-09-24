@@ -1,7 +1,7 @@
 ---
 phase: 10
 slug: paper-execution-surface
-status: awaiting-signoff
+status: signed-off
 written: 2026-09-22
 ---
 
