@@ -238,6 +238,21 @@ def test_trade_check_constraints(db_session: Session, bad: dict[str, Any]) -> No
     _assert_rejected(db_session, _trade(sid, **bad))
 
 
+def test_refusal_row_allows_zero_quantity(db_session: Session) -> None:
+    """Phase 10 migration 006: a refusal records quantity 0 (nothing ordered)."""
+    sid = _seed_signal(db_session)
+    db_session.add(_trade(sid, submit_status="refused_policy", broker_order_id=None, quantity=0))
+    db_session.commit()
+
+
+def test_submitted_row_still_requires_positive_quantity(db_session: Session) -> None:
+    """The paired CHECK keeps submitted orders strictly positive."""
+    sid = _seed_signal(db_session)
+    _assert_rejected(
+        db_session, _trade(sid, submit_status="submitted", broker_order_id="ok", quantity=0)
+    )
+
+
 def test_limit_order_with_price_is_valid(db_session: Session) -> None:
     sid = _seed_signal(db_session)
     db_session.add(_trade(sid, order_type="limit", limit_price_cents=180_00))

@@ -267,7 +267,11 @@ class PaperTrade(Base, DualTimestampMixin, AppendOnlyGuard):
         UniqueConstraint("signal_id", "attempt_no", name="uq_paper_trades_signal_attempt"),
         UniqueConstraint("broker_order_id", name="uq_paper_trades_broker_order_id"),
         CheckConstraint("attempt_no >= 1", name="ck_paper_trades_attempt_no"),
-        CheckConstraint("quantity > 0", name="ck_paper_trades_quantity"),
+        CheckConstraint("quantity >= 0", name="ck_paper_trades_quantity"),
+        CheckConstraint(
+            "submit_status <> 'submitted' OR quantity > 0",
+            name="ck_paper_trades_submitted_qty",
+        ),
         CheckConstraint("side IN ('buy', 'sell')", name="ck_paper_trades_side"),
         CheckConstraint("order_type IN ('market', 'limit')", name="ck_paper_trades_order_type"),
         CheckConstraint(
