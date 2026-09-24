@@ -34,6 +34,20 @@ the debt and the expected resolution timing.
   and provides the pattern (file-based SQLite + `alembic.autogenerate.compare_metadata`).
   Extend to the full chain, and add parity checks for every v1.0 table, in a v1.x cleanup.
 
+- **Async pipeline invoked against a sync PostgresSaver (found Phase 10, pre-existing since Phase 1):**
+  `tests/integration/test_checkpointer.py::test_checkpoint_resume` calls `graph.ainvoke(...)` on a
+  pipeline built with `create_checkpointer()`, which yields a synchronous
+  `langgraph.checkpoint.postgres.PostgresSaver`. Under the current langgraph, the async loop calls
+  `aget_tuple()` on the sync saver -> `NotImplementedError`. The test has been skipped its entire life
+  (its `requires_db` guard skips when Docker is down, which was always the case until Phase 9 started
+  Postgres), so this never ran. Fix needs a decision: yield `AsyncPostgresSaver` from an async
+  `create_checkpointer` path, or invoke synchronously in the test. Touches `graph/checkpointer.py`,
+  `graph/pipeline.py`, and how production runs the graph -> its own session, not a mid-phase patch.
+  Filed 2026-09-24. (Secondary: module-level `create_agent()` in `agents/analysis.py` /
+  `extraction.py` makes graph imports need `ANTHROPIC_API_KEY` at import; isolated collection of any
+  graph-importing test errors unless a dummy key is set. A session-scoped conftest
+  `os.environ.setdefault` would fix isolated runs.)
+
 ## Closed
 
 _(none yet)_
