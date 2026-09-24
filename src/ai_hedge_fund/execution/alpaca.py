@@ -1,19 +1,26 @@
 """Alpaca paper-trading adapter (Phase 10, D2/D8).
 
 Wraps the official ``alpaca-py`` TradingClient behind the :class:`BrokerClient`
-seam. Two fail-closed guards: the host must be a paper endpoint (a live URL is a
-construction error, never a live order), and every credential must be present
-and named if missing. Broker errors are classified by driver code -- duplicate
-client_order_id and outright rejections are terminal (never retried); only
-transient transport/5xx failures retry. Stored ``raw`` is redacted so a broker
-response can never carry a credential into an audit payload.
+seam. Two fail-closed guards: the host must be exactly Alpaca's paper endpoint
+(parsed, allow-listed -- a live or look-alike URL is a construction error, never
+an order), and every credential must be present and named if missing.
+
+Broker errors are classified from shapes observed on the real paper API
+(review R5): a duplicate client_order_id is identified by its message, because
+its code (42210000) is shared with other 422s such as an unknown symbol; 401/403
+are credential failures, not order rejections; 429, 5xx, timeouts and
+connection errors are transient and retried with the *same* client_order_id,
+which makes the retry idempotent. Every message leaving the adapter -- and the
+stored ``raw`` -- is scrubbed of the configured credentials.
 """
 
 from __future__ import annotations
 
 import json
 from typing import Any
+from urllib.parse import urlsplit
 
+import requests
 import structlog
 from alpaca.common.exceptions import APIError
 from alpaca.trading.client import TradingClient
@@ -23,8 +30,10 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_ex
 
 from ai_hedge_fund.execution.broker import BrokerOrderRequest, BrokerOrderResult
 from ai_hedge_fund.execution.errors import (
+    BrokerAuthError,
     BrokerRejected,
     DuplicateClientOrderId,
+    ExecutionError,
     LiveEndpointRefused,
     MissingBrokerCredentials,
     TransientBrokerError,
@@ -33,30 +42,69 @@ from ai_hedge_fund.execution.redact import redact
 
 logger = structlog.get_logger(__name__)
 
-_PAPER_MARKER = "paper-api"
-_DUP_CODE = 40010001
+_PAPER_HOSTNAMES = frozenset({"paper-api.alpaca.markets"})
+_DUPLICATE_MESSAGE = "client_order_id must be unique"
+_TRANSPORT_ERRORS = (requests.exceptions.Timeout, requests.exceptions.ConnectionError)
 
 
-def _classify_api_error(exc: APIError) -> Exception:
-    """Map an Alpaca APIError to a typed execution error by driver code, not message text."""
+def _paper_base_url(host: str) -> str:
+    """Canonical ``https://<paper hostname>`` for ``host``, or LiveEndpointRefused.
+
+    Parsed, not substring-matched (review R2): ``https://paper-api@api.alpaca.markets``
+    contains "paper-api" but its hostname is the live API. The message names only
+    scheme and hostname, never the raw value, which may carry userinfo credentials.
+    """
+    parts = urlsplit(host.strip())
     try:
-        status = exc.status_code
+        port = parts.port
+    except ValueError:
+        port = -1
+    hostname = parts.hostname or ""
+    if (
+        parts.scheme.lower() != "https"
+        or hostname not in _PAPER_HOSTNAMES
+        or parts.username is not None
+        or parts.password is not None
+        or port not in (None, 443)
+        or parts.path not in ("", "/")
+        or parts.query
+        or parts.fragment
+    ):
+        allowed = ", ".join(f"https://{h}" for h in sorted(_PAPER_HOSTNAMES))
+        raise LiveEndpointRefused(
+            f"refusing broker host (scheme={parts.scheme!r}, hostname={hostname!r}); "
+            f"only {allowed} is allowed"
+        )
+    return f"https://{hostname}"
+
+
+def _status(exc: APIError) -> int | None:
+    try:
+        return exc.status_code
     except Exception:  # noqa: BLE001 - status_code parsing can raise without an http_error
-        status = None
-    if status is not None and status >= 500:
-        return TransientBrokerError(str(exc))
+        return None
 
-    code: Any = None
-    message = ""
+
+def _message(exc: APIError) -> str:
     try:
-        code = exc.code
-        message = exc.message or ""
-    except Exception:  # noqa: BLE001 - defensive: fall back to the raw string
-        message = str(exc)
+        return str(exc.message or "") or str(exc)
+    except Exception:  # noqa: BLE001 - body may not be JSON or may lack "message"
+        return str(exc)
 
-    if code == _DUP_CODE or "client_order_id" in message.lower():
-        return DuplicateClientOrderId(message or str(exc))
-    return BrokerRejected(message or str(exc))
+
+def _classify_api_error(exc: APIError, secret_values: list[str] | None = None) -> ExecutionError:
+    """Map an Alpaca APIError to a typed execution error (shapes probed live, review R5)."""
+    status = _status(exc)
+    raw_message = _message(exc)
+    # Classify on the raw text; only the scrubbed text leaves the adapter.
+    message = f"HTTP {status}: {redact(raw_message, secret_values)}"
+    if status in (401, 403):
+        return BrokerAuthError(message)
+    if status == 429 or (status is not None and status >= 500):
+        return TransientBrokerError(message)
+    if _DUPLICATE_MESSAGE in raw_message.lower():
+        return DuplicateClientOrderId(message)
+    return BrokerRejected(message)
 
 
 class AlpacaPaperBroker:
@@ -69,12 +117,9 @@ class AlpacaPaperBroker:
             raise MissingBrokerCredentials("ALPACA_PAPER_SECRET is not set")
         if not host:
             raise MissingBrokerCredentials("ALPACA_PAPER_HOST is not set")
-        if _PAPER_MARKER not in host:
-            raise LiveEndpointRefused(
-                f"refusing non-paper host {host!r}: must contain {_PAPER_MARKER!r}"
-            )
+        base_url = _paper_base_url(host)
         self._secret_values = [api_key, secret]
-        self._client = TradingClient(api_key, secret, paper=True, url_override=host)
+        self._client = TradingClient(api_key, secret, paper=True, url_override=base_url)
 
     @classmethod
     def from_settings(cls, settings: Any) -> AlpacaPaperBroker:
@@ -98,6 +143,14 @@ class AlpacaPaperBroker:
             return LimitOrderRequest(limit_price=limit, **common)
         return MarketOrderRequest(**common)
 
+    def _translate(self, exc: Exception) -> ExecutionError:
+        """Typed, credential-scrubbed error. Raised ``from None`` by callers so the
+        unscrubbed SDK exception never rides along as ``__cause__``."""
+        if isinstance(exc, APIError):
+            return _classify_api_error(exc, self._secret_values)
+        detail = redact(str(exc), self._secret_values)
+        return TransientBrokerError(f"{type(exc).__name__}: {detail}")
+
     @retry(
         retry=retry_if_exception_type(TransientBrokerError),
         stop=stop_after_attempt(3),
@@ -107,28 +160,51 @@ class AlpacaPaperBroker:
     def _submit(self, order_data: Any) -> Any:
         try:
             return self._client.submit_order(order_data=order_data)
-        except APIError as exc:
-            raise _classify_api_error(exc) from exc
+        except (APIError, *_TRANSPORT_ERRORS) as exc:
+            raise self._translate(exc) from None
 
     def submit_order(self, req: BrokerOrderRequest) -> BrokerOrderResult:
         order = self._submit(self._build_request(req))
-        raw = redact(_as_dict(order), secret_values=self._secret_values)
+        result = self._to_result(order)
         logger.info(
             "paper_order_submitted",
             client_order_id=req.client_order_id,
             symbol=req.symbol,
             qty=req.qty,
-            broker_order_id=str(order.id),
+            broker_order_id=result.broker_order_id,
         )
-        return BrokerOrderResult(
-            broker_order_id=str(order.id),
-            status=str(order.status),
-            submitted_at=order.submitted_at,
-            raw=raw,
-        )
+        return result
+
+    def get_order_by_client_order_id(self, client_order_id: str) -> BrokerOrderResult | None:
+        try:
+            order = self._client.get_order_by_client_id(client_order_id)
+        except APIError as exc:
+            if _status(exc) == 404:
+                return None
+            raise self._translate(exc) from None
+        except _TRANSPORT_ERRORS as exc:
+            raise self._translate(exc) from None
+        return self._to_result(order)
 
     def cancel_order(self, broker_order_id: str) -> None:
         self._client.cancel_order_by_id(broker_order_id)
+
+    def _to_result(self, order: Any) -> BrokerOrderResult:
+        return BrokerOrderResult(
+            broker_order_id=str(order.id),
+            status=_enum_value(order.status),
+            submitted_at=order.submitted_at,
+            client_order_id=str(order.client_order_id),
+            symbol=str(order.symbol),
+            side=_enum_value(order.side),
+            qty=int(float(order.qty)),
+            raw=redact(_as_dict(order), secret_values=self._secret_values),
+        )
+
+
+def _enum_value(value: Any) -> str:
+    """alpaca-py returns enums (``OrderSide.BUY``); store their wire value (``buy``)."""
+    return str(getattr(value, "value", value))
 
 
 def _as_dict(order: Any) -> dict[str, Any]:

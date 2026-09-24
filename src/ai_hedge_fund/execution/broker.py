@@ -28,6 +28,12 @@ class BrokerOrderResult:
     broker_order_id: str
     status: str
     submitted_at: datetime
+    # What the broker holds -- compared against our request before an existing
+    # order found by client_order_id is adopted as ours.
+    client_order_id: str
+    symbol: str
+    side: str
+    qty: int
     raw: dict[str, Any]  # already redacted by the adapter
 
 
@@ -37,8 +43,13 @@ class BrokerClient(Protocol):
     def submit_order(self, req: BrokerOrderRequest) -> BrokerOrderResult:
         """Submit one order.
 
-        Raises BrokerRejected / DuplicateClientOrderId / TransientBrokerError.
+        Raises BrokerRejected / DuplicateClientOrderId / TransientBrokerError /
+        BrokerAuthError.
         """
+        ...
+
+    def get_order_by_client_order_id(self, client_order_id: str) -> BrokerOrderResult | None:
+        """The order the broker holds under ``client_order_id``, or None if none."""
         ...
 
     def cancel_order(self, broker_order_id: str) -> None:
