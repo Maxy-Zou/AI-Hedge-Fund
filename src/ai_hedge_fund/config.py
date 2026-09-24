@@ -41,6 +41,11 @@ class AppSettings(BaseSettings):
     thetadata_api_key: str = ""
     tiingo_api_key: str = ""
 
+    # Alpaca paper trading (Phase 10)
+    alpaca_paper_api_key: str = ""
+    alpaca_paper_secret: str = ""
+    alpaca_paper_host: str = "https://paper-api.alpaca.markets"
+
     # Observability
     langfuse_public_key: str = ""
     langfuse_secret_key: str = ""

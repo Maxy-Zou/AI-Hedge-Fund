@@ -1,0 +1,12 @@
+# Execution / sizing policy (Phase 10). Human-editable; validated at load.
+# Editing any value changes execution_policy_sha, which is stamped onto every
+# paper trade for audit. See src/ai_hedge_fund/execution/policy.py.
+
+nav_cents: 10000000        # $100,000 paper NAV (D6). Configurable; broker-equity NAV is v1.2.
+max_position_pct: 0.05     # each position capped at 5% of NAV
+min_conviction: 55         # below this the size scale is 0 -> order refused (below_min_size)
+full_conviction: 90        # at/above this the size scale is 1.0 (full max_position_pct)
+long_only: true            # D7: 'short' signals are recorded as refused_policy (long_only)
+max_attempts: 3            # per-signal submit attempts before AttemptsExhausted
+order_type: market         # market | limit
+limit_offset_bps: 25       # used only when order_type == limit
