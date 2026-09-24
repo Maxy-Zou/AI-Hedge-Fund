@@ -3,15 +3,15 @@ milestone: v1.1
 milestone_name: Paper Trading + Promotion Gate
 current_plan: —
 status: ready_to_execute
-stopped_at: Phase 9 complete (PR #2) — Phase 10 Paper Execution Surface not started
-last_updated: "2026-09-22T00:00:00.000Z"
+stopped_at: Phase 10 complete (PR #4) — Phase 11 Mark-to-Market not started
+last_updated: "2026-09-24T00:00:00.000Z"
 last_activity: "2026-09-22 -- Phase 9 delivered: migration 004, models, append-only guard, paper/ package; 79 tests; suite 1263 passed / 11 skipped"
 progress:
   total_phases: 5
-  completed_phases: 1
-  total_plans: 1
-  completed_plans: 1
-  percent: 20
+  completed_phases: 2
+  total_plans: 2
+  completed_plans: 2
+  percent: 40
 ---
 
 # Project State
@@ -21,17 +21,17 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-25)
 
 **Core value:** Produce institutional-quality investment research at scale -- structured theses with quantitative signals that are rigorous enough to trade on and transparent enough to show investors.
-**Current focus:** v1.1 — Paper Trading + Promotion Gate (Phase 9 complete; Phase 10 not started)
+**Current focus:** v1.1 — Paper Trading + Promotion Gate (Phase 10 complete; Phase 11 not started)
 
 ## Current Position
 
 Milestone: v1.1 — Paper Trading + Promotion Gate
-Phase: Phase 10 — Paper Execution Surface (not started). Phase 9 complete 2026-09-22 on `phase/09-paper-data-layer`, PR #2.
+Phase: Phase 11 — Mark-to-Market and Attribution (not started). Phase 10 complete 2026-09-24 on `phase/10-paper-execution-surface`, PR #4.
 Plan: —
-Status: Phase 9 delivered; next is the Phase 10 Plan -> Spec -> Pre-mortem (needs Alpaca paper credentials for the live path)
+Status: Phase 10 delivered (live paper smoke passed); next is the Phase 11 Plan -> Spec -> Pre-mortem
 Last activity: 2026-09-22 -- Phase 9 complete: 11 commits, 79 test functions, all 5 ROADMAP criteria proven (09-SUMMARY.md)
 
-Progress: [==        ] 20%
+Progress: [====      ] 40%
 
 ## Performance Metrics
 
