@@ -27,6 +27,7 @@ dependencies = [
     "fredapi>=0.5.2,<0.6",
     "finnhub-python>=2.4.27,<3",
     "ruamel.yaml>=0.19.0,<0.20",
+    "alpaca-py>=0.44,<1",
 ]
 
 [project.optional-dependencies]
