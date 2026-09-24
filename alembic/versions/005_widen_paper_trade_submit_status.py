@@ -11,6 +11,10 @@ admitted submitted | rejected | refused_veto; this adds refused_review
 no price, or sub-minimum size). The 'broker_order_id iff submitted' CHECK is
 unchanged and still holds for every refusal.
 
+The two new statuses are 14 characters, so the column widens from VARCHAR(12)
+to VARCHAR(20) too. (A CHECK that admits a value the column cannot store only
+fails on PostgreSQL -- SQLite ignores VARCHAR length.)
+
 SQLite cannot ALTER ... DROP CONSTRAINT, so the change runs inside
 batch_alter_table, which recreates the table with the new CHECK. downgrade
 refuses to run if any row already uses a new status (would violate the
@@ -33,10 +37,18 @@ _NEW = (
 )
 _OLD = "submit_status IN ('submitted', 'rejected', 'refused_veto')"
 _NAME = "ck_paper_trades_submit_status"
+_OLD_WIDTH = 12
+_NEW_WIDTH = 20
 
 
 def upgrade() -> None:
     with op.batch_alter_table("paper_trades") as batch:
+        batch.alter_column(
+            "submit_status",
+            existing_type=sa.String(_OLD_WIDTH),
+            type_=sa.String(_NEW_WIDTH),
+            existing_nullable=False,
+        )
         batch.drop_constraint(_NAME, type_="check")
         batch.create_check_constraint(_NAME, _NEW)
 
@@ -54,6 +66,13 @@ def downgrade() -> None:
             f"cannot downgrade: {stragglers} paper_trades row(s) use refused_review/"
             "refused_policy, which the narrower CHECK forbids -- would lose audit rows"
         )
+    # Safe to narrow: the guard above proves no 14-char status remains.
     with op.batch_alter_table("paper_trades") as batch:
         batch.drop_constraint(_NAME, type_="check")
         batch.create_check_constraint(_NAME, _OLD)
+        batch.alter_column(
+            "submit_status",
+            existing_type=sa.String(_NEW_WIDTH),
+            type_=sa.String(_OLD_WIDTH),
+            existing_nullable=False,
+        )

@@ -303,6 +303,55 @@ def test_005_downgrade_refuses_when_new_statuses_present(sqlite_cfg: tuple[Confi
         command.downgrade(cfg, "004")
 
 
+def _allowed_submit_statuses() -> list[str]:
+    ck = next(
+        c
+        for c in PaperTrade.__table__.constraints
+        if isinstance(c, CheckConstraint) and c.name == "ck_paper_trades_submit_status"
+    )
+    return re.findall(r"'([a-z_]+)'", str(ck.sqltext))
+
+
+def test_every_allowed_submit_status_fits_the_migrated_column(
+    sqlite_cfg: tuple[Config, str],
+) -> None:
+    """Review R1: a CHECK may not admit a value the column cannot store.
+
+    SQLite ignores VARCHAR length, so PostgreSQL alone would reject a too-long
+    status -- at insert time, as a DataError nothing catches. Compare lengths
+    here so the default (SQLite) suite catches it.
+    """
+    cfg, url = sqlite_cfg
+    command.upgrade(cfg, "head")
+    engine = create_engine(url)
+    try:
+        cols = {c["name"]: c["type"] for c in inspect(engine).get_columns("paper_trades")}
+    finally:
+        engine.dispose()
+    width = cols["submit_status"].length
+    too_long = [s for s in _allowed_submit_statuses() if len(s) > width]
+    assert not too_long, f"submit_status VARCHAR({width}) cannot hold {too_long}"
+
+
+@pytest.mark.parametrize("model", [PaperTrade, PaperFill])
+def test_string_column_widths_match_models(sqlite_cfg: tuple[Config, str], model) -> None:
+    """Review R1: compare_metadata diffs are filtered to STRUCTURAL kinds, which
+    drop modify_type -- so width drift between migration and ORM needs its own check."""
+    cfg, url = sqlite_cfg
+    command.upgrade(cfg, "head")
+    engine = create_engine(url)
+    try:
+        reflected = {
+            c["name"]: getattr(c["type"], "length", None)
+            for c in inspect(engine).get_columns(model.__tablename__)
+        }
+    finally:
+        engine.dispose()
+    declared = {c.name: c.type.length for c in model.__table__.columns if hasattr(c.type, "length")}
+    drift = {n: (reflected.get(n), w) for n, w in declared.items() if reflected.get(n) != w}
+    assert not drift, f"(migration, model) width drift: {drift}"
+
+
 # --------------------------------------------------------------------------- PostgreSQL (L3)
 
 
@@ -391,3 +440,50 @@ def test_pg_downgrade_leaves_no_orphan_function(pg_cfg: tuple[Config, str]) -> N
     finally:
         engine.dispose()
     command.upgrade(cfg, "head")
+
+
+@pytest.mark.slow
+def test_pg_accepts_every_submit_status(pg_cfg: tuple[Config, str]) -> None:
+    """Review R1: every status the CHECK admits must insert on real PostgreSQL.
+
+    Flushed, then rolled back: the append-only trigger makes committed rows
+    permanent, and leftover refusal rows (quantity 0) would block the downgrade
+    tests on the next run. A too-long value still fails at flush.
+    """
+    cfg, url = pg_cfg
+    command.upgrade(cfg, "head")
+    engine = create_engine(url)
+    sha = "d" * 64
+    try:
+        with Session(engine) as s:
+            sig = EpisodicMemory(
+                ticker="PGS",
+                sector="Test",
+                record_type="analysis",
+                as_of_date=normalise_as_of("2026-04-18"),
+                payload={"v": 1},
+            )
+            s.add(sig)
+            s.flush()
+            for n, status in enumerate(_allowed_submit_statuses(), start=1):
+                s.add(
+                    PaperTrade(
+                        signal_id=sig.id,
+                        attempt_no=n,
+                        ticker="PGS",
+                        side="buy",
+                        order_type="market",
+                        quantity=1 if status in ("submitted", "rejected") else 0,
+                        submit_status=status,
+                        broker_order_id="pgs-order" if status == "submitted" else None,
+                        risk_status_at_submit="APPROVED",
+                        policy_sha=sha,
+                        review_policy_sha=sha,
+                        as_of_date=normalise_as_of("2026-04-18"),
+                        payload={"v": 1, "status": status},
+                    )
+                )
+                s.flush()
+            s.rollback()
+    finally:
+        engine.dispose()
