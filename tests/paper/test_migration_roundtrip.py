@@ -116,7 +116,7 @@ def _version(url: str) -> str | None:
 def test_sqlite_upgrade_head_creates_paper_tables(sqlite_cfg: tuple[Config, str]) -> None:
     cfg, url = sqlite_cfg
     command.upgrade(cfg, "head")
-    assert _version(url) == "004"
+    assert _version(url) == "005"
     engine = create_engine(url)
     try:
         insp = inspect(engine)
@@ -160,7 +160,7 @@ def test_sqlite_downgrade_removes_only_paper_tables_and_is_reversible(
     finally:
         engine.dispose()
     command.upgrade(cfg, "head")  # reversible: back to head cleanly
-    assert _version(url) == "004"
+    assert _version(url) == "005"
     engine = create_engine(url)
     try:
         assert set(inspect(engine).get_table_names()) >= PAPER_TABLES
@@ -211,6 +211,55 @@ def test_check_constraints_match_models(sqlite_cfg: tuple[Config, str], model) -
 def test_fk_drift_is_detected_by_filter() -> None:
     """Review F4: the STRUCTURAL filter must not drop foreign-key diff kinds."""
     assert "add_fk" in STRUCTURAL and "remove_fk" in STRUCTURAL
+
+
+def test_005_downgrade_narrows_then_upgrade_restores(sqlite_cfg: tuple[Config, str]) -> None:
+    """005 down -> 004 CHECK (3 statuses); up -> 005 CHECK (5 statuses). Reversible."""
+    cfg, url = sqlite_cfg
+    command.upgrade(cfg, "head")
+    command.downgrade(cfg, "004")
+    assert _version(url) == "004"
+    command.upgrade(cfg, "head")
+    assert _version(url) == "005"
+
+
+def test_005_downgrade_refuses_when_new_statuses_present(sqlite_cfg: tuple[Config, str]) -> None:
+    """09-PREMORTEM #14 analogue: downgrade must not silently drop refusal rows."""
+    cfg, url = sqlite_cfg
+    command.upgrade(cfg, "head")
+    engine = create_engine(url)
+    try:
+        with Session(engine) as s:
+            sig = EpisodicMemory(
+                ticker="DG",
+                sector="T",
+                record_type="analysis",
+                as_of_date=normalise_as_of("2026-04-18"),
+                payload={"v": 1},
+            )
+            s.add(sig)
+            s.commit()
+            s.add(
+                PaperTrade(
+                    signal_id=sig.id,
+                    ticker="DG",
+                    side="buy",
+                    order_type="market",
+                    quantity=1,
+                    submit_status="refused_policy",
+                    broker_order_id=None,
+                    risk_status_at_submit="APPROVED",
+                    policy_sha="a" * 64,
+                    review_policy_sha="a" * 64,
+                    as_of_date=normalise_as_of("2026-04-18"),
+                    payload={"v": 1, "refusal_reason": "long_only"},
+                )
+            )
+            s.commit()
+    finally:
+        engine.dispose()
+    with pytest.raises(Exception, match="cannot downgrade"):
+        command.downgrade(cfg, "004")
 
 
 # --------------------------------------------------------------------------- PostgreSQL (L3)

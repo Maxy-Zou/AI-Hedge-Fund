@@ -23,7 +23,7 @@ _SECRET_LIKE = re.compile(r"(^|_)(secret|api_key|token|password)(_|$)", re.IGNOR
 
 Side = Literal["buy", "sell"]
 OrderType = Literal["market", "limit"]
-SubmitStatus = Literal["submitted", "rejected", "refused_veto"]
+SubmitStatus = Literal["submitted", "rejected", "refused_veto", "refused_review", "refused_policy"]
 
 
 class NewPaperTrade(BaseModel):

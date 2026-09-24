@@ -165,6 +165,16 @@ def test_fk_rejects_fill_for_unknown_trade(db_session: Session) -> None:
 # --------------------------------------------------------------------------- uniques
 
 
+def test_refusal_statuses_accepted(db_session: Session) -> None:
+    """Phase 10 migration 005: refused_review / refused_policy are valid statuses."""
+    for status in ("refused_veto", "refused_review", "refused_policy"):
+        sid = _seed_signal(db_session, f"T{status[-4:]}")
+        db_session.add(
+            _trade(sid, ticker=f"T{status[-4:]}", submit_status=status, broker_order_id=None)
+        )
+        db_session.commit()
+
+
 def test_same_signal_and_attempt_is_rejected(db_session: Session) -> None:
     """D4: (signal_id, attempt_no) is the idempotency grain."""
     sid = _seed_signal(db_session)
