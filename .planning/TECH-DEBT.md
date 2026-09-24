@@ -46,21 +46,28 @@ the debt and the expected resolution timing.
   Filed 2026-09-24. (Secondary: module-level `create_agent()` in `agents/analysis.py` /
   `extraction.py` makes graph imports need `ANTHROPIC_API_KEY` at import; isolated collection of any
   graph-importing test errors unless a dummy key is set. A session-scoped conftest
-  `os.environ.setdefault` would fix isolated runs.)
+  `os.environ.setdefault` would fix isolated runs.) **Fixed in PR #5** (`fix/checkpointer-async`):
+  the test uses the existing `create_async_checkpointer`; conftest defaults a dummy key. Move to
+  Closed, and drop the Phase 10 gate's `--deselect`, once PR #5 merges.
 
-- **Duplicate-client-order-id with no local row leaves a broker order untracked (Phase 10 review F3):**
-  in `execution/submit.py::_submit_order`, if the broker reports DuplicateClientOrderId but no local
-  paper_trades row exists for that (signal_id, attempt), submit raises AlreadySubmitted without
-  recording a row -- a broker-side order with no ledger entry. Prevents double-fill but not the
-  orphan. Proper fix needs a broker `get_order_by_client_id` on the BrokerClient Protocol to recover
-  the broker order id and record it. Deferred; accept for single-operator v1.1 paper. Filed 2026-09-24.
+- **submit_signal has no concurrency guard (Phase 10 review F6; narrowed by review round 2):**
+  two concurrent runs for one signal compute the same attempt and therefore the same deterministic
+  client_order_id, so the broker accepts only one order (the other gets "duplicate" and adopts it).
+  What remains: the losing run fails at the (signal_id, attempt_no) unique constraint with a DB error
+  instead of a clean AlreadySubmitted. Safe for the single-threaded CLI; a scheduler (PAPER-03) should
+  take a per-signal advisory lock. Deferred. Filed 2026-09-24, updated same day.
 
-- **submit_signal has no concurrency guard (Phase 10 review F6):** next_attempt reads prior attempts
-  then the order path submits to the broker before insert_paper_trade, so two concurrent runs for one
-  signal can both submit and the second only fails at the DB unique constraint (after its order was
-  sent). Safe for the single-threaded CLI; a scheduler (PAPER-03) would need a per-signal advisory
-  lock or a pre-insert reservation row. Deferred. Filed 2026-09-24.
+- **Price source precedence is undecided (Phase 10 review round 2, R10):** `daily_prices` can hold a
+  yfinance and a tiingo row for the same day. `execution/prices.py` now resolves ties to the most
+  recently collected row -- deterministic, so dry-run and submit agree -- but prefers no source.
+  Whether one vendor should always win is a product decision; the chosen source is also not yet
+  recorded in the trade payload. Filed 2026-09-24.
 
 ## Closed
 
-_(none yet)_
+- **Duplicate-client-order-id with no local row left a broker order untracked (Phase 10 review F3):**
+  closed by review round 2 (R3). On "duplicate", `_submit_order` now looks the order up by
+  client_order_id (`BrokerClient.get_order_by_client_order_id`) and records it as submitted -- only
+  if its symbol/side/qty match what we would place; otherwise `ClientOrderIdConflict`. The
+  client_order_id is namespaced per database (R7), so a foreign order cannot be adopted by id alone.
+  Verified live against Alpaca paper. Closed 2026-09-24.
