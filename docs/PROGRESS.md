@@ -4,7 +4,7 @@
 
 **Changed:** the test now uses `create_async_checkpointer`, stubs both agents with `TestModel` (it tests persistence, not LLM output; real-LLM runs stay in `test_graph.py`), drops its API-key guard (which ran real calls on any non-empty key), and uses a per-run thread id so a stale Postgres checkpoint can't satisfy it. New test covers the async factory's type. Five docstrings in `graph/pipeline.py`, `scripts/run_analysis.py` and `graph/checkpointer.py` told readers to pass the sync `PostgresSaver` to `ainvoke`-driven graphs -- corrected. `tests/conftest.py` now defaults `ANTHROPIC_API_KEY` to the repo's dummy `test-key-for-unit-tests` so an isolated `pytest <file>` collects like the full suite; the value keeps the `test-key` prefix, which `_has_real_api_key()` relies on to skip live LLM tests.
 
-**Tests:** unpatched main 1285 passed / 1 failed / 8 skipped -> **1287 passed, 8 skipped**, no deselect (Postgres up). Checkpoint rows verified in Postgres.
+**Tests:** unpatched main 1285 passed / 1 failed / 8 skipped -> **1287 passed, 8 skipped**, no deselect (Postgres up). Checkpoint rows verified in Postgres. Rebased onto Phase 10 (PR #4): **1515 passed, 11 skipped, 0 deselected** -- the Phase 10 gate's `--deselect` is no longer needed; TECH-DEBT entry closed.
 
 ## 2026-09-24 — Phase 10 code review round 2: 10 findings fixed before merge (PR #4)
 
