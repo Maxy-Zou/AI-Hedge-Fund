@@ -116,7 +116,7 @@ def _version(url: str) -> str | None:
 def test_sqlite_upgrade_head_creates_paper_tables(sqlite_cfg: tuple[Config, str]) -> None:
     cfg, url = sqlite_cfg
     command.upgrade(cfg, "head")
-    assert _version(url) == "005"
+    assert _version(url) == "006"
     engine = create_engine(url)
     try:
         insp = inspect(engine)
@@ -160,7 +160,7 @@ def test_sqlite_downgrade_removes_only_paper_tables_and_is_reversible(
     finally:
         engine.dispose()
     command.upgrade(cfg, "head")  # reversible: back to head cleanly
-    assert _version(url) == "005"
+    assert _version(url) == "006"
     engine = create_engine(url)
     try:
         assert set(inspect(engine).get_table_names()) >= PAPER_TABLES
@@ -220,7 +220,7 @@ def test_005_downgrade_narrows_then_upgrade_restores(sqlite_cfg: tuple[Config, s
     command.downgrade(cfg, "004")
     assert _version(url) == "004"
     command.upgrade(cfg, "head")
-    assert _version(url) == "005"
+    assert _version(url) == "006"
 
 
 def test_005_downgrade_refuses_when_new_statuses_present(sqlite_cfg: tuple[Config, str]) -> None:

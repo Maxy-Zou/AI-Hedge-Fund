@@ -36,7 +36,7 @@ class NewPaperTrade(BaseModel):
     ticker: str = Field(min_length=1, max_length=10)
     side: Side
     order_type: OrderType
-    quantity: int = Field(gt=0, strict=True)
+    quantity: int = Field(ge=0, strict=True)
     limit_price_cents: int | None = Field(default=None, gt=0, strict=True)
     submit_status: SubmitStatus
     broker_order_id: str | None = Field(default=None, min_length=1, max_length=64)
@@ -52,6 +52,8 @@ class NewPaperTrade(BaseModel):
             raise ValueError("limit_price_cents must be set iff order_type == 'limit'")
         if (self.submit_status == "submitted") != (self.broker_order_id is not None):
             raise ValueError("broker_order_id must be set iff submit_status == 'submitted'")
+        if self.submit_status == "submitted" and self.quantity <= 0:
+            raise ValueError("a submitted order must have quantity > 0")
         bad = [k for k in self.payload if _SECRET_LIKE.search(k)]
         if bad:
             raise ValueError(f"payload top-level keys look like secrets: {bad}")
