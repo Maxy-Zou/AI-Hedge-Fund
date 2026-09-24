@@ -48,6 +48,19 @@ the debt and the expected resolution timing.
   graph-importing test errors unless a dummy key is set. A session-scoped conftest
   `os.environ.setdefault` would fix isolated runs.)
 
+- **Duplicate-client-order-id with no local row leaves a broker order untracked (Phase 10 review F3):**
+  in `execution/submit.py::_submit_order`, if the broker reports DuplicateClientOrderId but no local
+  paper_trades row exists for that (signal_id, attempt), submit raises AlreadySubmitted without
+  recording a row -- a broker-side order with no ledger entry. Prevents double-fill but not the
+  orphan. Proper fix needs a broker `get_order_by_client_id` on the BrokerClient Protocol to recover
+  the broker order id and record it. Deferred; accept for single-operator v1.1 paper. Filed 2026-09-24.
+
+- **submit_signal has no concurrency guard (Phase 10 review F6):** next_attempt reads prior attempts
+  then the order path submits to the broker before insert_paper_trade, so two concurrent runs for one
+  signal can both submit and the second only fails at the DB unique constraint (after its order was
+  sent). Safe for the single-threaded CLI; a scheduler (PAPER-03) would need a per-signal advisory
+  lock or a pre-insert reservation row. Deferred. Filed 2026-09-24.
+
 ## Closed
 
 _(none yet)_

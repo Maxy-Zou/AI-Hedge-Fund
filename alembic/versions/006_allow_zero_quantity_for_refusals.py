@@ -14,6 +14,8 @@ nothing was sent.
 
 from __future__ import annotations
 
+import sqlalchemy as sa
+
 from alembic import op
 
 revision = "006"
@@ -34,6 +36,16 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    zeros = (
+        op.get_bind()
+        .execute(sa.text("SELECT count(*) FROM paper_trades WHERE quantity = 0"))
+        .scalar_one()
+    )
+    if zeros:
+        raise RuntimeError(
+            f"cannot downgrade: {zeros} paper_trades row(s) have quantity 0 (refusals), "
+            "which the restored quantity > 0 CHECK forbids -- would lose audit rows"
+        )
     with op.batch_alter_table("paper_trades") as batch:
         batch.drop_constraint(_SUBMITTED_QTY, type_="check")
         batch.drop_constraint(_QTY, type_="check")
