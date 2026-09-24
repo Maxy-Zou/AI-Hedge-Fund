@@ -1,3 +1,21 @@
+## 2026-09-24 — Phase 10 delivered: Paper Execution Surface (EXEC-01..05), PR #4
+
+Second phase under the Development Workflow. Branch `phase/10-paper-execution-surface`; every implementation commit preceded by a RED test; D1-D9 signed off before any code.
+
+**Shipped:** `execution/` package — `policy.py` (SHA-pinned ExecutionPolicy, NAV $100k default, long-only), `prices.py` (as-of adj-close, never a live quote), `sizing.py` (pure integer sizing), `decide.py` (pure signal→order/refusal in audit order), `broker.py` (BrokerClient Protocol), `alpaca.py` (adapter with paper-host + credential guards, driver-code error classification, retry only on transient), `redact.py` (recursive secret masking), `submit.py` (standalone idempotent orchestration). Plus `scripts/submit_signal.py` CLI, migrations 005 (widen submit_status) and 006 (allow quantity 0 for refusals), and the shared `policy_sha.fingerprint()` (T0/D9, replacing two duplicate copies).
+
+**Live-verified:** the credential-gated smoke test ran against **real Alpaca paper** — a far-below-market limit buy of 1 SPY was accepted, the `client_order_id` round-tripped, and it was cancelled. First real broker authentication; your keys work.
+
+**Tests:** ~90 new across `tests/execution/` + `tests/scripts/` + `tests/unit/test_policy_sha.py`. Suite 1366 → **1385 passed, 8 skipped, 1 deselected** (the deselected checkpointer test is the pre-existing async-saver bug, filed separately). ruff clean; frozen resolve OK.
+
+**Two decisions worth flagging:**
+- **Migration 006 was unforeseen by the spec.** D4 (record every refusal as a row) collided with Phase 9's `quantity > 0` CHECK — a refusal has no positive quantity. 006 relaxes it to `>= 0` with a paired CHECK keeping *submitted* orders positive. Knock-on: **Phase 11's `paper_pnl_daily` is now migration 007** (ROADMAP updated).
+- **`NO_REVIEW_POLICY_SHA` sentinel** (all-zeros) for refusals that occur before the review stage (VETOED signals never get a review_policy_sha), rather than making the Phase 9 column nullable and weakening it for real trades.
+
+**Two heredoc mishaps mid-phase** (a malformed commit-message heredoc no-op'd a whole script; a `-F 'EOF'` typo) committed RED tests without their implementation once — caught on the next gate, amended before push, nothing bad reached the PR. Switched to the Write tool for source files thereafter.
+
+**Docs:** `10-SUMMARY.md` (per-criterion evidence, deviations, handoff), ROADMAP (Phase 10 complete, Phase 11 → migration 007), REQUIREMENTS (EXEC-01..05 Complete, 10/23), STATE (40%), `.env.example` (+ALPACA vars).
+
 ## 2026-09-22 — Phase 9 delivered: Paper-Trading Data Layer (PT-01..05), PR #2
 
 First phase executed under the new Development Workflow: Plan -> Spec -> Pre-mortem (signed off) -> TDD -> code review -> PR. Branch `phase/09-paper-data-layer`, 11 commits, every implementation commit preceded by a RED test.

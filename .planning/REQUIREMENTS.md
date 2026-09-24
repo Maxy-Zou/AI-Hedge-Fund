@@ -92,11 +92,11 @@ These are not numbered requirements — they are invariants every v1.1 phase mus
 | PT-03 | Phase 9 | Complete (FK episodic_memory.id -- enforced on SQLite via `db/sqlite_compat.py`; store validates record_type='analysis' + ticker; `test_models.py::test_fk_rejects_unknown_signal`, `test_store.py`; PR #2) |
 | PT-04 | Phase 9 | Complete (`alembic/versions/004`; SQLite round-trip + `compare_metadata` parity; PG-gated trigger tests; `test_migration_roundtrip.py`; PR #2) |
 | PT-05 | Phase 9 | Complete (FUTUREX trade + fill @ 2099-01-01 in `tests/paper/fixtures`; `test_recall.py::test_recall_excludes_future_trades` / `_fills`, boundary `<=` proof; PR #2) |
-| EXEC-01 | Phase 10 | Pending |
-| EXEC-02 | Phase 10 | Pending |
-| EXEC-03 | Phase 10 | Pending |
-| EXEC-04 | Phase 10 | Pending |
-| EXEC-05 | Phase 10 | Pending |
+| EXEC-01 | Phase 10 | Complete (AlpacaPaperBroker + submit_signal; live paper smoke passed; PR #4) |
+| EXEC-02 | Phase 10 | Complete (execution/sizing.py pure; test_no_llm.py proves no LLM in the package; PR #4) |
+| EXEC-03 | Phase 10 | Complete ((signal_id, attempt_no) DB grain + client_order_id at broker; test_submit.py; PR #4) |
+| EXEC-04 | Phase 10 | Complete (decide() refuses VETOED before any broker call; test_submit.py::test_vetoed_refused_zero_broker_calls; PR #4) |
+| EXEC-05 | Phase 10 | Complete (AlpacaPaperBroker names each missing credential; refuses non-paper host; PR #4) |
 | MTM-01 | Phase 11 | Pending |
 | MTM-02 | Phase 11 | Pending |
 | MTM-03 | Phase 11 | Pending |
@@ -120,4 +120,4 @@ These are not numbered requirements — they are invariants every v1.1 phase mus
 
 ---
 *Requirements defined: 2026-04-25*
-*Last updated: 2026-09-22 -- Phase 9 complete (PT-01..05), 5/23 requirements delivered*
+*Last updated: 2026-09-24 -- Phase 10 complete (EXEC-01..05), 10/23 requirements delivered*

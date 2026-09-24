@@ -30,7 +30,7 @@
 **Phase numbering:** Continues from v1.0 (last phase was 8).
 
 - [x] **Phase 9: Paper-Trading Data Layer** - Append-only `paper_trades` / `paper_fills` with a mechanical UPDATE/DELETE guard, dual timestamps, thesis lineage, and temporal-leakage regression (completed 2026-09-22, PR #2; `paper_pnl_daily` moved to Phase 11 per 09-PLAN D1)
-- [ ] **Phase 10: Paper Execution Surface** - Alpaca paper client, deterministic sizing tool, idempotent submit, VETOED circuit breaker
+- [x] **Phase 10: Paper Execution Surface** - Alpaca paper client, deterministic sizing, idempotent submit, VETOED circuit breaker, refusal audit rows (completed 2026-09-24, PR #4; migrations 005-006)
 - [ ] **Phase 11: Mark-to-Market and Attribution** - Daily EOD P&L job, append-only series, attribution by analyst / debate-side / conviction
 - [ ] **Phase 12: Promotion Gate** - SHA-pinned `promotion_policy.yaml`, pure-Python gate verdict, audit-chain round-trip
 - [ ] **Phase 13: Track-Record Reporting** - `render_track_record` CLI, LP/YC-shareable markdown, machine-verifiable JSON
@@ -61,11 +61,12 @@
   4. Missing any of `ALPACA_PAPER_API_KEY` / `ALPACA_PAPER_SECRET` / `ALPACA_PAPER_HOST` fails at startup with an error naming the absent variable -- not at first order submission
   5. An order submitted against the Alpaca paper endpoint returns a broker order id that is persisted to `paper_trades`, closing the loop between intent and broker state
 **Plans:** written during the Plan -> Spec -> Pre-mortem stages (CLAUDE.md, Development Workflow) before any code
+**Delivered:** 2026-09-24 -- execution/ package (policy, prices, sizing, decide, broker+Alpaca adapter, redact, submit), CLI, migrations 005-006, live paper smoke test passed. Evidence in `phases/10-paper-execution-surface/10-SUMMARY.md`.
 
 ### Phase 11: Mark-to-Market and Attribution
 **Goal**: A daily job that turns fills into an append-only P&L series decomposed by analyst, debate side, and conviction -- so performance can be attributed rather than merely totaled
 **Depends on**: Phase 10
-**Requirements**: MTM-01, MTM-02, MTM-03, MTM-04 -- also owns migration 005 (`paper_pnl_daily`), deferred from Phase 9 per 09-PLAN D1
+**Requirements**: MTM-01, MTM-02, MTM-03, MTM-04 -- also owns migration 007 (`paper_pnl_daily`), deferred from Phase 9 (D1); Phase 10 used 005-006
 **Success Criteria** (what must be TRUE):
   1. The EOD job computes realized and unrealized P&L per position from fills plus adjusted-close prices, entirely in Python, with no LLM in the path
   2. Re-running the job for an already-processed date adds zero rows and issues zero UPDATEs -- idempotency is achieved by skip-or-insert, never by mutation
@@ -109,7 +110,7 @@
 | 7. Memory and Learning | v1.0 | 6/6 | Complete | 2026-04-22 |
 | 8. Signal and Output | v1.0 | 6/6 | Complete | 2026-04-23 |
 | 9. Paper-Trading Data Layer | v1.1 | 1/1 | Complete (PR #2) | 2026-09-22 |
-| 10. Paper Execution Surface | v1.1 | 0/- | Not started | - |
+| 10. Paper Execution Surface | v1.1 | 1/1 | Complete (PR #4) | 2026-09-24 |
 | 11. Mark-to-Market and Attribution | v1.1 | 0/- | Not started | - |
 | 12. Promotion Gate | v1.1 | 0/- | Not started | - |
 | 13. Track-Record Reporting | v1.1 | 0/- | Not started | - |
