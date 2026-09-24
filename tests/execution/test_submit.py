@@ -16,6 +16,7 @@ from ai_hedge_fund.execution.errors import (
     BrokerAuthError,
     BrokerRejected,
     ClientOrderIdConflict,
+    InvalidSignal,
     TransientBrokerError,
 )
 from ai_hedge_fund.execution.policy import ExecutionPolicy
@@ -266,3 +267,61 @@ def test_auth_failure_records_nothing_and_burns_no_attempt(
     assert query_paper_trades(db_session, as_of_date="2999-01-01", signal_id=reviewed_signal) == []
     rec = submit_signal(_deps(db_session, FakeBroker()), reviewed_signal)
     assert rec.submit_status == "submitted" and rec.attempt_no == 1
+
+
+# ------------------------------------------------------------ stored-signal validation (R6)
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"direction": "LONG"},
+        {"conviction": 150},
+        {"episodic_id": 424242},  # review row describes a different analysis
+        {"ticker": "MSFT"},  # ...or a different ticker than the analysis row
+        {"thesis_summary": None},
+    ],
+    ids=["direction", "conviction", "episodic_id", "ticker", "null-field"],
+)
+def test_malformed_stored_signal_raises_and_records_nothing(
+    db_session: Session, overrides: dict
+) -> None:
+    """Review R6 / spec 3.8: the stored final_signal is validated against
+    FinalSignalOutput before anything is decided. A malformed signal is a data
+    error -- raised, not recorded (a refusal row would be terminal forever)."""
+    aid = make_analysis(db_session)
+    add_review(db_session, aid, signal_overrides=overrides)
+    add_price(db_session)
+    broker = FakeBroker()
+    with pytest.raises(InvalidSignal):
+        submit_signal(_deps(db_session, broker), aid)
+    assert broker.calls == 0
+    assert query_paper_trades(db_session, as_of_date="2999-01-01", signal_id=aid) == []
+
+
+@pytest.mark.parametrize("risk_status", ["UNKNOWN", "approved"])
+def test_unrecognised_risk_status_raises(db_session: Session, risk_status: str) -> None:
+    aid = make_analysis(db_session, risk_status=risk_status)
+    add_review(db_session, aid)
+    add_price(db_session)
+    with pytest.raises(InvalidSignal):
+        submit_signal(_deps(db_session), aid)
+
+
+def test_unrecognised_review_status_raises(db_session: Session) -> None:
+    aid = make_analysis(db_session)
+    add_review(db_session, aid, review_status="MAYBE")
+    add_price(db_session)
+    with pytest.raises(InvalidSignal):
+        submit_signal(_deps(db_session), aid)
+
+
+def test_loads_real_review_store_shape(db_session: Session) -> None:
+    """09-PREMORTEM #23: the fixture's final_signal is FinalSignalOutput's own dump
+    (review_store_node stores model_dump(mode='json')), so it must validate."""
+    from ai_hedge_fund.schemas.signal_output import FinalSignalOutput
+
+    aid = make_analysis(db_session)
+    add_review(db_session, aid, review_status="APPROVED")
+    ctx = load_signal_context(db_session, aid)
+    assert FinalSignalOutput.model_validate(ctx.final_signal).episodic_id == aid

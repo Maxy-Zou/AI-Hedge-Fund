@@ -5,6 +5,11 @@ veto first (EXEC-04 circuit breaker), then reviewer rejection, then direction,
 then the long-only policy, then price availability, then minimum size. A veto or
 rejection is decided without a price or a final signal so a blocked signal never
 reaches sizing.
+
+Fail closed (review R6): only explicitly allowed values proceed. Any other risk
+status, review status, direction or conviction is refused as ``invalid_signal``
+-- it used to fall through, so e.g. direction "LONG" became a *sell*.
+``load_signal_context`` already rejects such data; this is the second line.
 """
 
 from __future__ import annotations
@@ -18,8 +23,20 @@ from ai_hedge_fund.execution.sizing import SizeResult, size_order
 
 RefusalStatus = Literal["refused_veto", "refused_review", "refused_policy"]
 RefusalReason = Literal[
-    "risk_vetoed", "review_rejected", "neutral_direction", "long_only", "no_price", "below_min_size"
+    "risk_vetoed",
+    "review_rejected",
+    "invalid_signal",
+    "neutral_direction",
+    "long_only",
+    "no_price",
+    "below_min_size",
 ]
+
+RISK_APPROVED = "APPROVED"
+RISK_VETOED = "VETOED"
+REVIEW_REJECTED = "REJECTED"
+REVIEW_GO = frozenset({"APPROVED", "NOT_REQUIRED"})  # NOT_REQUIRED: below review threshold
+DIRECTIONS = frozenset({"long", "short", "neutral"})
 
 
 class Refusal(BaseModel):
@@ -53,18 +70,23 @@ def decide(
 ) -> Decision:
     """Return an OrderPlan to submit, or a typed Refusal to record."""
     # 1. Risk veto -- EXEC-04, decided before price or signal is even needed.
-    if risk_status == "VETOED":
+    if risk_status == RISK_VETOED:
         return Refusal(status="refused_veto", reason="risk_vetoed")
 
     # 2. Human reviewer rejected.
-    if review_status == "REJECTED":
+    if review_status == REVIEW_REJECTED:
         return Refusal(status="refused_review", reason="review_rejected")
 
-    # Below here a final_signal is required; its absence is a policy refusal.
-    if final_signal is None:
-        return Refusal(status="refused_policy", reason="neutral_direction")
-
+    # Fail closed: every input must be a recognised value from here on.
+    invalid = Refusal(status="refused_policy", reason="invalid_signal")
+    if risk_status != RISK_APPROVED or review_status not in REVIEW_GO or final_signal is None:
+        return invalid
     direction = final_signal.get("direction")
+    conviction = final_signal.get("conviction")
+    if not isinstance(direction, str) or direction not in DIRECTIONS:
+        return invalid
+    if type(conviction) is not int or not 0 <= conviction <= 100:  # bool is not a conviction
+        return invalid
 
     # 3. Direction.
     if direction == "neutral":
@@ -79,12 +101,11 @@ def decide(
         return Refusal(status="refused_policy", reason="no_price")
 
     # 6. Minimum size.
-    conviction = int(final_signal.get("conviction") or 0)
     size = size_order(conviction=conviction, price_cents=price_cents, policy=policy)
     if size.shares <= 0:
         return Refusal(status="refused_policy", reason="below_min_size")
 
-    side: Literal["buy", "sell"] = "buy" if direction == "long" else "sell"
+    side: Literal["buy", "sell"] = "buy" if direction == "long" else "sell"  # only long|short here
     limit_price_cents = (
         _limit_price(side, price_cents, policy) if policy.order_type == "limit" else None
     )
