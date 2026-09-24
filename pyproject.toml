@@ -28,6 +28,9 @@ dependencies = [
     "finnhub-python>=2.4.27,<3",
     "ruamel.yaml>=0.19.0,<0.20",
     "alpaca-py>=0.44,<1",
+    # Direct import: the alpaca adapter classifies requests timeouts/connection
+    # errors as transient. Already locked transitively via alpaca-py.
+    "requests>=2.31,<3",
 ]
 
 [project.optional-dependencies]
