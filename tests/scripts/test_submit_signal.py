@@ -8,6 +8,7 @@ import pytest
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from ai_hedge_fund.execution.errors import MissingBrokerCredentials
 from ai_hedge_fund.paper.recall import query_paper_trades
 from ai_hedge_fund.scripts.submit_signal import _main
 from tests.execution.conftest import add_price, add_review, make_analysis
@@ -63,6 +64,61 @@ def test_dry_run_writes_nothing(session_factory: Callable[[], Session]) -> None:
     assert rc == 0 and broker.calls == 0
     with session_factory() as s:
         assert query_paper_trades(s, as_of_date="2999-01-01", signal_id=1) == []
+
+
+def test_dry_run_needs_no_broker_credentials(session_factory: Callable[[], Session]) -> None:
+    """F1: --dry-run must not construct the broker, so missing creds is fine."""
+    with session_factory() as s:
+        aid = make_analysis(s)
+        add_review(s, aid)
+        add_price(s)
+
+    def boom(_settings):
+        raise MissingBrokerCredentials("ALPACA_PAPER_API_KEY is not set")
+
+    rc = _main(
+        ["--episodic-id", "1", "--policy", "config/execution_policy.yaml", "--dry-run"],
+        session_factory=session_factory,
+        broker_factory=boom,
+    )
+    assert rc == 0
+
+
+def test_veto_refusal_needs_no_broker_credentials(session_factory: Callable[[], Session]) -> None:
+    """F1: a VETOED signal is refused before the broker; missing creds must not block it."""
+    with session_factory() as s:
+        make_analysis(s, risk_status="VETOED")
+
+    def boom(_settings):
+        raise MissingBrokerCredentials("ALPACA_PAPER_API_KEY is not set")
+
+    rc = _main(
+        ["--episodic-id", "1", "--policy", "config/execution_policy.yaml"],
+        session_factory=session_factory,
+        broker_factory=boom,
+    )
+    assert rc == 2  # refused_veto recorded, no broker needed
+
+
+def test_already_submitted_distinct_exit_code(session_factory: Callable[[], Session]) -> None:
+    """F5: a benign already-handled re-run is not exit 1."""
+    with session_factory() as s:
+        aid = make_analysis(s)
+        add_review(s, aid)
+        add_price(s)
+    broker = FakeBroker()
+    first = _main(
+        ["--episodic-id", "1", "--policy", "config/execution_policy.yaml"],
+        session_factory=session_factory,
+        broker_factory=lambda _s: broker,
+    )
+    assert first == 0
+    again = _main(
+        ["--episodic-id", "1", "--policy", "config/execution_policy.yaml"],
+        session_factory=session_factory,
+        broker_factory=lambda _s: FakeBroker(),
+    )
+    assert again == 3  # already handled, not an error
 
 
 def test_unknown_id_exit_one(session_factory: Callable[[], Session]) -> None:

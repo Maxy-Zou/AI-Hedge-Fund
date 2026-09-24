@@ -223,6 +223,47 @@ def test_005_downgrade_narrows_then_upgrade_restores(sqlite_cfg: tuple[Config, s
     assert _version(url) == "006"
 
 
+def test_006_downgrade_refuses_when_zero_quantity_rows_present(
+    sqlite_cfg: tuple[Config, str],
+) -> None:
+    """F2: downgrading past 006 must not drop/So break refusal rows (quantity 0)."""
+    cfg, url = sqlite_cfg
+    command.upgrade(cfg, "head")
+    engine = create_engine(url)
+    try:
+        with Session(engine) as s:
+            sig = EpisodicMemory(
+                ticker="ZQ",
+                sector="T",
+                record_type="analysis",
+                as_of_date=normalise_as_of("2026-04-18"),
+                payload={"v": 1},
+            )
+            s.add(sig)
+            s.commit()
+            s.add(
+                PaperTrade(
+                    signal_id=sig.id,
+                    ticker="ZQ",
+                    side="buy",
+                    order_type="market",
+                    quantity=0,
+                    submit_status="refused_veto",
+                    broker_order_id=None,
+                    risk_status_at_submit="VETOED",
+                    policy_sha="a" * 64,
+                    review_policy_sha="0" * 64,
+                    as_of_date=normalise_as_of("2026-04-18"),
+                    payload={"v": 1, "refusal_reason": "risk_vetoed"},
+                )
+            )
+            s.commit()
+    finally:
+        engine.dispose()
+    with pytest.raises(Exception, match="cannot downgrade"):
+        command.downgrade(cfg, "005")
+
+
 def test_005_downgrade_refuses_when_new_statuses_present(sqlite_cfg: tuple[Config, str]) -> None:
     """09-PREMORTEM #14 analogue: downgrade must not silently drop refusal rows."""
     cfg, url = sqlite_cfg

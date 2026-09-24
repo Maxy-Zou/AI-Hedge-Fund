@@ -34,6 +34,14 @@ def test_configured_secret_values_scrubbed_from_strings() -> None:
     assert "SUPERSECRET" not in out["url"]
 
 
+def test_hyphenated_secret_keys_redacted() -> None:
+    """F4: Alpaca-style hyphenated header keys must be masked by key name."""
+    out = redact({"APCA-API-KEY-ID": "PK", "APCA-API-SECRET-KEY": "s", "symbol": "AAPL"})
+    assert out["APCA-API-KEY-ID"] == "***"
+    assert out["APCA-API-SECRET-KEY"] == "***"
+    assert out["symbol"] == "AAPL"
+
+
 def test_non_secret_data_unchanged() -> None:
     data = {"symbol": "AAPL", "qty": 10, "nested": {"side": "buy"}}
     assert redact(data) == data

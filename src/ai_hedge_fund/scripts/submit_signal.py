@@ -18,9 +18,13 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from ai_hedge_fund.config import get_settings
-from ai_hedge_fund.execution.broker import BrokerClient
+from ai_hedge_fund.execution.broker import BrokerClient, BrokerOrderRequest, BrokerOrderResult
 from ai_hedge_fund.execution.decide import OrderPlan, Refusal
-from ai_hedge_fund.execution.errors import ExecutionError
+from ai_hedge_fund.execution.errors import (
+    AlreadyDecided,
+    AlreadySubmitted,
+    ExecutionError,
+)
 from ai_hedge_fund.execution.policy import (
     DEFAULT_EXECUTION_POLICY_PATH,
     compute_execution_policy_sha,
@@ -43,6 +47,30 @@ def _default_broker_factory(settings: Any) -> BrokerClient:
     return AlpacaPaperBroker.from_settings(settings)
 
 
+class _LazyBroker:
+    """Builds the real broker only on first use.
+
+    A refusal (veto, no price, below-min-size) and a --dry-run never call the
+    broker, so they must not require credentials (F1). The factory -- which may
+    raise MissingBrokerCredentials -- is deferred until an order is actually sent.
+    """
+
+    def __init__(self, factory: Callable[[], BrokerClient]) -> None:
+        self._factory = factory
+        self._broker: BrokerClient | None = None
+
+    def _get(self) -> BrokerClient:
+        if self._broker is None:
+            self._broker = self._factory()
+        return self._broker
+
+    def submit_order(self, req: BrokerOrderRequest) -> BrokerOrderResult:
+        return self._get().submit_order(req)
+
+    def cancel_order(self, broker_order_id: str) -> None:
+        self._get().cancel_order(broker_order_id)
+
+
 def _main(
     argv: list[str] | None = None,
     *,
@@ -61,12 +89,18 @@ def _main(
     policy_sha = compute_execution_policy_sha(policy)
     factory = session_factory or _default_session_factory(args.database_url)
 
+    make_broker = broker_factory or _default_broker_factory
     session = factory()
     try:
-        # The broker is only built when an order might actually be sent.
-        broker = (broker_factory or _default_broker_factory)(get_settings())
+        # Lazily built: refusals and --dry-run never touch the broker, so they
+        # must not require credentials (only an actual order does).
+        broker = _LazyBroker(lambda: make_broker(get_settings()))
         deps = SubmitDeps(db_session=session, broker=broker, policy=policy, policy_sha=policy_sha)
         result = submit_signal(deps, args.episodic_id, dry_run=args.dry_run)
+    except (AlreadySubmitted, AlreadyDecided) as exc:
+        # Benign: the signal was already handled. Not an error.
+        print(f"ALREADY HANDLED: {exc}", file=sys.stderr)
+        return 3
     except ExecutionError as exc:
         print(f"ERROR: {type(exc).__name__}: {exc}", file=sys.stderr)
         return 1

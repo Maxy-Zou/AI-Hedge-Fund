@@ -13,7 +13,11 @@ from __future__ import annotations
 import re
 from typing import Any
 
-SECRET_KEY = re.compile(r"(^|_)(secret|api_key|token|password|authorization)(_|$)", re.IGNORECASE)
+# Boundary class includes '-' so hyphenated header keys (Alpaca's APCA-API-KEY-ID,
+# APCA-API-SECRET-KEY) are masked, not just underscore_separated ones.
+SECRET_KEY = re.compile(
+    r"(^|[_-])(secret|api[_-]?key|token|password|authorization)([_-]|$)", re.IGNORECASE
+)
 _MASK = "***"
 
 
