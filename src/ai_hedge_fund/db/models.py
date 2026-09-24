@@ -271,7 +271,8 @@ class PaperTrade(Base, DualTimestampMixin, AppendOnlyGuard):
         CheckConstraint("side IN ('buy', 'sell')", name="ck_paper_trades_side"),
         CheckConstraint("order_type IN ('market', 'limit')", name="ck_paper_trades_order_type"),
         CheckConstraint(
-            "submit_status IN ('submitted', 'rejected', 'refused_veto')",
+            "submit_status IN ('submitted', 'rejected', 'refused_veto', "
+            "'refused_review', 'refused_policy')",
             name="ck_paper_trades_submit_status",
         ),
         CheckConstraint(
