@@ -300,7 +300,7 @@ class PaperTrade(Base, DualTimestampMixin, AppendOnlyGuard):
     order_type: Mapped[str] = mapped_column(String(6), nullable=False)  # "market" | "limit"
     quantity: Mapped[int] = mapped_column(Integer, nullable=False)  # whole shares (D3)
     limit_price_cents: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
-    submit_status: Mapped[str] = mapped_column(String(12), nullable=False)
+    submit_status: Mapped[str] = mapped_column(String(20), nullable=False)
     broker_order_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     risk_status_at_submit: Mapped[str] = mapped_column(String(10), nullable=False)
     policy_sha: Mapped[str] = mapped_column(String(64), nullable=False)
