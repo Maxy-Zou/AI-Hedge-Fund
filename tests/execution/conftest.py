@@ -56,8 +56,12 @@ def add_review(
     review_status: str = "NOT_REQUIRED",
     direction: str = "long",
     conviction: int = 80,
+    signal_overrides: dict | None = None,
 ) -> int:
-    """Insert a record_type='review' row (mirrors review_store_node payload)."""
+    """Insert a record_type='review' row (mirrors review_store_node payload).
+
+    ``signal_overrides`` patches the stored final_signal (e.g. to corrupt it).
+    """
     final_signal = {
         "ticker": ticker,
         "as_of_date": as_of,
@@ -71,6 +75,7 @@ def add_review(
         "episodic_id": analysis_id,
         "review_status": review_status,
     }
+    final_signal = {**final_signal, **(signal_overrides or {})}
     row = EpisodicMemory(
         ticker=ticker,
         sector="Technology",

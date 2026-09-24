@@ -154,3 +154,56 @@ def test_decision_types_are_frozen() -> None:
     r = Refusal(status="refused_veto", reason="risk_vetoed")
     with pytest.raises(ValidationError):
         r.status = "x"  # type: ignore[misc]
+
+
+# ------------------------------------------------------------------ fail closed (review R6)
+
+
+def _decide(sig=None, *, risk="APPROVED", review="NOT_REQUIRED", policy=POLICY):
+    return decide(
+        _sig() if sig is None else sig,
+        risk_status=risk,
+        review_status=review,
+        price_cents=10_000,
+        policy=policy,
+    )
+
+
+@pytest.mark.parametrize("direction", ["LONG", "Short", "bullish", "", None, 1])
+@pytest.mark.parametrize("policy", [POLICY, SHORT_OK], ids=["long_only", "shorts_ok"])
+def test_unknown_direction_is_refused_never_a_sell(direction, policy) -> None:
+    """Review R6: anything but exactly long/short/neutral used to become side='sell'."""
+    d = _decide({"ticker": "AAPL", "direction": direction, "conviction": 90}, policy=policy)
+    assert isinstance(d, Refusal) and d.reason == "invalid_signal", d
+
+
+@pytest.mark.parametrize("risk", ["UNKNOWN", "approved", "", "PENDING"])
+def test_unknown_risk_status_is_refused(risk) -> None:
+    """Review R6: only an explicit APPROVED may trade; VETOED is the veto path."""
+    d = _decide(risk=risk)
+    assert isinstance(d, Refusal) and d.reason == "invalid_signal", d
+
+
+@pytest.mark.parametrize("review", [None, "rejected", "MAYBE", ""])
+def test_unknown_review_status_is_refused(review) -> None:
+    """Review R6: only APPROVED or NOT_REQUIRED (below the review threshold) may trade."""
+    d = _decide(review=review)
+    assert isinstance(d, Refusal) and d.reason == "invalid_signal", d
+
+
+@pytest.mark.parametrize("conviction", [None, "90", 101, -1, True, 80.5])
+def test_invalid_conviction_is_refused(conviction) -> None:
+    d = _decide({"ticker": "AAPL", "direction": "long", "conviction": conviction})
+    assert isinstance(d, Refusal) and d.reason == "invalid_signal", d
+
+
+def test_missing_final_signal_on_approved_path_is_invalid_not_neutral() -> None:
+    d = decide(
+        None, risk_status="APPROVED", review_status="APPROVED", price_cents=10_000, policy=POLICY
+    )
+    assert isinstance(d, Refusal) and d.reason == "invalid_signal"
+
+
+@pytest.mark.parametrize("review", ["APPROVED", "NOT_REQUIRED"])
+def test_valid_go_statuses_still_trade(review) -> None:
+    assert isinstance(_decide(review=review), OrderPlan)

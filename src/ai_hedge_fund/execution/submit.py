@@ -22,12 +22,22 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 import structlog
+from pydantic import ValidationError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ai_hedge_fund.db.models import EpisodicMemory
 from ai_hedge_fund.execution.broker import BrokerClient, BrokerOrderRequest, BrokerOrderResult
-from ai_hedge_fund.execution.decide import Decision, OrderPlan, Refusal, decide
+from ai_hedge_fund.execution.decide import (
+    REVIEW_GO,
+    REVIEW_REJECTED,
+    RISK_APPROVED,
+    RISK_VETOED,
+    Decision,
+    OrderPlan,
+    Refusal,
+    decide,
+)
 from ai_hedge_fund.execution.errors import (
     AlreadyDecided,
     AlreadySubmitted,
@@ -35,6 +45,7 @@ from ai_hedge_fund.execution.errors import (
     BrokerRejected,
     ClientOrderIdConflict,
     DuplicateClientOrderId,
+    InvalidSignal,
     NoPriceAvailable,
     SignalNotReviewed,
 )
@@ -42,6 +53,7 @@ from ai_hedge_fund.execution.policy import ExecutionPolicy
 from ai_hedge_fund.execution.prices import latest_adj_close_cents
 from ai_hedge_fund.paper import NewPaperTrade, PaperTradeRecord, insert_paper_trade
 from ai_hedge_fund.paper.recall import query_paper_trades
+from ai_hedge_fund.schemas.signal_output import FinalSignalOutput
 
 logger = structlog.get_logger(__name__)
 
@@ -89,6 +101,8 @@ def load_signal_context(db_session: Session, episodic_id: int) -> SignalContext:
     Raises:
         ValueError: no ``record_type='analysis'`` row at ``episodic_id``.
         SignalNotReviewed: a non-vetoed analysis has no review row to act on.
+        InvalidSignal: unrecognised risk/review status, or a tradeable review whose
+            final_signal fails ``FinalSignalOutput`` or describes another analysis.
     """
     analysis = db_session.get(EpisodicMemory, episodic_id)
     if analysis is None or analysis.record_type != "analysis":
@@ -96,7 +110,9 @@ def load_signal_context(db_session: Session, episodic_id: int) -> SignalContext:
         raise ValueError(f"no analysis row at episodic id {episodic_id} (found: {found})")
 
     payload = analysis.payload or {}
-    risk_status = (payload.get("risk_assessment") or {}).get("status") or "UNKNOWN"
+    risk_status = (payload.get("risk_assessment") or {}).get("status")
+    if risk_status not in (RISK_APPROVED, RISK_VETOED):
+        raise InvalidSignal(f"analysis {episodic_id} has unrecognised risk status {risk_status!r}")
     as_of_str = _as_of_str(analysis.as_of_date)
     observed = analysis.observed_date.isoformat()
     risk_sha = analysis.policy_sha or NO_REVIEW_POLICY_SHA
@@ -125,7 +141,12 @@ def load_signal_context(db_session: Session, episodic_id: int) -> SignalContext:
         raise SignalNotReviewed(f"analysis {episodic_id} has no review row")
 
     rpayload = review.payload or {}
+    review_status = rpayload.get("review_status")
     final_signal = rpayload.get("final_signal")
+    if review_status in REVIEW_GO:
+        _validate_final_signal(final_signal, episodic_id, analysis.ticker)
+    elif review_status != REVIEW_REJECTED:
+        raise InvalidSignal(f"review {review.id} has unrecognised status {review_status!r}")
     review_sha = (
         rpayload.get("review_policy_sha")
         or (final_signal or {}).get("review_policy_sha")
@@ -136,12 +157,29 @@ def load_signal_context(db_session: Session, episodic_id: int) -> SignalContext:
         ticker=analysis.ticker,
         as_of_date=as_of_str,
         risk_status=risk_status,
-        review_status=rpayload.get("review_status"),
+        review_status=review_status,
         final_signal=final_signal,
         policy_sha=risk_sha,
         review_policy_sha=review_sha,
         signal_observed_at=observed,
     )
+
+
+def _validate_final_signal(final_signal: Any, episodic_id: int, ticker: str) -> None:
+    """Spec 3.8: a signal that may trade must be a well-formed FinalSignalOutput
+    about *this* analysis -- never trade on a review row describing another one."""
+    try:
+        sig = FinalSignalOutput.model_validate(final_signal)
+    except ValidationError as exc:
+        fields = sorted({".".join(map(str, e["loc"])) or "<root>" for e in exc.errors()})
+        raise InvalidSignal(
+            f"final_signal for analysis {episodic_id} is malformed (fields: {fields})"
+        ) from None
+    if sig.episodic_id != episodic_id or sig.ticker != ticker:
+        raise InvalidSignal(
+            f"final_signal describes analysis {sig.episodic_id}/{sig.ticker}, "
+            f"not {episodic_id}/{ticker}"
+        )
 
 
 def next_attempt(db_session: Session, signal_id: int, policy: ExecutionPolicy) -> int:

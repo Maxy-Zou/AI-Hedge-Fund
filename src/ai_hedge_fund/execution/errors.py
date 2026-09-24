@@ -32,6 +32,14 @@ class NoPriceAvailable(ExecutionError):
     """No cached adj-close on or before the as-of date for the ticker."""
 
 
+class InvalidSignal(ExecutionError):
+    """The stored analysis/review data is malformed or inconsistent.
+
+    Raised, not recorded: a refusal row is terminal, and malformed data should
+    be fixable by a corrected review row (latest review wins).
+    """
+
+
 class SignalNotReviewed(ExecutionError):
     """The analysis row has no linked review row to source a decision from."""
 
