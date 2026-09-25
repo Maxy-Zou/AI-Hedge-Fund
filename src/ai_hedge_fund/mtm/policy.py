@@ -19,6 +19,7 @@ DEFAULT_MTM_POLICY_PATH = Path("config/mtm_policy.yaml")
 
 _CONVICTION_MIN = 0
 _CONVICTION_MAX = 100
+UNKNOWN_BUCKET = "unknown"  # label for a missing confidence; reserved
 
 
 class ConvictionBucket(BaseModel):
@@ -46,6 +47,8 @@ class MtmPolicy(BaseModel):
         names: set[str] = set()
         expected_min = _CONVICTION_MIN
         for bucket in self.conviction_buckets:
+            if bucket.name == UNKNOWN_BUCKET:
+                raise ValueError(f"conviction bucket name '{UNKNOWN_BUCKET}' is reserved")
             if bucket.name in names:
                 raise ValueError(f"duplicate conviction bucket name '{bucket.name}'")
             names.add(bucket.name)

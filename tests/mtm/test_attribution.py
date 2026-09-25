@@ -138,3 +138,9 @@ def test_split_cents_always_sums_exactly() -> None:
 def test_split_cents_rejects_zero_parts() -> None:
     with pytest.raises(ValueError):
         split_cents(10, 0)
+
+
+@pytest.mark.parametrize("version", ["2", None, True, 2.0])
+def test_non_int_schema_version_is_unattributed(version: object) -> None:
+    payload = {"schema_version": version, "analyst_stances": {"fundamental": "bull"}}
+    assert attribution_for(payload, 60, "buy", POLICY).attribution_schema == "unattributed"

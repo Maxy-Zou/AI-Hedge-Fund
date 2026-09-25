@@ -535,3 +535,34 @@ def test_holdings_above_paid_shares_are_flagged(db_session: Session) -> None:
     with structlog.testing.capture_logs() as logs:
         run(db_session, 3)
     assert any(e["event"] == "dividend_holdings_exceed_paid" for e in logs)
+
+
+def _raw_fill(s: Session, tid: int, at: datetime, as_of: object) -> None:
+    insert_paper_fill(
+        s,
+        NewPaperFill(
+            trade_id=tid, broker_fill_id=f"fill-{next(_ids)}", filled_qty=4,
+            fill_price_cents=10_000, filled_at=at, as_of_date=as_of, payload={},
+        ),
+    )  # fmt: skip
+
+
+def test_loader_selects_fills_by_trading_date_not_as_of(db_session: Session) -> None:
+    """Review MED (db-1): a fill whose as_of_date is its timestamp still counts that day."""
+    sid = analysis(db_session)
+    at = datetime(2026, 9, 3, 14, 30, tzinfo=UTC)
+    _raw_fill(db_session, trade(db_session, sid), at, as_of=at)
+    price(db_session, 3, 10_000)
+    assert run(db_session, 3).inserted == 1
+
+
+def test_inconsistent_fill_skips_that_signal_only(db_session: Session) -> None:
+    """Review LOW (temporal-5): as_of says D2, filled_at says D3 -> not marked on D2, no abort."""
+    odd = analysis(db_session)
+    _raw_fill(
+        db_session, trade(db_session, odd), datetime(2026, 9, 3, 14, tzinfo=UTC), as_of="2026-09-02"
+    )
+    fine = held(db_session)
+    price(db_session, 2, 10_000)
+    run(db_session, 2)
+    assert [r.signal_id for r in query_pnl_rows(db_session)] == [fine]

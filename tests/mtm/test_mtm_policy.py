@@ -141,3 +141,20 @@ def test_loader_rejects_invalid_yaml(tmp_path: Path) -> None:
     bad.write_text("sentiment_threshold: 0.2\n", encoding="utf-8")
     with pytest.raises(ValidationError):
         load_mtm_policy(bad)
+
+
+def test_reserved_bucket_name_rejected() -> None:
+    """'unknown' labels a missing confidence; a real bucket of that name would merge with it."""
+    with pytest.raises(ValidationError, match="unknown"):
+        _policy(conviction_buckets=[{"name": "unknown", "min": 0, "max": 100}])
+
+
+def test_sha_test_covers_every_field() -> None:
+    """Review L4: a new policy field must be added to the per-field SHA test."""
+    covered = {
+        "sentiment_threshold",
+        "stance_rule_version",
+        "market_close_buffer_minutes",
+        "conviction_buckets",
+    }
+    assert covered == set(MtmPolicy.model_fields)

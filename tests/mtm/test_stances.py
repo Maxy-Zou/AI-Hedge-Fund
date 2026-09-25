@@ -130,3 +130,45 @@ def test_debate_snapshot_reads_synthesis_fields() -> None:
 def test_debate_snapshot_none_when_absent_or_malformed(synthesis: dict | None) -> None:
     """11-PREMORTEM #26: a run with no (usable) debate stores None, never crashes."""
     assert debate_snapshot(synthesis) is None
+
+
+@pytest.mark.parametrize("score", [float("nan"), float("inf"), float("-inf")])
+def test_nonfinite_composite_is_absent(score: float) -> None:
+    assert derive_stances([_sentiment(score)], POLICY)["sentiment"] == "absent"
+
+
+def test_non_string_factor_items_are_absent() -> None:
+    report = {
+        "analyst": "technical",
+        "analysis": {"bull_factors": [None, "", 3], "bear_factors": []},
+    }
+    assert derive_stances([report], POLICY)["technical"] == "absent"
+
+
+def test_real_analyst_schemas_feed_the_rule() -> None:
+    """Review M1: tie the rule to the real output schemas so a field rename fails a test."""
+    from ai_hedge_fund.schemas.agents import (
+        FundamentalAnalysis,
+        SentimentAnalysis,
+        TechnicalAnalysis,
+    )
+
+    def dump(model: type, **values: object) -> dict:
+        fields = model.model_fields
+        assert set(values) <= set(fields), f"{model.__name__} lost {set(values) - set(fields)}"
+        return values
+
+    reports = [
+        {
+            "analyst": "fundamental",
+            "analysis": dump(FundamentalAnalysis, bull_factors=["a", "b"], bear_factors=["c"]),
+        },
+        {
+            "analyst": "technical",
+            "analysis": dump(TechnicalAnalysis, bull_factors=["a"], bear_factors=["b", "c"]),
+        },
+        {"analyst": "sentiment", "analysis": dump(SentimentAnalysis, composite_score=0.5)},
+    ]
+    assert derive_stances(reports, POLICY) == {
+        "fundamental": "bull", "technical": "bear", "sentiment": "bull",
+    }  # fmt: skip

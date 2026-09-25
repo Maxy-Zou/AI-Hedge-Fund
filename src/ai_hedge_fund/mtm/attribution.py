@@ -14,12 +14,13 @@ report -- is ``absent``, never ``neutral`` (11-PREMORTEM #24).
 
 from __future__ import annotations
 
+import math
 from collections.abc import Sequence
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
-from ai_hedge_fund.mtm.policy import MtmPolicy
+from ai_hedge_fund.mtm.policy import UNKNOWN_BUCKET, MtmPolicy
 
 Analyst = Literal["fundamental", "sentiment", "technical"]
 Stance = Literal["bull", "bear", "neutral", "absent"]
@@ -38,9 +39,13 @@ def _is_number(value: object) -> bool:
     return isinstance(value, int | float) and not isinstance(value, bool)
 
 
+def _is_factor_list(value: object) -> bool:
+    return isinstance(value, list) and all(isinstance(v, str) and v for v in value)
+
+
 def _factor_stance(analysis: dict[str, Any]) -> Stance:
     bull, bear = analysis.get("bull_factors"), analysis.get("bear_factors")
-    if not isinstance(bull, list) or not isinstance(bear, list):
+    if not _is_factor_list(bull) or not _is_factor_list(bear):
         return "absent"
     if len(bull) > len(bear):
         return "bull"
@@ -51,7 +56,7 @@ def _factor_stance(analysis: dict[str, Any]) -> Stance:
 
 def _sentiment_stance(analysis: dict[str, Any], threshold: float) -> Stance:
     score = analysis.get("composite_score")
-    if not _is_number(score):
+    if not _is_number(score) or not math.isfinite(score):
         return "absent"
     if score >= threshold:
         return "bull"
@@ -134,7 +139,8 @@ def debate_winner(debate: dict[str, Any] | None, side: Side) -> DebateWinner:
 
 def _stored_stances(payload: dict[str, Any]) -> dict[str, Any] | None:
     stances = payload.get("analyst_stances")
-    if payload.get("schema_version", 1) < 2 or not isinstance(stances, dict):
+    version = payload.get("schema_version")
+    if type(version) is not int or version < 2 or not isinstance(stances, dict):
         return None
     return stances
 
@@ -149,7 +155,7 @@ def attribution_for(
 
     Uses the stances frozen at store time -- never re-derives them (11-PREMORTEM #23).
     """
-    bucket = "unknown" if confidence is None else policy.bucket_for(confidence)
+    bucket = UNKNOWN_BUCKET if confidence is None else policy.bucket_for(confidence)
     stances = _stored_stances(analysis_payload)
     if stances is None:
         return Attribution(

@@ -10,7 +10,7 @@ a day is never half-written (11-PREMORTEM #6).
 from __future__ import annotations
 
 from collections.abc import Sequence
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import NamedTuple
 
 from sqlalchemy import select, tuple_
@@ -39,6 +39,9 @@ class InsertResult(NamedTuple):
 
 
 def _iso(value: object) -> str:
+    """ISO text; aware datetimes in UTC so the date prefix never follows the session TZ."""
+    if isinstance(value, datetime) and value.tzinfo is not None:
+        value = value.astimezone(UTC)
     return value.isoformat() if hasattr(value, "isoformat") else str(value)
 
 

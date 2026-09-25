@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 
 from ai_hedge_fund.mtm.attribution import ANALYSTS, split_cents
 from ai_hedge_fund.mtm.errors import AttributionInvariantError
+from ai_hedge_fund.mtm.policy import UNKNOWN_BUCKET
 from ai_hedge_fund.mtm.store import query_pnl_rows
 
 ANALYST_KEYS = (*ANALYSTS, "none_aligned", "unattributed")
@@ -98,7 +99,7 @@ def rollup_rows(rows: Sequence[RollupRow], start: date, end: date) -> Attributio
         _assign_analysts(by_analyst, latest.attribution, pnl)
         winner = latest.attribution.get("debate_winner", "unattributed")
         by_debate[winner] = by_debate.get(winner, 0) + pnl
-        bucket = latest.attribution.get("conviction_bucket", "unknown")
+        bucket = latest.attribution.get("conviction_bucket", UNKNOWN_BUCKET)
         by_bucket[bucket] = by_bucket.get(bucket, 0) + pnl
     _check_sums(total, by_analyst=by_analyst, by_debate_winner=by_debate, by_conviction=by_bucket)
     return AttributionReport(

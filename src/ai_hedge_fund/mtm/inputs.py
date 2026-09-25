@@ -1,7 +1,7 @@
 """Database reads feeding the EOD job (Phase 11, 11-SPEC s6). Read-only.
 
-Every query is bounded by the date being marked: fills by their New York trading
-date (``paper_fills.as_of_date``), prices by the exact ``trade_date`` and by
+Every query is bounded by the date being marked: fills by the New York trading
+date of ``filled_at`` (the core's own rule), prices by the exact ``trade_date`` and by
 ``observed_date <= now``, cash events by ``event_date``. The pure core
 re-checks the fill and dividend bounds (11-PREMORTEM #9, #10).
 """
@@ -10,13 +10,13 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any, Literal
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ai_hedge_fund.db.dates import normalise_as_of, trading_date
+from ai_hedge_fund.db.dates import market_midnight_utc, normalise_as_of, trading_date
 from ai_hedge_fund.db.models import DailyPrice, EpisodicMemory, PaperFill, PaperTrade
 from ai_hedge_fund.mtm.pnl import FillIn
 
@@ -51,7 +51,8 @@ def _fills_by_signal(
         .join(PaperFill, PaperFill.trade_id == PaperTrade.id)
         .where(
             PaperTrade.submit_status == "submitted",
-            PaperFill.as_of_date <= normalise_as_of(pnl_date),
+            # The core's rule, not as_of_date (review db-1): traded by NY close of pnl_date.
+            PaperFill.filled_at < market_midnight_utc(pnl_date + timedelta(days=1)),
         )
         .order_by(PaperTrade.signal_id, PaperFill.filled_at, PaperFill.id)
     ).all()
