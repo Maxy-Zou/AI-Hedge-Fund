@@ -1,3 +1,11 @@
+## 2026-09-26 — Fix: migration chain hardening (round-trip + parity, migration 008)
+
+Closes two TECH-DEBT entries. New `tests/db/test_migration_chain.py` exercises the full alembic chain 001 -> head (SQLite by default, PostgreSQL via `TEST_DATABASE_URL`): upgrade head / downgrade base / upgrade head, a step-wise walk down and up, a linear-chain check, and unfiltered `compare_metadata` ORM parity. It found the 002 `observed_date` drift was wider than filed: migration 001 left `observed_date` nullable on all six ingestion tables, plus `daily_prices.source`. Migration 008 makes all eight columns NOT NULL and refuses to upgrade over NULLs rather than backfilling. Local dev DB checked read-only first: 0 NULLs.
+
+**Files:** `alembic/versions/008_enforce_not_null_observed_date.py`, `tests/db/test_migration_chain.py`, `tests/paper/test_migration_roundtrip.py` (HEAD -> 008), `.planning/TECH-DEBT.md`.
+
+**Tests:** 1904 -> **1920 passed** (9 skipped, all live-API-key skips; Postgres tests ran).
+
 ## 2026-09-25 — Phase 11 review: 5 HIGH defects confirmed and fixed before PR
 
 Six parallel read-only review lenses plus one targeted re-review. Confirmed by RED tests and fixed: the Alpaca activity parser rejected the documented response shapes (SDK models demand fields the docs omit); one manual short/fractional trade aborted all ingest (items are now rejected individually, ours fail loudly); an intraday bar could be frozen as the close (close must be observed after 16:00 ET + buffer); a split-adjusted close could mark a pre-split date; dividends could be over- or double-credited (now per-signal `floor(net * shares / max(paid, holdings))`). Plus loader/core date alignment and a dozen parser/stance/policy hardening fixes. Re-review found 1 MEDIUM + 3 LOW in the fixes; all fixed. Deferred items with rulings in TECH-DEBT.
