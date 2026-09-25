@@ -37,6 +37,7 @@ from ai_hedge_fund.execution.policy import (
     load_execution_policy,
 )
 from ai_hedge_fund.execution.submit import SubmitDeps, submit_signal
+from ai_hedge_fund.logging import route_logs_to_stderr
 from ai_hedge_fund.paper import PaperTradeRecord
 
 
@@ -96,6 +97,7 @@ def _main(
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--json", action="store_true", dest="as_json")
     args = parser.parse_args(argv)
+    route_logs_to_stderr()  # keep stdout machine-readable for --json
 
     policy = load_execution_policy(args.policy)
     policy_sha = compute_execution_policy_sha(policy)
