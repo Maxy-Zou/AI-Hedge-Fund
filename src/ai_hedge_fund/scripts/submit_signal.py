@@ -11,14 +11,20 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
+from datetime import date
 from pathlib import Path
 from typing import Any
 
 from sqlalchemy.orm import Session
 
 from ai_hedge_fund.config import get_settings
-from ai_hedge_fund.execution.broker import BrokerClient, BrokerOrderRequest, BrokerOrderResult
+from ai_hedge_fund.execution.broker import (
+    BrokerActivity,
+    BrokerClient,
+    BrokerOrderRequest,
+    BrokerOrderResult,
+)
 from ai_hedge_fund.execution.decide import OrderPlan, Refusal
 from ai_hedge_fund.execution.errors import (
     AlreadyDecided,
@@ -72,6 +78,9 @@ class _LazyBroker:
 
     def cancel_order(self, broker_order_id: str) -> None:
         self._get().cancel_order(broker_order_id)
+
+    def list_activities(self, types: Sequence[str], since: date) -> list[BrokerActivity]:
+        return self._get().list_activities(types, since)
 
 
 def _main(

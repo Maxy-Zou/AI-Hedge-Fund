@@ -18,6 +18,8 @@ stored ``raw`` -- is scrubbed of the configured credentials.
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
+from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any
 from urllib.parse import urlsplit
@@ -30,7 +32,9 @@ from alpaca.trading.enums import OrderSide, TimeInForce
 from alpaca.trading.requests import LimitOrderRequest, MarketOrderRequest
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
-from ai_hedge_fund.execution.broker import BrokerOrderRequest, BrokerOrderResult
+from ai_hedge_fund.db.dates import trading_date
+from ai_hedge_fund.execution.alpaca_activities import parse_activity
+from ai_hedge_fund.execution.broker import BrokerActivity, BrokerOrderRequest, BrokerOrderResult
 from ai_hedge_fund.execution.errors import (
     BrokerAuthError,
     BrokerRejected,
@@ -39,6 +43,7 @@ from ai_hedge_fund.execution.errors import (
     LiveEndpointRefused,
     MissingBrokerCredentials,
     TransientBrokerError,
+    UnexpectedBrokerResponse,
 )
 from ai_hedge_fund.execution.redact import redact
 
@@ -47,6 +52,8 @@ logger = structlog.get_logger(__name__)
 _PAPER_HOSTNAMES = frozenset({"paper-api.alpaca.markets"})
 _DUPLICATE_MESSAGE = "client_order_id must be unique"
 _TRANSPORT_ERRORS = (requests.exceptions.Timeout, requests.exceptions.ConnectionError)
+_ACTIVITIES_PATH = "/account/activities"
+_ACTIVITY_PAGE_SIZE = 100  # Alpaca maximum
 
 
 def _paper_base_url(host: str) -> str:
@@ -190,6 +197,41 @@ class AlpacaPaperBroker:
 
     def cancel_order(self, broker_order_id: str) -> None:
         self._client.cancel_order_by_id(broker_order_id)
+
+    def _get_activity_page(self, params: dict[str, Any]) -> list[Any]:
+        try:
+            page = self._client.get(_ACTIVITIES_PATH, params)
+        except (APIError, *_TRANSPORT_ERRORS) as exc:
+            raise self._translate(exc) from None
+        if not isinstance(page, list):
+            raise UnexpectedBrokerResponse(f"{_ACTIVITIES_PATH} returned {type(page).__name__}")
+        return page
+
+    def list_activities(self, types: Sequence[str], since: date) -> list[BrokerActivity]:
+        """All activities of ``types`` on or after New York date ``since``, oldest first.
+
+        Goes through the SDK client (paper-host guard, auth) -- alpaca-py 0.44 has no
+        method for this endpoint. ``after`` is sent a day early so no timezone edge
+        drops an activity; results are then filtered to the New York date. Every
+        page is followed (11-PREMORTEM #29).
+        """
+        params: dict[str, Any] = {
+            "activity_types": ",".join(types),
+            "after": (since - timedelta(days=1)).isoformat(),
+            "direction": "asc",
+            "page_size": _ACTIVITY_PAGE_SIZE,
+        }
+        activities: list[BrokerActivity] = []
+        while True:
+            page = self._get_activity_page(params)
+            activities.extend(parse_activity(item, self._secret_values) for item in page)
+            if len(page) < _ACTIVITY_PAGE_SIZE:
+                break
+            token = activities[-1].activity_id
+            if params.get("page_token") == token:
+                raise UnexpectedBrokerResponse(f"{_ACTIVITIES_PATH} repeated page {token!r}")
+            params = {**params, "page_token": token}
+        return [a for a in activities if trading_date(a.occurred_at) >= since]
 
     def _to_result(self, order: Any) -> BrokerOrderResult:
         return BrokerOrderResult(

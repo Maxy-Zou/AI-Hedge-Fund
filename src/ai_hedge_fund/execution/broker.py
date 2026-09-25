@@ -7,8 +7,9 @@ tests use ``tests.execution.fakes.FakeBroker``.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal, Protocol
 
 
@@ -40,6 +41,26 @@ class BrokerOrderResult:
     raw: dict[str, Any]  # already redacted by the adapter
 
 
+@dataclass(frozen=True)
+class BrokerActivity:
+    """One account activity: a fill, a dividend cash movement, or a corporate action.
+
+    FILL rows carry ``broker_order_id`` / ``side`` / ``qty`` / ``price_cents``;
+    every other type carries ``net_amount_cents`` (signed). Money is exact cents.
+    """
+
+    activity_id: str
+    activity_type: str
+    symbol: str
+    occurred_at: datetime  # aware UTC; non-FILL = 00:00 New York on the activity date
+    broker_order_id: str | None
+    side: Literal["buy", "sell"] | None
+    qty: int | None
+    price_cents: int | None
+    net_amount_cents: int | None
+    raw: dict[str, Any]  # redacted, account_id removed
+
+
 class BrokerClient(Protocol):
     """The seam the submit orchestration depends on."""
 
@@ -57,4 +78,11 @@ class BrokerClient(Protocol):
 
     def cancel_order(self, broker_order_id: str) -> None:
         """Cancel an open order (used by the live smoke test)."""
+        ...
+
+    def list_activities(self, types: Sequence[str], since: date) -> list[BrokerActivity]:
+        """Account activities of ``types`` on or after New York date ``since``, oldest first.
+
+        Raises FractionalQuantity / UnexpectedBrokerResponse / the typed API errors.
+        """
         ...
