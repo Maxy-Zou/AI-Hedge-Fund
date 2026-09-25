@@ -1,7 +1,7 @@
 ---
 phase: 11
 slug: mark-to-market
-status: draft -- awaiting review
+status: signed-off (test names reconciled with the suite at T9, 2026-09-25)
 written: 2026-09-25
 ---
 
@@ -20,8 +20,8 @@ Each row becomes a test in T1-T9 (file names from 11-SPEC.md section 9). A row w
 | 3 | C | A second run of the same date issued UPDATEs through an ORM merge / upsert helper; the PG trigger raised in prod only, and SQLite tests passed. | MTM-04, 11.2 | `test_job.py::test_rerun_issues_no_update` (`before_cursor_execute` counter: 0 statements starting `UPDATE`/`DELETE`); `test_migration_007.py::test_pg_trigger_rejects_update` (`requires_db`) |
 | 4 | C | Re-run recomputed a row with a newer vendor price (a second `daily_prices` source arrived) and, finding it different, inserted a second row for the same (signal, date). | 11.4 one row | `test_migration_007.py::test_unique_signal_date`; `test_job.py::test_rerun_after_new_price_source_inserts_nothing` |
 | 5 | C | A re-run changed nothing in the table, but JSON key order or float serialisation in `attribution`/`payload` differed between runs, so a checksum audit reported the ledger as modified. | 11.4 byte-identical | `test_job.py::test_prior_rows_byte_identical` (snapshot every column incl. JSON text, re-run, compare); `test_attribution.py::test_no_float_in_attribution` |
-| 6 | C | Two concurrent job runs each read "no row yet" and one partially wrote before hitting the unique constraint, leaving half a day's rows. | Spec 6.5 all-or-nothing | `test_job.py::test_unique_violation_rolls_back_whole_batch` (pre-insert one conflicting row mid-batch -> `ConcurrentRun`, count unchanged) |
-| 7 | H | `total_pnl_cents` drifted from `realized + unrealized` because one code path rounded the parts and another rounded the sum. | Spec 3 CHECK | `test_migration_007.py::test_total_check_rejects_mismatch`; `test_pnl.py::test_total_is_sum_of_parts` |
+| 6 | C | Two concurrent job runs each read "no row yet" and one partially wrote before hitting the unique constraint, leaving half a day's rows. | Spec 6.5 all-or-nothing | `test_store.py::test_unique_violation_rolls_back_whole_batch` (pre-insert one conflicting row mid-batch -> `ConcurrentRun`, count unchanged) |
+| 7 | H | `total_pnl_cents` drifted from `realized + unrealized` because one code path rounded the parts and another rounded the sum. | Spec 3 CHECK | `test_migration_007.py::test_total_check_rejects_mismatch`; `test_pnl.py::test_total_is_sum_of_parts_and_all_ints` |
 | 8 | H | Migration 007's downgrade left the trigger function or an index behind; `upgrade head` after `downgrade -1` failed on PG. | Reversibility | `test_migration_007.py::test_roundtrip_leaves_no_orphans` (SQLite + PG-gated), `::test_parity_with_orm` (`compare_metadata` + CHECK comparison, as 004) |
 
 ## Temporal leakage
@@ -38,7 +38,7 @@ Each row becomes a test in T1-T9 (file names from 11-SPEC.md section 9). A row w
 | # | Sev | Failure mode | Invariant | Test |
 |---|---|---|---|---|
 | 13 | C | Marks used cached `adj_close`; each row carried a different download's adjustment factor and dividends vanished from the series (the D4 flaw, A1). | A1 raw close | `test_job.py::test_mark_uses_close_cents_not_adj_close` (seed rows where they differ) |
-| 14 | C | A stock split turned 10 shares at $200 into 20 shares at $100; the raw-close mark on 10 shares halved the position overnight and Phase 12 rejected a good signal. | A1 corporate actions | `test_job.py::test_split_after_first_fill_skips_signal` (`skipped_corporate_action`, no row); `test_ingest.py::test_split_activity_stored` |
+| 14 | C | A stock split turned 10 shares at $200 into 20 shares at $100; the raw-close mark on 10 shares halved the position overnight and Phase 12 rejected a good signal. | A1 corporate actions | `test_job.py::test_split_after_first_fill_skips_signal` (`skipped_corporate_action`, no row); `test_ingest.py::test_split_activity_stored_with_zero_amount` |
 | 15 | H | Dividends were credited to every signal on the ticker at full amount instead of pro rata, double-counting when two signals held the same stock. | Spec 5 pro rata | `test_job.py::test_dividend_split_pro_rata_across_signals` (sum of credits == `net_amount_cents` exactly) |
 | 16 | H | FIFO matched sells by `id` rather than `filled_at`; an out-of-order ingest produced the wrong realized P&L. | Spec 5 FIFO order | `test_pnl.py::test_fifo_uses_filled_at_then_id` |
 | 17 | H | A manual short or over-sell on Alpaca produced negative `open_qty`; the CHECK raised mid-batch and no signal was marked that day. | Long-only book | `test_pnl.py::test_oversell_raises`; `test_job.py::test_oversold_signal_skipped_others_marked` |
@@ -65,8 +65,8 @@ Each row becomes a test in T1-T9 (file names from 11-SPEC.md section 9). A row w
 |---|---|---|---|---|
 | 29 | C | Activity paging stopped after the first 100 records; weeks of fills were never ingested and positions looked flat. | Complete ingest | `test_alpaca_activities.py::test_follows_page_token_until_short_page` |
 | 30 | H | alpaca-py was upgraded and its `RESTClient.get` signature or return shape changed; ingest returned 0 activities without error. | Vendor contract | `test_alpaca_activities.py::test_unexpected_shape_raises` (non-list body -> error, never empty); live `test_list_activities_roundtrip` |
-| 31 | H | The activities call used a hand-built base URL, bypassing the Phase 10 paper-host guard. | Paper only (Phase 10 D8) | `test_alpaca_activities.py::test_uses_guarded_client` (calls go through the adapter's `TradingClient`, never a new HTTP client) |
-| 32 | H | Raw activity JSON with account ids / auth details was stored in `payload` and exported in Phase 13. | Security | `test_ingest.py::test_payload_is_redacted` (reuses `execution/redact.py`) |
+| 31 | H | The activities call used a hand-built base URL, bypassing the Phase 10 paper-host guard. | Paper only (Phase 10 D8) | `test_alpaca_activities.py::test_request_goes_through_the_guarded_sdk_client` (calls go through the adapter's `TradingClient`, never a new HTTP client) |
+| 32 | H | Raw activity JSON with account ids / auth details was stored in `payload` and exported in Phase 13. | Security | `test_ingest.py::test_payload_is_the_redacted_raw` (reuses `execution/redact.py`) |
 | 33 | M | A fill for an order we never placed (manual trade) crashed the ingest. | D1 | `test_ingest.py::test_unknown_order_skipped_and_logged` |
 
 ## Scope and LLM boundary
@@ -75,7 +75,7 @@ Each row becomes a test in T1-T9 (file names from 11-SPEC.md section 9). A row w
 |---|---|---|---|---|
 | 34 | C | A helper in `mtm/` imported an agent module to "explain" a P&L move; an LLM ran in the P&L path. | 11.1 | `test_no_llm.py` (package scan for anthropic / pydantic_ai / langchain imports, as Phase 10) |
 | 35 | H | `graph` imported `mtm`, and `mtm` imported `graph`; a circular import broke only the CLI entry point. | Spec 2 layering | `test_no_llm.py::test_mtm_does_not_import_graph`; `tests/scripts/test_mark_to_market.py` runs the CLI entry point |
-| 36 | M | `--dry-run` wrote rows. | CLI contract | `test_mark_to_market.py::test_dry_run_writes_nothing`, `test_ingest_fills.py::test_exit_codes` |
+| 36 | M | `--dry-run` wrote rows. | CLI contract | `test_mark_to_market.py::test_dry_run_writes_nothing`, `test_ingest_fills.py::test_mismatched_fill_exits_one`, `::test_broker_error_exits_two` |
 
 ## Known and accepted (not tested here -> TECH-DEBT at T9)
 

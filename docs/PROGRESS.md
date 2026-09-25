@@ -1,13 +1,14 @@
-## 2026-09-25 — Phase 11 in progress: planning docs + T0 + T1 (MTM policy)
+## 2026-09-25 — Phase 11 implemented: Mark-to-Market and Attribution (MTM-01..04), review pending
 
-Branch `phase/11-mark-to-market` (worktree `../AI-Hedge-Fund-phase11`). Plan, Spec, and Pre-mortem written; the Spec stage replaced the plan's adjusted-close price formula (A1: cached `adj_close` rows keep their download-day adjustment factor, so marks use raw close plus broker dividends) and defined an analyst stance rule (A2: the analyst schemas have no direction field). ROADMAP 11.1 and MTM-01 reworded to match.
+Branch `phase/11-mark-to-market` (worktree `../AI-Hedge-Fund-phase11`). Plan -> Spec -> Pre-mortem -> TDD, T0-T9 done; T10 (independent review) and the PR are next. Spec amendments: A1 marks at the raw close and books broker dividends as realized income (cached `adj_close` keeps its download-day adjustment factor, so the planned ratio would have silently dropped dividends); A2 derives analyst stances (the analyst schemas have no direction field).
 
-**T0:** migration 004 docstring said `paper_pnl_daily` would be migration 005; it is 007.
-**T1:** `mtm/policy.py` -- SHA-pinned `MtmPolicy` (conviction buckets validated to partition 0..100, sentiment threshold, stance-rule version, market-close buffer) and `config/mtm_policy.yaml`. Covers 11-PREMORTEM #27-#28.
+**Shipped:** `mtm/` package -- SHA-pinned `MtmPolicy`; stances + debate snapshot frozen into the episodic payload (v2) at store time; migration 007 (`paper_pnl_daily` cumulative one-row-per-signal-day with a total CHECK, `paper_cash_events`; both append-only); skip-or-insert store with whole-batch rollback; `BrokerClient.list_activities` over Alpaca `/account/activities` (SDK `RESTClient.get`, paged, exact cents, fractional refused); fill/cash ingest + `ingest_fills` CLI; pure FIFO P&L core; pro-rata dividend apportionment; EOD job with completed-day guard, exact-date price, corporate-action skip + `mark_to_market` CLI; attribution rollup whose three dimensions sum exactly to the total.
 
-**Files:** `.planning/phases/11-mark-to-market/11-{PLAN,SPEC,PREMORTEM}.md`, `.planning/{ROADMAP,REQUIREMENTS}.md`, `alembic/versions/004_*` (docstring), `src/ai_hedge_fund/mtm/{__init__,policy}.py`, `config/mtm_policy.yaml`, `tests/mtm/test_mtm_policy.py`.
+**Fixed along the way:** `submit_signal --json` printed a structlog line before the JSON in production (structlog was never configured) -- `route_logs_to_stderr()`; migration 004 docstring; new worktrees need `chflags -R nohidden .venv` (Python 3.13 skips hidden `.pth` files).
 
-**Tests:** 1515 -> **1548 passed** (11 skipped).
+**Files:** `src/ai_hedge_fund/mtm/*`, `scripts/{ingest_fills,mark_to_market}.py`, `execution/{broker,alpaca,alpaca_activities,errors}.py`, `db/{models,dates}.py`, `graph/{nodes,memory_deps}.py`, `logging.py`, `alembic/versions/007_*`, `config/mtm_policy.yaml`, tests under `tests/mtm/`, `tests/execution/`, `tests/scripts/`, `tests/unit/`; `.planning/phases/11-mark-to-market/*`, `.planning/{ROADMAP,REQUIREMENTS,TECH-DEBT}.md`.
+
+**Tests:** 1515 -> **1751 passed** (14 skipped). All 36 pre-mortem rows map to existing tests. PG-gated migration tests pass; the 57 DB-touching mtm tests also passed on Postgres (manual fixture override). Live Alpaca activities read passed.
 
 ## 2026-09-24 — Fix: async Postgres checkpointer in `test_checkpoint_resume`
 
