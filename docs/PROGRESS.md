@@ -1,3 +1,15 @@
+## 2026-09-25 — Workflow: phase-* skills + scheduling/pre-mortem tooling
+
+Replaced the six-stage prose workflow with five project skills, redesigned from an audit of Phases 9-10 (coding ~40 min; cost was sequential review rounds, sign-off wait, and doc upkeep; five pre-mortem tests named but never written) and a survey of superpowers, spec-kit, HumanLayer, GSD, BMAD, agent-os, and Anthropic's guidance.
+
+**Skills** (`.claude/skills/`): `phase-plan` (one PLAN: decisions, interfaces, `phase-tasks` + `phase-premortem` YAML blocks; parallel research; vendor probing), `phase-split` (wave schedule, ledger), `phase-exec` (user-invoked; parallel TDD subagents in worktrees, gate per wave), `phase-review` (six parallel fresh-context lenses, RED-confirmed findings, one targeted re-review), `phase-ship` (user-invoked; gates, SUMMARY, PR).
+
+**Tooling** (`src/ai_hedge_fund/devtools/`): `waves` schedules tasks by file ownership (shared owned files and reads force order; hotspots such as lockfile, migrations, config, models, conftest, `__init__` run alone; width cap 4). `premortem_check` statically verifies every pre-mortem node id exists. `phase_doc` extracts named YAML blocks. CLAUDE.md workflow section rewritten; `.claude/worktrees/` git-ignored.
+
+**Review:** one independent reviewer, no CRITICAL; 2 HIGH + 7 MEDIUM fixed RED-first -- path spellings (`./a.py`, case, trailing space) could put two owners of one file in the same wave; conflicting `reads` edges were silently dropped; pre-mortem check counted uncollectable/shadowed tests and needed a `--done` filter for mid-phase gates; the gate claimed Postgres coverage while those tests skipped without `TEST_DATABASE_URL` (now set in the gate commands, `.env.example`, and CLAUDE.md). Accepted: review lenses are read-only by instruction only; parametrize ids are not checked.
+
+**Tests:** +87 (`tests/devtools/`); the 3 Postgres migration tests now run in the gate -> **1605 passed, 8 skipped** (remaining skips need live API keys).
+
 ## 2026-09-24 — Fix: async Postgres checkpointer in `test_checkpoint_resume`
 
 `tests/integration/test_checkpointer.py::test_checkpoint_resume` failed with `NotImplementedError` whenever Postgres was up (pre-existing since Phase 1, hidden because Docker was always down): it drove `ainvoke` through the sync `PostgresSaver`, which has no `aget_tuple`. The async factory `create_async_checkpointer` (`AsyncPostgresSaver`) already existed but nothing used it, and no production path uses Postgres checkpointing today (`run_analysis.py` uses `InMemorySaver`), so the fix is at the call site, not the factory.
