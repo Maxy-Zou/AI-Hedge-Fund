@@ -235,9 +235,12 @@ def mark_position(fills: Sequence[FillIn], dividends: Sequence[CashIn],
   temporal guard is enforced at two layers).
 - FIFO in `(filled_at, fill_id)` order. A sell beyond open quantity raises `OversoldError`
   (long-only book; a short would mean corrupt data).
-- Dividends are credited to a signal pro rata to its open quantity on the event date, across all
-  signals holding that ticker (the broker pays the account, not the signal). Integer split with
-  the remainder to the lowest `signal_id`; this lives in `mtm/job.py`, which has the cross-signal view.
+- Dividends: *amended in review (T10, H5).* Each signal holding shares at the start of the event
+  date is credited `net_amount * shares / paid_shares`, truncated toward zero, where `paid_shares`
+  is the activity's own `qty` (withholding rows borrow the same-day `DIV`'s). A credit depends only
+  on that signal's holding, so external shares, late-ingested fills and oversold holders cannot move
+  cash between signals, and credits never exceed what was paid (short by < 1 cent per signal).
+  No usable `qty` -> `dividend_unallocated`, nothing credited. (Was: pro rata among signals.)
 - All values are ints; no float appears anywhere (tests assert types).
 
 ```python

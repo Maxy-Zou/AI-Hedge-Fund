@@ -11,6 +11,7 @@ from collections.abc import Iterator
 from datetime import UTC, date, datetime
 
 import pytest
+import structlog
 from sqlalchemy import event, text
 from sqlalchemy.orm import Session
 
@@ -121,7 +122,9 @@ def price(
     return row.id
 
 
-def cash(s: Session, kind: str, day: int, net: int, ticker: str = "AAPL") -> int:
+def cash(
+    s: Session, kind: str, day: int, net: int, ticker: str = "AAPL", qty: str | None = None
+) -> int:
     rec = insert_cash_event(
         s,
         NewCashEvent(
@@ -130,7 +133,7 @@ def cash(s: Session, kind: str, day: int, net: int, ticker: str = "AAPL") -> int
             ticker=ticker,
             event_date=date(2026, 9, day),
             net_amount_cents=net,
-            payload={},
+            payload={} if qty is None else {"qty": qty},
         ),
     )
     assert rec is not None
@@ -359,21 +362,23 @@ def test_backfill_ignores_later_dividends(db_session: Session) -> None:
 
 
 def test_dividend_split_pro_rata_across_signals(db_session: Session) -> None:
-    """11-PREMORTEM #15: sum of credits == what the broker paid, exactly."""
+    """11-PREMORTEM #15 (amended in review): each signal gets net x its shares / shares paid,
+    truncated -- the credits never exceed what the broker paid."""
     a = held(db_session, qty=30)
     b = held(db_session, qty=10)
-    cash(db_session, "DIV", 3, 101)
+    cash(db_session, "DIV", 3, 101, qty="40")
     price(db_session, 3, 10_000)
     run(db_session, 3)
     credits = {r.signal_id: r.realized_pnl_cents for r in query_pnl_rows(db_session)}
-    assert credits == {a: 76, b: 25}
+    assert credits == {a: 75, b: 25}
+    assert sum(credits.values()) <= 101
 
 
 def test_dividend_before_a_signal_held_goes_to_holders_only(db_session: Session) -> None:
     early = held(db_session, qty=10)
     later = analysis(db_session)
     fill(db_session, trade(db_session, later), 10, 10_000, day=4)
-    cash(db_session, "DIV", 3, 200)
+    cash(db_session, "DIV", 3, 200, qty="10")
     price(db_session, 4, 10_000)
     run(db_session, 4)
     credits = {r.signal_id: r.realized_pnl_cents for r in query_pnl_rows(db_session)}
@@ -460,3 +465,73 @@ def test_close_observation_boundary_is_exact(
     held(db_session)
     price(db_session, 3, 10_000, observed=observed)
     assert (run(db_session, 3).inserted == 1) is marked
+
+
+def test_dividend_credit_bounded_by_broker_qty(db_session: Session) -> None:
+    """Review H5a: shares held outside any signal are not credited to the signals."""
+    sid = held(db_session, qty=10)
+    cash(db_session, "DIV", 3, 5_000, qty="100")
+    price(db_session, 3, 10_000)
+    run(db_session, 3)
+    [row] = query_pnl_rows(db_session, signal_id=sid)
+    assert row.realized_pnl_cents == 500
+
+
+def test_late_fill_does_not_overcredit_dividend(db_session: Session) -> None:
+    """Review H5b: a fill ingested after a day was marked must not re-split that day's cash."""
+    a = held(db_session, qty=10)
+    cash(db_session, "DIV", 3, 240, qty="20")
+    price(db_session, 3, 10_000)
+    price(db_session, 4, 10_000)
+    run(db_session, 3)
+    b = analysis(db_session)
+    fill(db_session, trade(db_session, b), 10, 10_000, day=2)  # ingested late
+    run(db_session, 3)
+    run(db_session, 4)
+    rows = {(r.signal_id, r.pnl_date): r.realized_pnl_cents for r in query_pnl_rows(db_session)}
+    assert rows[(a, "2026-09-03")] + rows[(b, "2026-09-03")] <= 240
+    assert rows[(a, "2026-09-04")] >= rows[(a, "2026-09-03")]
+
+
+def test_dividend_not_reallocated_from_oversold_holder(db_session: Session) -> None:
+    """Review MED: a corrupt holder's share is not handed to the others."""
+    bad = analysis(db_session)
+    fill(db_session, trade(db_session, bad), 10, 10_000, day=2)
+    fill(db_session, trade(db_session, bad, side="sell", attempt=2), 15, 10_000, day=2, hour=15)
+    good = held(db_session, qty=10)
+    cash(db_session, "DIV", 3, 1_000, qty="20")
+    price(db_session, 3, 10_000)
+    run(db_session, 3)
+    [row] = query_pnl_rows(db_session, signal_id=good)
+    assert row.realized_pnl_cents == 500
+
+
+def test_dividend_without_broker_qty_is_unallocated(db_session: Session) -> None:
+    sid = held(db_session, qty=10)
+    cash(db_session, "DIV", 3, 240)
+    price(db_session, 3, 10_000)
+    with structlog.testing.capture_logs() as logs:
+        run(db_session, 3)
+    [row] = query_pnl_rows(db_session, signal_id=sid)
+    assert row.realized_pnl_cents == 0
+    assert any(e["event"] == "dividend_unallocated" for e in logs)
+
+
+def test_withholding_borrows_the_same_day_dividend_qty(db_session: Session) -> None:
+    sid = held(db_session, qty=10)
+    cash(db_session, "DIV", 3, 240, qty="20")
+    cash(db_session, "DIVWH", 3, -36)
+    price(db_session, 3, 10_000)
+    run(db_session, 3)
+    [row] = query_pnl_rows(db_session, signal_id=sid)
+    assert row.realized_pnl_cents == 120 - 18
+
+
+def test_holdings_above_paid_shares_are_flagged(db_session: Session) -> None:
+    held(db_session, qty=10)
+    held(db_session, qty=10)
+    cash(db_session, "DIV", 3, 100, qty="10")  # one signal bought after the ex-date
+    price(db_session, 3, 10_000)
+    with structlog.testing.capture_logs() as logs:
+        run(db_session, 3)
+    assert any(e["event"] == "dividend_holdings_exceed_paid" for e in logs)

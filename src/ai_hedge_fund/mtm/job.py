@@ -14,13 +14,14 @@ from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
+from decimal import Decimal
 
 import structlog
 from sqlalchemy.orm import Session
 
 from ai_hedge_fund.db.dates import MARKET_TZ, trading_date
 from ai_hedge_fund.mtm.attribution import attribution_for
-from ai_hedge_fund.mtm.dividends import apportion
+from ai_hedge_fund.mtm.dividends import paid_shares, signal_credit
 from ai_hedge_fund.mtm.errors import IncompleteTradingDay, OversoldError
 from ai_hedge_fund.mtm.inputs import ClosePrice, SignalPosition, load_close, load_positions
 from ai_hedge_fund.mtm.pnl import CashIn, mark_position, open_quantity_before
@@ -75,19 +76,42 @@ def last_completed_trading_day(now: datetime, policy: MtmPolicy) -> date:
     raise AssertionError("unreachable: a week always contains a completed weekday")
 
 
+def _paid_shares_for(ev: CashEventRecord, events: Sequence[CashEventRecord]) -> Decimal | None:
+    """The event's own ``qty``, else (withholding rows) the same-day dividend's."""
+    own = paid_shares(ev.payload)
+    if own is not None:
+        return own
+    same_day = [
+        paid_shares(e.payload)
+        for e in events
+        if e.event_date == ev.event_date and e.activity_type == "DIV" and e.id != ev.id
+    ]
+    usable = {q for q in same_day if q is not None}
+    return usable.pop() if len(usable) == 1 else None
+
+
 def _dividend_credits(
     positions: Sequence[SignalPosition], events: Sequence[CashEventRecord]
 ) -> dict[int, list[CashIn]]:
-    """Each dividend split pro rata by shares held at the start of its date (11-PREMORTEM #15)."""
+    """Credit each dividend to each holder by its own shares (review H5; 11-PREMORTEM #15)."""
     credits: dict[int, list[CashIn]] = defaultdict(list)
     for ev in events:
         day = date.fromisoformat(ev.event_date)
-        weights = {p.signal_id: open_quantity_before(p.fills, day) for p in positions}
-        shares = apportion(ev.net_amount_cents, weights)
-        if not shares:
-            logger.warning("dividend_unallocated", event_id=ev.id, ticker=ev.ticker, day=str(day))
-        for signal_id, cents in shares.items():
-            credits[signal_id].append(CashIn(event_id=ev.id, event_date=day, amount_cents=cents))
+        paid = _paid_shares_for(ev, events)
+        if paid is None:
+            logger.warning(
+                "dividend_unallocated", event_id=ev.id, ticker=ev.ticker, reason="no qty"
+            )
+            continue
+        held = {p.signal_id: open_quantity_before(p.fills, day) for p in positions}
+        if sum(held.values()) > paid:  # bought between ex-date and pay date (TECH-DEBT)
+            logger.warning("dividend_holdings_exceed_paid", event_id=ev.id, paid=str(paid))
+        for signal_id, shares in held.items():
+            if shares:
+                cents = signal_credit(ev.net_amount_cents, shares, paid)
+                credits[signal_id].append(
+                    CashIn(event_id=ev.id, event_date=day, amount_cents=cents)
+                )
     return credits
 
 

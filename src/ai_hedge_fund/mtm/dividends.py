@@ -1,33 +1,37 @@
-"""Apportion broker cash across the signals that held the ticker (Phase 11, 11-SPEC s5).
+"""Credit broker dividend cash to the signals that held the ticker (Phase 11, 11-SPEC s5).
 
-The broker pays the *account*; attribution needs it per *signal*. Each holder
-gets ``amount * weight / total`` floored, and the leftover cents go one each to
-the lowest signal ids, so the credits always sum to exactly what the broker
-paid (11-PREMORTEM #15). Pure; integer arithmetic only.
+The broker pays the *account* for ``paid_shares`` shares (the activity's ``qty``).
+A signal holding ``shares`` of them is credited ``amount * shares / paid_shares``,
+truncated toward zero. The credit depends only on that signal's own holding, so
+shares held outside any signal, a fill ingested after the day was marked, or an
+oversold holder can never move cash onto another signal (review H5), and the
+credits never exceed what was paid. Pure; exact integer/Decimal arithmetic.
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from decimal import Decimal, DecimalException
+from typing import Any
 
 
-def apportion(amount_cents: int, weights: Mapping[int, int]) -> dict[int, int]:
-    """Split ``amount_cents`` across signal ids in proportion to ``weights`` (shares held).
+def paid_shares(payload: dict[str, Any]) -> Decimal | None:
+    """The share count the broker paid on, from a cash event's raw payload; None if unusable."""
+    value = payload.get("qty")
+    if isinstance(value, bool) or not isinstance(value, str | int):
+        return None
+    try:
+        qty = Decimal(str(value))
+    except DecimalException:
+        return None
+    return qty if qty.is_finite() and qty > 0 else None
 
-    Holders with zero weight get nothing. With no holders at all the result is
-    empty -- the caller decides what an unallocated dividend means.
+
+def signal_credit(amount_cents: int, shares: int, paid: Decimal) -> int:
+    """``amount_cents * shares / paid``, truncated toward zero (never more than paid).
 
     Raises:
-        ValueError: a weight is negative.
+        ValueError: ``shares`` is negative or ``paid`` is not positive.
     """
-    if any(w < 0 for w in weights.values()):
-        raise ValueError(f"negative weight in {dict(weights)}")
-    holders = {sid: w for sid, w in sorted(weights.items()) if w > 0}
-    total = sum(holders.values())
-    if total == 0:
-        return {}
-    shares = {sid: amount_cents * w // total for sid, w in holders.items()}
-    leftover = amount_cents - sum(shares.values())  # 0 <= leftover < len(holders)
-    return {
-        sid: cents + (1 if i < leftover else 0) for i, (sid, cents) in enumerate(shares.items())
-    }
+    if shares < 0 or paid <= 0:
+        raise ValueError(f"invalid holding {shares} of {paid} paid shares")
+    return int(Decimal(amount_cents) * shares / paid)  # int() truncates toward zero
