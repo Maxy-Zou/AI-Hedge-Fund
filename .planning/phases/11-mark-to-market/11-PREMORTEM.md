@@ -43,7 +43,7 @@ Each row becomes a test in T1-T9 (file names from 11-SPEC.md section 9). A row w
 | 16 | H | FIFO matched sells by `id` rather than `filled_at`; an out-of-order ingest produced the wrong realized P&L. | Spec 5 FIFO order | `test_pnl.py::test_fifo_uses_filled_at_then_id` |
 | 17 | H | A manual short or over-sell on Alpaca produced negative `open_qty`; the CHECK raised mid-batch and no signal was marked that day. | Long-only book | `test_pnl.py::test_oversell_raises`; `test_job.py::test_oversold_signal_skipped_others_marked` |
 | 18 | H | Partial fills were ingested from the order's aggregate `filled_avg_price` and lost per-execution prices. | D1 | `test_ingest.py::test_partial_fills_one_row_each` |
-| 19 | H | A fractional fill (e.g. from a manual trade) was truncated to whole shares. | Whole shares (Phase 9 D3) | `test_alpaca_activities.py::test_fractional_qty_raises` |
+| 19 | H | A fractional fill (e.g. from a manual trade) was truncated to whole shares. | Whole shares (Phase 9 D3) | `test_alpaca_activities.py::test_fractional_qty_is_rejected_not_truncated` |
 | 20 | H | `DIVWH` withholding (negative) was stored with its sign flipped or skipped; realized income overstated. | Signed cash | `test_alpaca_activities.py::test_withholding_is_negative_cents`; `test_pnl.py::test_withholding_reduces_realized` |
 
 ## Attribution
@@ -64,7 +64,7 @@ Each row becomes a test in T1-T9 (file names from 11-SPEC.md section 9). A row w
 | # | Sev | Failure mode | Invariant | Test |
 |---|---|---|---|---|
 | 29 | C | Activity paging stopped after the first 100 records; weeks of fills were never ingested and positions looked flat. | Complete ingest | `test_alpaca_activities.py::test_follows_page_token_until_short_page` |
-| 30 | H | alpaca-py was upgraded and its `RESTClient.get` signature or return shape changed; ingest returned 0 activities without error. | Vendor contract | `test_alpaca_activities.py::test_unexpected_shape_raises` (non-list body -> error, never empty); live `test_list_activities_roundtrip` |
+| 30 | H | alpaca-py was upgraded and its `RESTClient.get` signature or return shape changed; ingest returned 0 activities without error. | Vendor contract | `test_alpaca_activities.py::test_unexpected_response_shape_raises` (non-list body -> error, never empty); live `test_list_activities_roundtrip` |
 | 31 | H | The activities call used a hand-built base URL, bypassing the Phase 10 paper-host guard. | Paper only (Phase 10 D8) | `test_alpaca_activities.py::test_request_goes_through_the_guarded_sdk_client` (calls go through the adapter's `TradingClient`, never a new HTTP client) |
 | 32 | H | Raw activity JSON with account ids / auth details was stored in `payload` and exported in Phase 13. | Security | `test_ingest.py::test_payload_is_the_redacted_raw` (reuses `execution/redact.py`) |
 | 33 | M | A fill for an order we never placed (manual trade) crashed the ingest. | D1 | `test_ingest.py::test_unknown_order_skipped_and_logged` |
@@ -73,7 +73,7 @@ Each row becomes a test in T1-T9 (file names from 11-SPEC.md section 9). A row w
 
 | # | Sev | Failure mode | Invariant | Test |
 |---|---|---|---|---|
-| 34 | C | A helper in `mtm/` imported an agent module to "explain" a P&L move; an LLM ran in the P&L path. | 11.1 | `test_no_llm.py` (package scan for anthropic / pydantic_ai / langchain imports, as Phase 10) |
+| 34 | C | A helper in `mtm/` imported an agent module to "explain" a P&L move; an LLM ran in the P&L path. | 11.1 | `test_no_llm.py::test_mtm_source_has_no_llm_surface` (package scan for anthropic / pydantic_ai / langchain imports, as Phase 10) |
 | 35 | H | `graph` imported `mtm`, and `mtm` imported `graph`; a circular import broke only the CLI entry point. | Spec 2 layering | `test_no_llm.py::test_mtm_does_not_import_graph`; `tests/scripts/test_mark_to_market.py` runs the CLI entry point |
 | 36 | M | `--dry-run` wrote rows. | CLI contract | `test_mark_to_market.py::test_dry_run_writes_nothing`, `test_ingest_fills.py::test_mismatched_fill_exits_one`, `::test_broker_error_exits_two` |
 
@@ -83,3 +83,248 @@ Each row becomes a test in T1-T9 (file names from 11-SPEC.md section 9). A row w
 - No correction mechanism for a wrong `paper_pnl_daily` row (D6).
 - No exchange calendar: holidays surface as `skipped_no_price`, which is correct but noisy in logs.
 - No exit policy, so realized P&L is dividends only (D5), and Phase 12 inherits this.
+
+## Machine-readable manifest
+
+Generated at ship time from the tables above for `ai_hedge_fund.devtools.premortem_check` (Phase 11 predates the `phase-premortem` block).
+
+```yaml phase-premortem
+- id: PM1
+  severity: C
+  failure: "The job ran at 14:00 ET on a trading day; that day's row was written with no price (skipped) or, after a vendor wrote an intraday bar, with an intraday \"close\". Append-only froze it forever."
+  invariant: "D6 completed-day guard"
+  test:
+    - tests/mtm/test_job.py::test_today_before_close_raises_incomplete
+    - tests/mtm/test_job.py::test_today_after_close_buffer_allowed
+    - tests/mtm/test_job.py::test_weekend_date_raises
+- id: PM2
+  severity: C
+  failure: "The mark fell back to the latest price on or before pnl_date (the execution/prices.py rule), so a holiday or data gap was frozen as a real day with a stale price."
+  invariant: "Spec 6.3 exact-date price"
+  test:
+    - tests/mtm/test_job.py::test_missing_exact_date_price_skips_not_stale
+- id: PM3
+  severity: C
+  failure: "A second run of the same date issued UPDATEs through an ORM merge / upsert helper; the PG trigger raised in prod only, and SQLite tests passed."
+  invariant: "MTM-04, 11.2"
+  test:
+    - tests/mtm/test_job.py::test_rerun_issues_no_update
+    - tests/mtm/test_migration_007.py::test_pg_trigger_rejects_update
+- id: PM4
+  severity: C
+  failure: "Re-run recomputed a row with a newer vendor price (a second daily_prices source arrived) and, finding it different, inserted a second row for the same (signal, date)."
+  invariant: "11.4 one row"
+  test:
+    - tests/mtm/test_migration_007.py::test_unique_signal_date
+    - tests/mtm/test_job.py::test_rerun_after_new_price_source_inserts_nothing
+- id: PM5
+  severity: C
+  failure: "A re-run changed nothing in the table, but JSON key order or float serialisation in attribution/payload differed between runs, so a checksum audit reported the ledger as modified."
+  invariant: "11.4 byte-identical"
+  test:
+    - tests/mtm/test_job.py::test_prior_rows_byte_identical
+    - tests/mtm/test_attribution.py::test_no_float_in_attribution
+- id: PM6
+  severity: C
+  failure: "Two concurrent job runs each read \"no row yet\" and one partially wrote before hitting the unique constraint, leaving half a day's rows."
+  invariant: "Spec 6.5 all-or-nothing"
+  test:
+    - tests/mtm/test_store.py::test_unique_violation_rolls_back_whole_batch
+- id: PM7
+  severity: H
+  failure: "total_pnl_cents drifted from realized + unrealized because one code path rounded the parts and another rounded the sum."
+  invariant: "Spec 3 CHECK"
+  test:
+    - tests/mtm/test_migration_007.py::test_total_check_rejects_mismatch
+    - tests/mtm/test_pnl.py::test_total_is_sum_of_parts_and_all_ints
+- id: PM8
+  severity: H
+  failure: "Migration 007's downgrade left the trigger function or an index behind; upgrade head after downgrade -1 failed on PG."
+  invariant: "Reversibility"
+  test:
+    - tests/mtm/test_migration_007.py::test_roundtrip_leaves_no_orphans
+    - tests/mtm/test_migration_007.py::test_parity_with_orm
+- id: PM9
+  severity: C
+  failure: "Backfilling a past date after later fills existed counted those fills; the historical series showed positions before they were bought."
+  invariant: "Temporal"
+  test:
+    - tests/mtm/test_pnl.py::test_future_fill_raises
+    - tests/mtm/test_job.py::test_backfill_ignores_later_fills
+- id: PM10
+  severity: C
+  failure: "A dividend paid after pnl_date was credited on a backfill, inflating realized P&L on earlier days."
+  invariant: "Temporal"
+  test:
+    - tests/mtm/test_pnl.py::test_future_dividend_raises
+    - tests/mtm/test_job.py::test_backfill_ignores_later_dividends
+- id: PM11
+  severity: H
+  failure: "Fill trade date was taken from the UTC date of transaction_time; a 20:30 ET after-hours fill landed on the next day."
+  invariant: "NY trading date"
+  test:
+    - tests/mtm/test_ingest.py::test_fill_as_of_is_new_york_date
+- id: PM12
+  severity: H
+  failure: "A price row observed *after* the job's now (a later backfill download) was used when re-running an old date with a pinned now."
+  invariant: "Spec 6.3 observed_date <= now"
+  test:
+    - tests/mtm/test_job.py::test_price_observed_after_now_ignored
+- id: PM13
+  severity: C
+  failure: "Marks used cached adj_close; each row carried a different download's adjustment factor and dividends vanished from the series (the D4 flaw, A1)."
+  invariant: "A1 raw close"
+  test:
+    - tests/mtm/test_job.py::test_mark_uses_close_cents_not_adj_close
+- id: PM14
+  severity: C
+  failure: "A stock split turned 10 shares at $200 into 20 shares at $100; the raw-close mark on 10 shares halved the position overnight and Phase 12 rejected a good signal."
+  invariant: "A1 corporate actions"
+  test:
+    - tests/mtm/test_job.py::test_split_after_first_fill_skips_signal
+    - tests/mtm/test_ingest.py::test_split_activity_stored_with_zero_amount
+- id: PM15
+  severity: H
+  failure: "Dividends were credited to every signal on the ticker at full amount instead of pro rata, double-counting when two signals held the same stock."
+  invariant: "Spec 5 per-signal credit (amended in review H5)"
+  test:
+    - tests/mtm/test_job.py::test_dividend_split_pro_rata_across_signals
+    - tests/mtm/test_job.py::test_dividend_credit_bounded_by_broker_qty
+    - tests/mtm/test_job.py::test_late_fill_does_not_overcredit_dividend
+    - tests/mtm/test_job.py::test_dividend_not_reallocated_from_oversold_holder
+    - tests/mtm/test_dividends.py::test_credits_never_exceed_what_was_paid
+- id: PM16
+  severity: H
+  failure: "FIFO matched sells by id rather than filled_at; an out-of-order ingest produced the wrong realized P&L."
+  invariant: "Spec 5 FIFO order"
+  test:
+    - tests/mtm/test_pnl.py::test_fifo_uses_filled_at_then_id
+- id: PM17
+  severity: H
+  failure: "A manual short or over-sell on Alpaca produced negative open_qty; the CHECK raised mid-batch and no signal was marked that day."
+  invariant: "Long-only book"
+  test:
+    - tests/mtm/test_pnl.py::test_oversell_raises
+    - tests/mtm/test_job.py::test_oversold_signal_skipped_others_marked
+- id: PM18
+  severity: H
+  failure: "Partial fills were ingested from the order's aggregate filled_avg_price and lost per-execution prices."
+  invariant: "D1"
+  test:
+    - tests/mtm/test_ingest.py::test_partial_fills_one_row_each
+- id: PM19
+  severity: H
+  failure: "A fractional fill (e.g. from a manual trade) was truncated to whole shares."
+  invariant: "Whole shares (Phase 9 D3)"
+  test:
+    - tests/execution/test_alpaca_activities.py::test_fractional_qty_is_rejected_not_truncated
+- id: PM20
+  severity: H
+  failure: "DIVWH withholding (negative) was stored with its sign flipped or skipped; realized income overstated."
+  invariant: "Signed cash"
+  test:
+    - tests/execution/test_alpaca_activities.py::test_withholding_is_negative_cents
+    - tests/mtm/test_pnl.py::test_withholding_reduces_realized
+- id: PM21
+  severity: C
+  failure: "The analyst split floored each third; totals across the portfolio were short a few cents, and the LP report did not reconcile."
+  invariant: "11.3 exact sums"
+  test:
+    - tests/mtm/test_rollup.py::test_each_dimension_sums_to_total
+- id: PM22
+  severity: C
+  failure: "v1 analyses (no stances) were silently bucketed as none_aligned, making analysts look worse than they were."
+  invariant: "D2 honest buckets"
+  test:
+    - tests/mtm/test_attribution.py::test_v1_payload_is_unattributed
+    - tests/mtm/test_rollup.py::test_unattributed_separate_from_none_aligned
+- id: PM23
+  severity: H
+  failure: "The stance rule was later tweaked and applied at rollup time, rewriting historical attribution."
+  invariant: "A2 stance stored at write time"
+  test:
+    - tests/graph/test_episodic_store_v2.py::test_stances_persisted
+    - tests/mtm/test_attribution.py::test_uses_stored_stances_not_rederived
+- id: PM24
+  severity: H
+  failure: "An analyst that errored was counted as neutral rather than absent."
+  invariant: "A2"
+  test:
+    - tests/mtm/test_stances.py::test_errored_analyst_is_absent
+- id: PM25
+  severity: H
+  failure: "Debate winner used revised_thesis.confidence (already the post value) as \"pre\", so every delta was 0 and every signal a draw."
+  invariant: "D3"
+  test:
+    - tests/mtm/test_attribution.py::test_debate_winner_table
+    - tests/graph/test_episodic_store_v2.py::test_debate_pre_confidence_from_state
+- id: PM26
+  severity: H
+  failure: "Phase-4-only runs (no debate) crashed the store node on state[\"debate_synthesis\"]."
+  invariant: "D2"
+  test:
+    - tests/graph/test_episodic_store_v2.py::test_no_debate_stores_none
+- id: PM27
+  severity: H
+  failure: "A conviction of exactly 50 or 75 landed in two buckets or none."
+  invariant: "Contiguous buckets"
+  test:
+    - tests/mtm/test_mtm_policy.py::test_boundaries_map_to_one_bucket
+    - tests/mtm/test_mtm_policy.py::test_gap_or_overlap_rejected
+- id: PM28
+  severity: H
+  failure: "Editing sentiment_threshold did not change mtm_policy_sha, so rows under different rules looked identical."
+  invariant: "Audit"
+  test:
+    - tests/mtm/test_mtm_policy.py::test_sha_changes_per_field
+- id: PM29
+  severity: C
+  failure: "Activity paging stopped after the first 100 records; weeks of fills were never ingested and positions looked flat."
+  invariant: "Complete ingest"
+  test:
+    - tests/execution/test_alpaca_activities.py::test_follows_page_token_until_short_page
+- id: PM30
+  severity: H
+  failure: "alpaca-py was upgraded and its RESTClient.get signature or return shape changed; ingest returned 0 activities without error."
+  invariant: "Vendor contract"
+  test:
+    - tests/execution/test_alpaca_activities.py::test_unexpected_response_shape_raises
+- id: PM31
+  severity: H
+  failure: "The activities call used a hand-built base URL, bypassing the Phase 10 paper-host guard."
+  invariant: "Paper only (Phase 10 D8)"
+  test:
+    - tests/execution/test_alpaca_activities.py::test_request_goes_through_the_guarded_sdk_client
+- id: PM32
+  severity: H
+  failure: "Raw activity JSON with account ids / auth details was stored in payload and exported in Phase 13."
+  invariant: "Security"
+  test:
+    - tests/mtm/test_ingest.py::test_payload_is_the_redacted_raw
+- id: PM33
+  severity: M
+  failure: "A fill for an order we never placed (manual trade) crashed the ingest."
+  invariant: "D1"
+  test:
+    - tests/mtm/test_ingest.py::test_unknown_order_skipped_and_logged
+- id: PM34
+  severity: C
+  failure: "A helper in mtm/ imported an agent module to \"explain\" a P&L move; an LLM ran in the P&L path."
+  invariant: "11.1"
+  test:
+    - tests/mtm/test_no_llm.py::test_mtm_source_has_no_llm_surface
+- id: PM35
+  severity: H
+  failure: "graph imported mtm, and mtm imported graph; a circular import broke only the CLI entry point."
+  invariant: "Spec 2 layering"
+  test:
+    - tests/mtm/test_no_llm.py::test_mtm_does_not_import_graph
+- id: PM36
+  severity: M
+  failure: "--dry-run wrote rows."
+  invariant: "CLI contract"
+  test:
+    - tests/scripts/test_mark_to_market.py::test_dry_run_writes_nothing
+    - tests/scripts/test_ingest_fills.py::test_mismatched_fill_exits_one
+    - tests/scripts/test_ingest_fills.py::test_broker_error_exits_two
+```
