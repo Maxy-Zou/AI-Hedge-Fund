@@ -8,7 +8,8 @@ tables with ``Base.metadata.create_all``, so that drift stayed invisible.
 Unlike ``tests/paper/test_migration_roundtrip.py`` (which filters to structural
 diffs on the paper tables), parity here is the *unfiltered* ``compare_metadata``
 over every table -- nullability included. SQLite tests run by default; the
-PostgreSQL copies need ``TEST_DATABASE_URL`` naming a ``*test*`` database.
+PostgreSQL copies need ``TEST_DATABASE_URL`` naming a ``*test*`` database and run in a
+throwaway database on that server (``tests.pg_scratch``), never the shared one.
 """
 
 from __future__ import annotations
@@ -27,6 +28,7 @@ from sqlalchemy import create_engine, inspect, text
 from ai_hedge_fund.db.base import Base
 from alembic import command
 from tests.paper.test_migration_roundtrip import HEAD, _alembic_config, _pg_url_or_skip, _version
+from tests.pg_scratch import scratch_alembic
 
 V1_TABLES = (
     "sec_filings",
@@ -61,12 +63,9 @@ def sqlite_cfg(tmp_path: Path) -> Iterator[tuple[Config, str]]:
 
 @pytest.fixture()
 def pg_cfg() -> Iterator[tuple[Config, str]]:
-    url = _pg_url_or_skip()
-    previous = os.environ.get("DATABASE_URL")
-    try:
-        yield _alembic_config(url), url
-    finally:
-        _restore_env(previous)
+    """A fresh scratch database per test; the shared test DB's revision never moves."""
+    with scratch_alembic(_pg_url_or_skip()) as cfg_url:
+        yield cfg_url
 
 
 def _revisions(cfg: Config) -> list[str]:
@@ -216,7 +215,6 @@ def test_008_downgrade_restores_nullable_observed_date(sqlite_cfg: tuple[Config,
 
 @pytest.mark.slow
 def test_pg_full_chain_round_trip(pg_cfg: tuple[Config, str]) -> None:
-    """Refuses (by design) if the test DB holds rows a downgrade guard protects."""
     _assert_round_trip(*pg_cfg)
 
 

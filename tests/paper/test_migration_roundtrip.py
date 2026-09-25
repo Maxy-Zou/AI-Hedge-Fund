@@ -9,7 +9,9 @@ would leave tests green and production wrong (09-PREMORTEM.md #11).
 
 Postgres-gated tests (``@slow``) need ``TEST_DATABASE_URL`` and prove L3 --
 the trigger that catches raw SQL -- plus clean downgrade of the trigger
-function. They refuse any database whose name does not contain ``test``.
+function. They refuse any database whose name does not contain ``test``, and run in
+a throwaway database on that server (``tests.pg_scratch``) so the shared one's
+revision never moves.
 """
 
 from __future__ import annotations
@@ -32,6 +34,7 @@ from ai_hedge_fund.db.base import Base
 from ai_hedge_fund.db.dates import normalise_as_of
 from ai_hedge_fund.db.models import EpisodicMemory, PaperFill, PaperTrade
 from alembic import command
+from tests.pg_scratch import scratch_alembic
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 HEAD = "008"  # latest revision; bump with every new migration
@@ -370,15 +373,9 @@ def _pg_url_or_skip() -> str:
 
 @pytest.fixture(scope="module")
 def pg_cfg() -> Iterator[tuple[Config, str]]:
-    url = _pg_url_or_skip()
-    previous = os.environ.get("DATABASE_URL")
-    try:
-        yield _alembic_config(url), url
-    finally:
-        if previous is None:
-            os.environ.pop("DATABASE_URL", None)
-        else:
-            os.environ["DATABASE_URL"] = previous
+    """A private scratch database -- never migrate the shared TEST_DATABASE_URL one."""
+    with scratch_alembic(_pg_url_or_skip()) as cfg_url:
+        yield cfg_url
 
 
 @pytest.mark.slow
