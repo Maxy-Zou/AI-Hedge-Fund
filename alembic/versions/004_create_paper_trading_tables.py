@@ -20,7 +20,7 @@ tests/paper/test_migration_roundtrip.py enforces it (compare_metadata for
 tables/columns/indexes/uniques/FKs, plus an explicit CHECK comparison).
 
 paper_pnl_daily is deliberately NOT created here; it belongs to Phase 11
-(migration 005), which defines its write semantics.
+(migration 007 -- Phase 10 took 005-006), which defines its write semantics.
 """
 
 from __future__ import annotations

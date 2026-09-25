@@ -2,8 +2,9 @@
 
 Data-source models (SEC filings, XBRL facts, daily prices, insider trades,
 news articles, macro indicators), the Phase-6 portfolio snapshot, the Phase-7
-episodic memory, and the Phase-9 paper-trading ledger (paper_trades,
-paper_fills). All models use DualTimestampMixin for temporal tracking
+episodic memory, the Phase-9 paper-trading ledger (paper_trades,
+paper_fills), and the Phase-11 mark-to-market tables (paper_cash_events,
+paper_pnl_daily). All models use DualTimestampMixin for temporal tracking
 (as_of_date / observed_date). Monetary values are stored as BigInteger cents
 to avoid floating-point errors.
 """
@@ -344,6 +345,93 @@ class PaperFill(Base, DualTimestampMixin, AppendOnlyGuard):
     )
 
 
-# L3: PostgreSQL append-only trigger, produced by create_all as well as by migration 004.
+# Alpaca non-trade activity types kept by Phase 11 (11-SPEC A1): dividend cash
+# (incl. withholding) and the corporate actions the EOD job must detect.
+CASH_ACTIVITY_TYPES = (
+    "DIV", "DIVCGL", "DIVCGS", "DIVNRA", "DIVROC", "DIVTXEX", "DIVWH",
+    "SPLIT", "SPIN", "MA", "NC",
+)  # fmt: skip
+_CASH_TYPES_SQL = ", ".join(f"'{t}'" for t in CASH_ACTIVITY_TYPES)
+
+
+class PaperCashEvent(Base, DualTimestampMixin, AppendOnlyGuard):
+    """One broker non-trade activity: dividend cash or a corporate action (Phase 11, A1).
+
+    Append-only. ``broker_activity_id`` is unique so repeated polling cannot
+    double-record an event. ``net_amount_cents`` is signed (``DIVWH``
+    withholding is negative) and 0 for non-cash actions (``SPLIT`` etc.).
+    Stored for every ticker the broker reports; the EOD job filters.
+    """
+
+    __tablename__ = "paper_cash_events"
+    __table_args__ = (
+        UniqueConstraint("broker_activity_id", name="uq_paper_cash_events_activity"),
+        CheckConstraint(
+            f"activity_type IN ({_CASH_TYPES_SQL})", name="ck_paper_cash_events_activity_type"
+        ),
+        Index("ix_paper_cash_events_ticker_date", "ticker", "event_date"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    broker_activity_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    activity_type: Mapped[str] = mapped_column(String(8), nullable=False)
+    ticker: Mapped[str] = mapped_column(String(10), nullable=False)
+    event_date: Mapped[str] = mapped_column(Date, nullable=False)
+    net_amount_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    payload: Mapped[dict] = mapped_column(
+        _JSONB(none_as_null=True).with_variant(JSON(none_as_null=True), "sqlite"),
+        nullable=False,
+    )
+
+
+class PaperPnlDaily(Base, DualTimestampMixin, AppendOnlyGuard):
+    """One signal's cumulative mark-to-market P&L at one trading day's close (Phase 11, MTM-02).
+
+    Append-only, exactly one row per ``(signal_id, pnl_date)`` -- the EOD job
+    skips pairs that exist and never updates (MTM-04). Values are cumulative
+    since the signal's first fill, so a missing day never corrupts a later
+    one; daily deltas are derived by the rollup. ``attribution`` holds the
+    signal's frozen attribution labels; ``payload`` the input ids needed to
+    reproduce the row.
+    """
+
+    __tablename__ = "paper_pnl_daily"
+    __table_args__ = (
+        UniqueConstraint("signal_id", "pnl_date", name="uq_paper_pnl_daily_signal_date"),
+        CheckConstraint("open_qty >= 0", name="ck_paper_pnl_daily_open_qty"),
+        CheckConstraint("open_cost_cents >= 0", name="ck_paper_pnl_daily_open_cost"),
+        CheckConstraint("mark_close_cents > 0", name="ck_paper_pnl_daily_mark"),
+        CheckConstraint(
+            "total_pnl_cents = realized_pnl_cents + unrealized_pnl_cents",
+            name="ck_paper_pnl_daily_total",
+        ),
+        Index("ix_paper_pnl_daily_date", "pnl_date"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    signal_id: Mapped[int] = mapped_column(ForeignKey("episodic_memory.id"), nullable=False)
+    pnl_date: Mapped[str] = mapped_column(Date, nullable=False)
+    ticker: Mapped[str] = mapped_column(String(10), nullable=False)
+    open_qty: Mapped[int] = mapped_column(Integer, nullable=False)
+    open_cost_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    mark_close_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    price_source: Mapped[str] = mapped_column(String(20), nullable=False)
+    realized_pnl_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    unrealized_pnl_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    total_pnl_cents: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    attribution: Mapped[dict] = mapped_column(
+        _JSONB(none_as_null=True).with_variant(JSON(none_as_null=True), "sqlite"),
+        nullable=False,
+    )
+    mtm_policy_sha: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload: Mapped[dict] = mapped_column(
+        _JSONB(none_as_null=True).with_variant(JSON(none_as_null=True), "sqlite"),
+        nullable=False,
+    )
+
+
+# L3: PostgreSQL append-only trigger, produced by create_all as well as by migrations 004/007.
 attach_postgres_guard(PaperTrade.__table__)
 attach_postgres_guard(PaperFill.__table__)
+attach_postgres_guard(PaperCashEvent.__table__)
+attach_postgres_guard(PaperPnlDaily.__table__)

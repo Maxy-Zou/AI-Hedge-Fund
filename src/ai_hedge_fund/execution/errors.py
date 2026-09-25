@@ -81,3 +81,11 @@ class TransientBrokerError(ExecutionError):
     The order may or may not have reached the broker; a re-run resends the same
     client_order_id, so it is safe either way.
     """
+
+
+class UnexpectedBrokerResponse(ExecutionError):
+    """A broker response did not have the documented shape (vendor drift).
+
+    Raised instead of returning partial or empty results, which would look like
+    "no activity" (11-PREMORTEM #30).
+    """

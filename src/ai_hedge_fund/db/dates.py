@@ -15,6 +15,7 @@ re-export it under their previous private name for backwards compatibility.
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
+from zoneinfo import ZoneInfo
 
 
 def normalise_as_of(value: str | date | datetime) -> datetime:
@@ -33,3 +34,24 @@ def normalise_as_of(value: str | date | datetime) -> datetime:
         return datetime(value.year, value.month, value.day, tzinfo=UTC)
     parsed = datetime.fromisoformat(value)
     return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=UTC)
+
+
+# US equity "trading day" is the America/New_York calendar date (Phase 11). A fill
+# at 20:30 ET is still that day's fill even though it is the next day in UTC.
+MARKET_TZ = ZoneInfo("America/New_York")
+
+
+def trading_date(moment: datetime) -> date:
+    """The New York calendar date of an aware ``moment``.
+
+    Raises:
+        ValueError: ``moment`` is naive -- its trading day would be a guess.
+    """
+    if moment.tzinfo is None:
+        raise ValueError("trading_date needs a timezone-aware datetime")
+    return moment.astimezone(MARKET_TZ).date()
+
+
+def market_midnight_utc(day: date) -> datetime:
+    """00:00 New York time on ``day``, as an aware UTC datetime (DST-correct)."""
+    return datetime(day.year, day.month, day.day, tzinfo=MARKET_TZ).astimezone(UTC)

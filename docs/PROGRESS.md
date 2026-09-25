@@ -1,3 +1,21 @@
+## 2026-09-25 — Phase 11 review: 5 HIGH defects confirmed and fixed before PR
+
+Six parallel read-only review lenses plus one targeted re-review. Confirmed by RED tests and fixed: the Alpaca activity parser rejected the documented response shapes (SDK models demand fields the docs omit); one manual short/fractional trade aborted all ingest (items are now rejected individually, ours fail loudly); an intraday bar could be frozen as the close (close must be observed after 16:00 ET + buffer); a split-adjusted close could mark a pre-split date; dividends could be over- or double-credited (now per-signal `floor(net * shares / max(paid, holdings))`). Plus loader/core date alignment and a dozen parser/stance/policy hardening fixes. Re-review found 1 MEDIUM + 3 LOW in the fixes; all fixed. Deferred items with rulings in TECH-DEBT.
+
+**Tests:** 1751 -> **1812 passed** (14 skipped); PG-gated 5/5; mtm DB tests on Postgres 77/77; live Alpaca activities read passed.
+
+## 2026-09-25 — Phase 11 implemented: Mark-to-Market and Attribution (MTM-01..04)
+
+Branch `phase/11-mark-to-market` (worktree `../AI-Hedge-Fund-phase11`). Plan -> Spec -> Pre-mortem -> TDD, T0-T9 done; T10 (independent review) and the PR are next. Spec amendments: A1 marks at the raw close and books broker dividends as realized income (cached `adj_close` keeps its download-day adjustment factor, so the planned ratio would have silently dropped dividends); A2 derives analyst stances (the analyst schemas have no direction field).
+
+**Shipped:** `mtm/` package -- SHA-pinned `MtmPolicy`; stances + debate snapshot frozen into the episodic payload (v2) at store time; migration 007 (`paper_pnl_daily` cumulative one-row-per-signal-day with a total CHECK, `paper_cash_events`; both append-only); skip-or-insert store with whole-batch rollback; `BrokerClient.list_activities` over Alpaca `/account/activities` (SDK `RESTClient.get`, paged, exact cents, fractional refused); fill/cash ingest + `ingest_fills` CLI; pure FIFO P&L core; pro-rata dividend apportionment; EOD job with completed-day guard, exact-date price, corporate-action skip + `mark_to_market` CLI; attribution rollup whose three dimensions sum exactly to the total.
+
+**Fixed along the way:** `submit_signal --json` printed a structlog line before the JSON in production (structlog was never configured) -- `route_logs_to_stderr()`; migration 004 docstring; new worktrees need `chflags -R nohidden .venv` (Python 3.13 skips hidden `.pth` files).
+
+**Files:** `src/ai_hedge_fund/mtm/*`, `scripts/{ingest_fills,mark_to_market}.py`, `execution/{broker,alpaca,alpaca_activities,errors}.py`, `db/{models,dates}.py`, `graph/{nodes,memory_deps}.py`, `logging.py`, `alembic/versions/007_*`, `config/mtm_policy.yaml`, tests under `tests/mtm/`, `tests/execution/`, `tests/scripts/`, `tests/unit/`; `.planning/phases/11-mark-to-market/*`, `.planning/{ROADMAP,REQUIREMENTS,TECH-DEBT}.md`.
+
+**Tests:** 1515 -> **1751 passed** (14 skipped). All 36 pre-mortem rows map to existing tests. PG-gated migration tests pass; the 57 DB-touching mtm tests also passed on Postgres (manual fixture override). Live Alpaca activities read passed.
+
 ## 2026-09-25 — Workflow: phase-* skills + scheduling/pre-mortem tooling
 
 Replaced the six-stage prose workflow with five project skills, redesigned from an audit of Phases 9-10 (coding ~40 min; cost was sequential review rounds, sign-off wait, and doc upkeep; five pre-mortem tests named but never written) and a survey of superpowers, spec-kit, HumanLayer, GSD, BMAD, agent-os, and Anthropic's guidance.
@@ -9,6 +27,7 @@ Replaced the six-stage prose workflow with five project skills, redesigned from 
 **Review:** one independent reviewer, no CRITICAL; 2 HIGH + 7 MEDIUM fixed RED-first -- path spellings (`./a.py`, case, trailing space) could put two owners of one file in the same wave; conflicting `reads` edges were silently dropped; pre-mortem check counted uncollectable/shadowed tests and needed a `--done` filter for mid-phase gates; the gate claimed Postgres coverage while those tests skipped without `TEST_DATABASE_URL` (now set in the gate commands, `.env.example`, and CLAUDE.md). Accepted: review lenses are read-only by instruction only; parametrize ids are not checked.
 
 **Tests:** +87 (`tests/devtools/`); the 3 Postgres migration tests now run in the gate -> **1605 passed, 8 skipped** (remaining skips need live API keys).
+
 
 ## 2026-09-24 — Fix: async Postgres checkpointer in `test_checkpoint_resume`
 

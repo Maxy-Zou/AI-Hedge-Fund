@@ -34,6 +34,7 @@ from ai_hedge_fund.db.models import EpisodicMemory, PaperFill, PaperTrade
 from alembic import command
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+HEAD = "007"  # latest revision; bump with every new migration
 PAPER_TABLES = {"paper_trades", "paper_fills"}
 V1_TABLES = {"episodic_memory", "portfolio_positions", "daily_prices", "sec_filings"}
 STRUCTURAL = (
@@ -116,7 +117,7 @@ def _version(url: str) -> str | None:
 def test_sqlite_upgrade_head_creates_paper_tables(sqlite_cfg: tuple[Config, str]) -> None:
     cfg, url = sqlite_cfg
     command.upgrade(cfg, "head")
-    assert _version(url) == "006"
+    assert _version(url) == HEAD
     engine = create_engine(url)
     try:
         insp = inspect(engine)
@@ -160,7 +161,7 @@ def test_sqlite_downgrade_removes_only_paper_tables_and_is_reversible(
     finally:
         engine.dispose()
     command.upgrade(cfg, "head")  # reversible: back to head cleanly
-    assert _version(url) == "006"
+    assert _version(url) == HEAD
     engine = create_engine(url)
     try:
         assert set(inspect(engine).get_table_names()) >= PAPER_TABLES
@@ -220,7 +221,7 @@ def test_005_downgrade_narrows_then_upgrade_restores(sqlite_cfg: tuple[Config, s
     command.downgrade(cfg, "004")
     assert _version(url) == "004"
     command.upgrade(cfg, "head")
-    assert _version(url) == "006"
+    assert _version(url) == HEAD
 
 
 def test_006_downgrade_refuses_when_zero_quantity_rows_present(

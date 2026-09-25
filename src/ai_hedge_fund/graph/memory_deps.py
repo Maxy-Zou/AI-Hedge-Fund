@@ -14,9 +14,11 @@ forward-reference; no SQLAlchemy import at runtime).
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+from ai_hedge_fund.mtm.policy import MtmPolicy, load_mtm_policy
 
 if TYPE_CHECKING:  # pragma: no cover - typing-only
     from sqlalchemy.orm import Session
@@ -38,8 +40,12 @@ class MemoryDeps:
         recall_limit: Max episodic_memory rows to load per recall
             (default 10; Pitfall 8 -- bound the return set so the
             analyst prompts stay in budget).
+        mtm_policy: Phase 11 attribution rules; ``episodic_store_node``
+            freezes analyst stances with it at write time (11-SPEC A2).
+            Defaults to ``config/mtm_policy.yaml``.
     """
 
     db_session: Session
     beliefs_path: Path
     recall_limit: int = 10
+    mtm_policy: MtmPolicy = field(default_factory=load_mtm_policy)

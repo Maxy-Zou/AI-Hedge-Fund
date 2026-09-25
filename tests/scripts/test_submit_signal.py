@@ -157,3 +157,34 @@ def test_lazy_broker_implements_the_whole_broker_protocol() -> None:
     assert wanted, "protocol has no public methods?"
     missing = {n for n in wanted if not callable(getattr(_LazyBroker, n, None))}
     assert not missing, f"_LazyBroker lacks {sorted(missing)}"
+
+
+class _LoggingBroker(FakeBroker):
+    """Logs on submit, as the real Alpaca adapter does (``paper_order_submitted``)."""
+
+    def submit_order(self, req):  # noqa: ANN001, ANN201
+        import structlog
+
+        structlog.get_logger("test").info("paper_order_submitted", symbol=req.symbol)
+        return super().submit_order(req)
+
+
+def test_json_stdout_is_pure_json_even_when_the_broker_logs(
+    session_factory: Callable[[], Session], capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Found in Phase 11: unconfigured structlog printed log lines into --json stdout."""
+    import json
+
+    with session_factory() as s:
+        aid = make_analysis(s)
+        add_review(s, aid)
+        add_price(s)
+    rc = _run(
+        ["--episodic-id", "1", "--policy", "config/execution_policy.yaml", "--json"],
+        session_factory,
+        _LoggingBroker(),
+    )
+    out, err = capsys.readouterr()
+    assert rc == 0
+    json.loads(out)  # raises if a log line leaked into stdout
+    assert "paper_order_submitted" in err

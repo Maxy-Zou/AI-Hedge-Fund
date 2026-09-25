@@ -101,6 +101,8 @@ from ai_hedge_fund.memory.beliefs import (
     load_belief,
 )
 from ai_hedge_fund.memory.recall import query_episodic
+from ai_hedge_fund.mtm.attribution import debate_snapshot, derive_stances
+from ai_hedge_fund.mtm.policy import compute_mtm_policy_sha
 from ai_hedge_fund.output.signal import assemble_final_signal
 from ai_hedge_fund.review.decision import ReviewDecision
 from ai_hedge_fund.review.policy import ReviewPolicy, compute_review_policy_sha
@@ -1139,6 +1141,10 @@ async def episodic_store_node(state: DebatePipelineState, deps: MemoryDeps) -> d
         - payload includes thesis, signal (may be ``None`` on veto),
           risk_assessment (may be empty), plus counts of prior hits and
           beliefs consulted (for future retrospective analysis).
+        - ``schema_version`` 2 (Phase 11) adds ``analyst_stances``,
+          ``debate`` (None without a debate), and ``mtm_policy_sha`` --
+          the attribution inputs mark-to-market reads. Additive: every
+          v1 key is unchanged.
 
     Args:
         state: Post-debate DebatePipelineState with ``thesis``,
@@ -1176,12 +1182,16 @@ async def episodic_store_node(state: DebatePipelineState, deps: MemoryDeps) -> d
         policy_sha=risk.get("policy_sha"),
         as_of_date=as_of_dt,
         payload={
-            "schema_version": 1,
+            "schema_version": 2,
             "thesis": thesis,
             "signal": signal,
             "risk_assessment": risk,
             "episodic_hits_count": len(state.get("episodic_hits") or []),
             "beliefs_consulted_count": len(state.get("beliefs_consulted") or []),
+            # v2 (Phase 11, D2): attribution inputs frozen at write time.
+            "analyst_stances": derive_stances(state.get("analyst_reports") or [], deps.mtm_policy),
+            "debate": debate_snapshot(state.get("debate_synthesis")),
+            "mtm_policy_sha": compute_mtm_policy_sha(deps.mtm_policy),
         },
     )
     deps.db_session.add(row)

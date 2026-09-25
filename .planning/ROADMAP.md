@@ -31,7 +31,7 @@
 
 - [x] **Phase 9: Paper-Trading Data Layer** - Append-only `paper_trades` / `paper_fills` with a mechanical UPDATE/DELETE guard, dual timestamps, thesis lineage, and temporal-leakage regression (completed 2026-09-22, PR #2; `paper_pnl_daily` moved to Phase 11 per 09-PLAN D1)
 - [x] **Phase 10: Paper Execution Surface** - Alpaca paper client, deterministic sizing, idempotent submit, VETOED circuit breaker, refusal audit rows (completed 2026-09-24, PR #4; migrations 005-006)
-- [ ] **Phase 11: Mark-to-Market and Attribution** - Daily EOD P&L job, append-only series, attribution by analyst / debate-side / conviction
+- [x] **Phase 11: Mark-to-Market and Attribution** - Daily EOD P&L job, append-only series, attribution by analyst / debate-side / conviction (completed 2026-09-25, PR #7; migration 007)
 - [ ] **Phase 12: Promotion Gate** - SHA-pinned `promotion_policy.yaml`, pure-Python gate verdict, audit-chain round-trip
 - [ ] **Phase 13: Track-Record Reporting** - `render_track_record` CLI, LP/YC-shareable markdown, machine-verifiable JSON
 
@@ -68,7 +68,7 @@
 **Depends on**: Phase 10
 **Requirements**: MTM-01, MTM-02, MTM-03, MTM-04 -- also owns migration 007 (`paper_pnl_daily`), deferred from Phase 9 (D1); Phase 10 used 005-006
 **Success Criteria** (what must be TRUE):
-  1. The EOD job computes realized and unrealized P&L per position from fills plus adjusted-close prices, entirely in Python, with no LLM in the path
+  1. The EOD job computes realized and unrealized P&L per position from fills, the day's raw close, and broker-reported dividends, entirely in Python, with no LLM in the path (amended 2026-09-25, 11-SPEC A1: cached adj_close rows carry download-day adjustment factors and cannot measure P&L)
   2. Re-running the job for an already-processed date adds zero rows and issues zero UPDATEs -- idempotency is achieved by skip-or-insert, never by mutation
   3. The attribution rollup decomposes total P&L by analyst (fundamental / sentiment / technical), by debate-side winner (bull / bear), and by conviction bucket, and the components sum to the total within rounding tolerance
   4. `paper_pnl_daily` holds exactly one row per (signal, date), and rows written on previous runs are byte-identical after a re-run
