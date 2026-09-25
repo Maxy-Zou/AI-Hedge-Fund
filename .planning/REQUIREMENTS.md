@@ -29,7 +29,7 @@
 
 ### Mark-to-market & attribution — `MTM-*`
 
-- [ ] **MTM-01**: Daily EOD job pulls fills + current adjusted-close prices and computes per-position P&L deterministically (pure Python, no LLM).
+- [ ] **MTM-01**: Daily EOD job pulls fills + that day's close price + broker dividends (11-SPEC A1) and computes per-position P&L deterministically (pure Python, no LLM).
 - [ ] **MTM-02**: `paper_pnl_daily` table appends one row per (signal, date) with realized + unrealized P&L; never overwrites historical rows.
 - [ ] **MTM-03**: Attribution rollup decomposes P&L by analyst (fundamental/sentiment/technical), debate-side (bull/bear winner), and conviction bucket.
 - [ ] **MTM-04**: Job is idempotent — re-running for the same EOD date produces no duplicate rows (uses upsert-by-natural-key or skip-if-exists, not row UPDATE).
