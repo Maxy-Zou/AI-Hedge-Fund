@@ -1,0 +1,11 @@
+# Mark-to-market / attribution policy (Phase 11). Human-editable; validated at load.
+# Editing any value changes mtm_policy_sha, which is stamped onto every
+# paper_pnl_daily row for audit. See src/ai_hedge_fund/mtm/policy.py.
+
+conviction_buckets:          # inclusive; must cover 0..100 with no gap or overlap
+  - {name: low,    min: 0,  max: 49}
+  - {name: medium, min: 50, max: 74}
+  - {name: high,   min: 75, max: 100}
+sentiment_threshold: 0.2     # A2: sentiment stance is bull/bear at |composite_score| >= this
+stance_rule_version: 1       # bump whenever the A2 stance rule changes
+market_close_buffer_minutes: 30   # D6: today counts as complete at 16:00 ET + this

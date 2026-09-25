@@ -1,3 +1,14 @@
+## 2026-09-25 — Phase 11 in progress: planning docs + T0 + T1 (MTM policy)
+
+Branch `phase/11-mark-to-market` (worktree `../AI-Hedge-Fund-phase11`). Plan, Spec, and Pre-mortem written; the Spec stage replaced the plan's adjusted-close price formula (A1: cached `adj_close` rows keep their download-day adjustment factor, so marks use raw close plus broker dividends) and defined an analyst stance rule (A2: the analyst schemas have no direction field). ROADMAP 11.1 and MTM-01 reworded to match.
+
+**T0:** migration 004 docstring said `paper_pnl_daily` would be migration 005; it is 007.
+**T1:** `mtm/policy.py` -- SHA-pinned `MtmPolicy` (conviction buckets validated to partition 0..100, sentiment threshold, stance-rule version, market-close buffer) and `config/mtm_policy.yaml`. Covers 11-PREMORTEM #27-#28.
+
+**Files:** `.planning/phases/11-mark-to-market/11-{PLAN,SPEC,PREMORTEM}.md`, `.planning/{ROADMAP,REQUIREMENTS}.md`, `alembic/versions/004_*` (docstring), `src/ai_hedge_fund/mtm/{__init__,policy}.py`, `config/mtm_policy.yaml`, `tests/mtm/test_mtm_policy.py`.
+
+**Tests:** 1515 -> **1548 passed** (11 skipped).
+
 ## 2026-09-24 — Fix: async Postgres checkpointer in `test_checkpoint_resume`
 
 `tests/integration/test_checkpointer.py::test_checkpoint_resume` failed with `NotImplementedError` whenever Postgres was up (pre-existing since Phase 1, hidden because Docker was always down): it drove `ainvoke` through the sync `PostgresSaver`, which has no `aget_tuple`. The async factory `create_async_checkpointer` (`AsyncPostgresSaver`) already existed but nothing used it, and no production path uses Postgres checkpointing today (`run_analysis.py` uses `InMemorySaver`), so the fix is at the call site, not the factory.
