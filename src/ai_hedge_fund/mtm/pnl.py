@@ -128,3 +128,17 @@ def mark_position(
         fill_ids=tuple(sorted(f.fill_id for f in fills)),
         cash_event_ids=tuple(sorted(d.event_id for d in dividends)),
     )
+
+
+def open_quantity_before(fills: Sequence[FillIn], day: date) -> int:
+    """Shares held at the start of New York date ``day`` (fills strictly before it).
+
+    Used to weight a dividend across signals. An oversold history holds nothing
+    (the job skips that signal anyway).
+    """
+    earlier = [f for f in fills if trading_date(f.filled_at) < day]
+    try:
+        lots, _ = _fold_fills(earlier)
+    except OversoldError:
+        return 0
+    return sum(lot.qty for lot in lots)
