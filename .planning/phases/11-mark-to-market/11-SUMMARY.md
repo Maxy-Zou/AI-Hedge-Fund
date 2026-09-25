@@ -1,7 +1,7 @@
 ---
 phase: 11
 slug: mark-to-market
-status: shipped -- PR open, awaiting merge
+status: shipped -- PR #7 open, awaiting merge
 delivered: 2026-09-25
 branch: phase/11-mark-to-market
 requirements: [MTM-01, MTM-02, MTM-03, MTM-04]

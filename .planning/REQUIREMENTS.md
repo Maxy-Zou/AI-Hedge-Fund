@@ -97,10 +97,10 @@ These are not numbered requirements — they are invariants every v1.1 phase mus
 | EXEC-03 | Phase 10 | Complete ((signal_id, attempt_no) DB grain + client_order_id at broker; test_submit.py; PR #4) |
 | EXEC-04 | Phase 10 | Complete (decide() refuses VETOED before any broker call; test_submit.py::test_vetoed_refused_zero_broker_calls; PR #4) |
 | EXEC-05 | Phase 10 | Complete (AlpacaPaperBroker names each missing credential; refuses non-paper host; PR #4) |
-| MTM-01 | Phase 11 | Complete (raw close + broker dividends, pure Python (mtm/pnl.py, mtm/job.py)) |
-| MTM-02 | Phase 11 | Complete (paper_pnl_daily, migration 007, append-only) |
-| MTM-03 | Phase 11 | Complete (mtm/rollup.py, exact per-dimension sums) |
-| MTM-04 | Phase 11 | Complete (skip-or-insert, no UPDATE) |
+| MTM-01 | Phase 11 | Complete, PR #7 (raw close + broker dividends, pure Python (mtm/pnl.py, mtm/job.py)) |
+| MTM-02 | Phase 11 | Complete, PR #7 (paper_pnl_daily, migration 007, append-only) |
+| MTM-03 | Phase 11 | Complete, PR #7 (mtm/rollup.py, exact per-dimension sums) |
+| MTM-04 | Phase 11 | Complete, PR #7 (skip-or-insert, no UPDATE) |
 | PROMO-01 | Phase 12 | Pending |
 | PROMO-02 | Phase 12 | Pending |
 | PROMO-03 | Phase 12 | Pending |

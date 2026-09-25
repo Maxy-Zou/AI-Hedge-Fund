@@ -31,7 +31,7 @@
 
 - [x] **Phase 9: Paper-Trading Data Layer** - Append-only `paper_trades` / `paper_fills` with a mechanical UPDATE/DELETE guard, dual timestamps, thesis lineage, and temporal-leakage regression (completed 2026-09-22, PR #2; `paper_pnl_daily` moved to Phase 11 per 09-PLAN D1)
 - [x] **Phase 10: Paper Execution Surface** - Alpaca paper client, deterministic sizing, idempotent submit, VETOED circuit breaker, refusal audit rows (completed 2026-09-24, PR #4; migrations 005-006)
-- [x] **Phase 11: Mark-to-Market and Attribution** - Daily EOD P&L job, append-only series, attribution by analyst / debate-side / conviction (completed 2026-09-25; migration 007)
+- [x] **Phase 11: Mark-to-Market and Attribution** - Daily EOD P&L job, append-only series, attribution by analyst / debate-side / conviction (completed 2026-09-25, PR #7; migration 007)
 - [ ] **Phase 12: Promotion Gate** - SHA-pinned `promotion_policy.yaml`, pure-Python gate verdict, audit-chain round-trip
 - [ ] **Phase 13: Track-Record Reporting** - `render_track_record` CLI, LP/YC-shareable markdown, machine-verifiable JSON
 
