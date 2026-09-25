@@ -238,15 +238,15 @@ def attribution_for(analysis_payload: dict, confidence: int | None, side: Side,
                     policy: MtmPolicy) -> Attribution: ...
 
 class Attribution(BaseModel):  # frozen; stored verbatim in paper_pnl_daily.attribution
-    schema: Literal["v2", "unattributed"]
+    attribution_schema: Literal["v2", "unattributed"]  # was `schema`: shadows BaseModel.schema
     credited_analysts: tuple[Literal["fundamental", "sentiment", "technical"], ...]  # () -> none_aligned
     debate_winner: Literal["bull", "bear", "draw", "unattributed"]
     conviction_bucket: str        # from episodic_memory.confidence; "unknown" if NULL
 ```
 The debate rule is plan D3 (`delta` sign relative to the executed side). v1 payloads give
-`schema="unattributed"`, `credited_analysts=()`, `debate_winner="unattributed"`, and a conviction
+`attribution_schema="unattributed"`, `credited_analysts=()`, `debate_winner="unattributed"`, and a conviction
 bucket is still derived because `confidence` exists in v1. `credited_analysts=()` on v1 rows rolls up to
-`unattributed`, not `none_aligned`. The rollup tells them apart by `schema`.
+`unattributed`, not `none_aligned`. The rollup tells them apart by `attribution_schema`.
 
 ## 6. EOD job (T7, D6)
 
