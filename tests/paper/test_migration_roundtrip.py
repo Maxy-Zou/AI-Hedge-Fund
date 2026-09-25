@@ -34,7 +34,7 @@ from ai_hedge_fund.db.models import EpisodicMemory, PaperFill, PaperTrade
 from alembic import command
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-HEAD = "007"  # latest revision; bump with every new migration
+HEAD = "008"  # latest revision; bump with every new migration
 PAPER_TABLES = {"paper_trades", "paper_fills"}
 V1_TABLES = {"episodic_memory", "portfolio_positions", "daily_prices", "sec_filings"}
 STRUCTURAL = (
