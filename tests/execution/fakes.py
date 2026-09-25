@@ -11,7 +11,13 @@ from collections.abc import Sequence
 from datetime import UTC, date, datetime
 
 from ai_hedge_fund.db.dates import trading_date
-from ai_hedge_fund.execution.broker import BrokerActivity, BrokerOrderRequest, BrokerOrderResult
+from ai_hedge_fund.execution.broker import (
+    ActivityBatch,
+    BrokerActivity,
+    BrokerOrderRequest,
+    BrokerOrderResult,
+    RejectedActivity,
+)
 from ai_hedge_fund.execution.errors import DuplicateClientOrderId, TransientBrokerError
 
 
@@ -32,6 +38,7 @@ class FakeBroker:
         self.cancelled: list[str] = []
         self.orders: dict[str, BrokerOrderResult] = {}
         self.activities: list[BrokerActivity] = []  # Phase 11: scripted account activity
+        self.rejected: list[RejectedActivity] = []  # Phase 11: scripted unusable activity
         self._fail_with = fail_with
         self._lose_next_response = lose_response_once
         self._counter = 0
@@ -83,10 +90,10 @@ class FakeBroker:
     def cancel_order(self, broker_order_id: str) -> None:
         self.cancelled.append(broker_order_id)
 
-    def list_activities(self, types: Sequence[str], since: date) -> list[BrokerActivity]:
+    def list_activities(self, types: Sequence[str], since: date) -> ActivityBatch:
         """Scripted activities of ``types`` on or after New York date ``since``, oldest first."""
         wanted = set(types)
-        return sorted(
+        activities = sorted(
             (
                 a
                 for a in self.activities
@@ -94,6 +101,7 @@ class FakeBroker:
             ),
             key=lambda a: (a.occurred_at, a.activity_id),
         )
+        return ActivityBatch(activities=activities, rejected=list(self.rejected))
 
     def _result(
         self,

@@ -174,8 +174,18 @@ class BrokerActivity:
 
 class BrokerClient(Protocol):
     ...  # existing three methods unchanged
-    def list_activities(self, types: Sequence[str], since: date) -> list[BrokerActivity]: ...
+    def list_activities(self, types: Sequence[str], since: date) -> ActivityBatch: ...
 ```
+
+*Amended in review (T10, findings H1/H2):* `ActivityBatch(activities, rejected)`. Items are
+validated field by field against what we use -- not against the SDK models, whose extra required
+fields (`account_id`, `order_status`, `description`) the documented shapes omit. An unusable item
+(unsupported side such as `sell_short`, fractional/zero/negative qty, non-positive or out-of-range
+price, naive timestamp, non-upper-case symbol, `status: canceled`, unrequested type) becomes a
+`RejectedActivity(activity_id, activity_type, order_id, reason, raw)` instead of aborting the
+batch. Only a malformed response (not a list, non-JSON body, item without an id, revisited page
+token) raises `UnexpectedBrokerResponse`. Ingest counts rejections: `fills_rejected_ours` (our
+order -- CLI exit 1), `fills_skipped_unusable`, `cash_skipped_unusable`. `FractionalQuantity` is gone.
 
 `AlpacaPaperBroker.list_activities` calls `self._client.get("/account/activities", {"activity_types":
 ",".join(types), "after": since.isoformat(), "direction": "asc", "page_size": 100})`, following

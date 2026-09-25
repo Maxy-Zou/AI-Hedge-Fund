@@ -88,9 +88,9 @@ def test_list_activities_roundtrip() -> None:
 
     broker = _broker_or_skip()
     since = trading_date(datetime.now(UTC)) - timedelta(days=90)
-    activities = broker.list_activities(ACTIVITY_TYPES, since)
-    assert isinstance(activities, list)
-    for act in activities:
+    batch = broker.list_activities(ACTIVITY_TYPES, since)
+    assert batch.rejected == [], [r.reason for r in batch.rejected]
+    for act in batch.activities:
         assert act.activity_type in ACTIVITY_TYPES
         assert trading_date(act.occurred_at) >= since
         if act.activity_type == "FILL":

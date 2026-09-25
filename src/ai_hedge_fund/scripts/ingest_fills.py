@@ -2,10 +2,11 @@
 
     uv run python -m ai_hedge_fund.scripts.ingest_fills --since 2026-09-01 [--json]
 
-Idempotent: re-running over the same window inserts nothing. Exit codes:
-0 success; 1 a fill contradicted its trade (data needs attention) or another
-error; 2 the broker call failed (auth, transport, or an unexpected response
-shape -- nothing from the failing page is written).
+Idempotent: re-running over the same window inserts nothing. Activities the broker
+reports that cannot be used are logged and skipped; they never block the rest.
+Exit codes: 0 success; 1 one of our fills contradicted its trade or could not be
+parsed (data needs attention), or another error; 2 the broker call failed (auth,
+transport, or a malformed response -- nothing is written).
 """
 
 from __future__ import annotations
@@ -46,9 +47,10 @@ def _report(result: IngestResult, *, as_json: bool) -> int:
         print(json.dumps(counts))
     else:
         print(" ".join(f"{k}={v}" for k, v in counts.items()))
-    if result.fills_skipped_mismatch:
+    if result.fills_skipped_mismatch or result.fills_rejected_ours:
         print(
-            "ERROR: some fills contradict their trade; see fill_trade_mismatch logs",
+            "ERROR: some of our fills could not be recorded; see the fill_trade_mismatch / "
+            "own_fill_rejected logs",
             file=sys.stderr,
         )
         return 1

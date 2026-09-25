@@ -83,10 +83,6 @@ class TransientBrokerError(ExecutionError):
     """
 
 
-class FractionalQuantity(ExecutionError):
-    """The broker reported a fractional share quantity; the ledger is whole shares only."""
-
-
 class UnexpectedBrokerResponse(ExecutionError):
     """A broker response did not have the documented shape (vendor drift).
 

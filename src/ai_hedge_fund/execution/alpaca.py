@@ -34,7 +34,13 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_ex
 
 from ai_hedge_fund.db.dates import trading_date
 from ai_hedge_fund.execution.alpaca_activities import parse_activity
-from ai_hedge_fund.execution.broker import BrokerActivity, BrokerOrderRequest, BrokerOrderResult
+from ai_hedge_fund.execution.broker import (
+    ActivityBatch,
+    BrokerActivity,
+    BrokerOrderRequest,
+    BrokerOrderResult,
+    RejectedActivity,
+)
 from ai_hedge_fund.execution.errors import (
     BrokerAuthError,
     BrokerRejected,
@@ -203,35 +209,42 @@ class AlpacaPaperBroker:
             page = self._client.get(_ACTIVITIES_PATH, params)
         except (APIError, *_TRANSPORT_ERRORS) as exc:
             raise self._translate(exc) from None
+        except requests.exceptions.JSONDecodeError:
+            raise UnexpectedBrokerResponse(f"{_ACTIVITIES_PATH} returned a non-JSON body") from None
         if not isinstance(page, list):
             raise UnexpectedBrokerResponse(f"{_ACTIVITIES_PATH} returned {type(page).__name__}")
         return page
 
-    def list_activities(self, types: Sequence[str], since: date) -> list[BrokerActivity]:
-        """All activities of ``types`` on or after New York date ``since``, oldest first.
+    def list_activities(self, types: Sequence[str], since: date) -> ActivityBatch:
+        """Activities of ``types`` on or after New York date ``since``, oldest first.
 
         Goes through the SDK client (paper-host guard, auth) -- alpaca-py 0.44 has no
         method for this endpoint. ``after`` is sent a day early so no timezone edge
         drops an activity; results are then filtered to the New York date. Every
-        page is followed (11-PREMORTEM #29).
+        page is followed (11-PREMORTEM #29); a revisited page token is an error.
+        Items that cannot be used are returned in ``rejected`` with a reason, so one
+        bad row never aborts the batch (review H2).
         """
+        wanted = set(types)
         params: dict[str, Any] = {
             "activity_types": ",".join(types),
             "after": (since - timedelta(days=1)).isoformat(),
             "direction": "asc",
             "page_size": _ACTIVITY_PAGE_SIZE,
         }
-        activities: list[BrokerActivity] = []
+        parsed: list[BrokerActivity | RejectedActivity] = []
+        seen_tokens: set[str] = set()
         while True:
             page = self._get_activity_page(params)
-            activities.extend(parse_activity(item, self._secret_values) for item in page)
+            parsed.extend(parse_activity(item, self._secret_values) for item in page)
             if len(page) < _ACTIVITY_PAGE_SIZE:
                 break
-            token = activities[-1].activity_id
-            if params.get("page_token") == token:
+            token = parsed[-1].activity_id
+            if token in seen_tokens:
                 raise UnexpectedBrokerResponse(f"{_ACTIVITIES_PATH} repeated page {token!r}")
+            seen_tokens.add(token)
             params = {**params, "page_token": token}
-        return [a for a in activities if trading_date(a.occurred_at) >= since]
+        return _batch(parsed, wanted, since)
 
     def _to_result(self, order: Any) -> BrokerOrderResult:
         return BrokerOrderResult(
@@ -247,6 +260,29 @@ class AlpacaPaperBroker:
             filled_qty=int(float(order.filled_qty or 0)),
             raw=redact(_as_dict(order), secret_values=self._secret_values),
         )
+
+
+def _batch(
+    parsed: list[BrokerActivity | RejectedActivity], wanted: set[str], since: date
+) -> ActivityBatch:
+    activities: list[BrokerActivity] = []
+    rejected: list[RejectedActivity] = []
+    for item in parsed:
+        if isinstance(item, RejectedActivity):
+            rejected.append(item)
+        elif item.activity_type not in wanted:
+            rejected.append(
+                RejectedActivity(
+                    activity_id=item.activity_id,
+                    activity_type=item.activity_type,
+                    order_id=item.broker_order_id,
+                    reason=f"unrequested activity type {item.activity_type!r}",
+                    raw=item.raw,
+                )
+            )
+        elif trading_date(item.occurred_at) >= since:
+            activities.append(item)
+    return ActivityBatch(activities=activities, rejected=rejected)
 
 
 def _enum_value(value: Any) -> str:

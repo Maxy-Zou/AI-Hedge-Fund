@@ -61,6 +61,23 @@ class BrokerActivity:
     raw: dict[str, Any]  # redacted, account_id removed
 
 
+@dataclass(frozen=True)
+class RejectedActivity:
+    """An activity the broker reported that cannot be used, and why (review H2)."""
+
+    activity_id: str
+    activity_type: str | None
+    order_id: str | None  # FILL only -- lets the caller tell our orders from manual ones
+    reason: str
+    raw: dict[str, Any]  # redacted
+
+
+@dataclass(frozen=True)
+class ActivityBatch:
+    activities: list[BrokerActivity]
+    rejected: list[RejectedActivity]
+
+
 class BrokerClient(Protocol):
     """The seam the submit orchestration depends on."""
 
@@ -80,9 +97,10 @@ class BrokerClient(Protocol):
         """Cancel an open order (used by the live smoke test)."""
         ...
 
-    def list_activities(self, types: Sequence[str], since: date) -> list[BrokerActivity]:
+    def list_activities(self, types: Sequence[str], since: date) -> ActivityBatch:
         """Account activities of ``types`` on or after New York date ``since``, oldest first.
 
-        Raises FractionalQuantity / UnexpectedBrokerResponse / the typed API errors.
+        Unusable items come back in ``rejected``; raises UnexpectedBrokerResponse for a
+        malformed response and the typed API errors.
         """
         ...

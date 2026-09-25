@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ai_hedge_fund.db.models import PaperCashEvent, PaperFill
-from ai_hedge_fund.execution.broker import BrokerActivity
+from ai_hedge_fund.execution.broker import BrokerActivity, RejectedActivity
 from ai_hedge_fund.mtm.ingest import IngestResult, ingest_activities
 from ai_hedge_fund.paper import query_paper_fills
 from ai_hedge_fund.paper.records import NewPaperTrade
@@ -112,14 +112,7 @@ def test_rerun_inserts_nothing(db_session: Session) -> None:
     broker = _broker(_fill(1), _cash(1))
     ingest_activities(db_session, broker, SINCE)
     again = ingest_activities(db_session, broker, SINCE)
-    assert again == IngestResult(
-        fills_inserted=0,
-        fills_skipped_duplicate=1,
-        fills_skipped_unknown_order=0,
-        fills_skipped_mismatch=0,
-        cash_inserted=0,
-        cash_skipped_duplicate=1,
-    )
+    assert again == IngestResult(fills_skipped_duplicate=1, cash_skipped_duplicate=1)
     assert (_count(db_session, PaperFill), _count(db_session, PaperCashEvent)) == (1, 1)
 
 
@@ -189,7 +182,7 @@ def test_requests_fills_and_every_cash_type(db_session: Session) -> None:
     class Spy(FakeBroker):
         def list_activities(self, types, since):  # noqa: ANN001, ANN202
             seen.append((tuple(types), since))
-            return []
+            return super().list_activities(types, since)
 
     ingest_activities(db_session, Spy(), SINCE)
     [(types, since)] = seen
@@ -198,3 +191,41 @@ def test_requests_fills_and_every_cash_type(db_session: Session) -> None:
         "FILL", "DIV", "DIVCGL", "DIVCGS", "DIVNRA", "DIVROC", "DIVTXEX", "DIVWH",
         "SPLIT", "SPIN", "MA", "NC",
     }  # fmt: skip
+
+
+# --------------------------------------------------------------------------- review H2
+
+
+def _rejected(order_id: str | None, kind: str = "FILL") -> RejectedActivity:
+    return RejectedActivity(
+        activity_id=f"rej-{order_id}", activity_type=kind, order_id=order_id,
+        reason="fractional qty 0.5", raw={},
+    )  # fmt: skip
+
+
+def test_rejected_foreign_fill_is_skipped_and_the_rest_ingested(db_session: Session) -> None:
+    _trade(db_session, "ord-1")
+    broker = _broker(_fill(1))
+    broker.rejected.append(_rejected("manual-9"))
+    with structlog.testing.capture_logs() as logs:
+        result = ingest_activities(db_session, broker, SINCE)
+    assert (result.fills_inserted, result.fills_skipped_unusable, result.fills_rejected_ours) == (
+        1, 1, 0,
+    )  # fmt: skip
+    assert any(e["event"] == "activity_rejected" and e["log_level"] == "warning" for e in logs)
+
+
+def test_rejected_fill_for_our_order_is_an_error(db_session: Session) -> None:
+    _trade(db_session, "ord-1")
+    broker = _broker()
+    broker.rejected.append(_rejected("ord-1"))
+    with structlog.testing.capture_logs() as logs:
+        result = ingest_activities(db_session, broker, SINCE)
+    assert result.fills_rejected_ours == 1
+    assert any(e["event"] == "own_fill_rejected" and e["log_level"] == "error" for e in logs)
+
+
+def test_rejected_cash_activity_is_counted(db_session: Session) -> None:
+    broker = _broker()
+    broker.rejected.append(_rejected(None, kind="DIV"))
+    assert ingest_activities(db_session, broker, SINCE).cash_skipped_unusable == 1

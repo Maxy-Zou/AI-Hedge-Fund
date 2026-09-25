@@ -68,6 +68,16 @@ def test_mismatched_fill_exits_one(session_factory: Callable[[], Session]) -> No
     assert _run(["--since", "2026-09-01"], session_factory, broker) == 1
 
 
+def test_rejected_own_fill_exits_one(session_factory: Callable[[], Session]) -> None:
+    from ai_hedge_fund.execution.broker import RejectedActivity
+
+    with session_factory() as s:
+        _trade(s, "ord-1")
+    broker = FakeBroker()
+    broker.rejected.append(RejectedActivity("r1", "FILL", "ord-1", "fractional qty 0.5", {}))
+    assert _run(["--since", "2026-09-01"], session_factory, broker) == 1
+
+
 @pytest.mark.parametrize(
     "exc", [BrokerAuthError("HTTP 401"), UnexpectedBrokerResponse("drift")], ids=["auth", "shape"]
 )

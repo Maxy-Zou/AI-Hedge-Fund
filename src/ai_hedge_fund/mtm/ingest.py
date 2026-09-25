@@ -22,7 +22,7 @@ from sqlalchemy.orm import Session
 
 from ai_hedge_fund.db.dates import trading_date
 from ai_hedge_fund.db.models import CASH_ACTIVITY_TYPES, PaperTrade
-from ai_hedge_fund.execution.broker import BrokerActivity, BrokerClient
+from ai_hedge_fund.execution.broker import BrokerActivity, BrokerClient, RejectedActivity
 from ai_hedge_fund.mtm.records import NON_CASH_ACTIVITY_TYPES, NewCashEvent
 from ai_hedge_fund.mtm.store import insert_cash_event
 from ai_hedge_fund.paper.errors import DuplicateFill
@@ -40,8 +40,11 @@ class IngestResult:
     fills_skipped_duplicate: int = 0
     fills_skipped_unknown_order: int = 0
     fills_skipped_mismatch: int = 0
+    fills_skipped_unusable: int = 0  # unparseable fill for an order that is not ours
+    fills_rejected_ours: int = 0  # unparseable fill for OUR order -- the position is wrong
     cash_inserted: int = 0
     cash_skipped_duplicate: int = 0
+    cash_skipped_unusable: int = 0
 
 
 _FILL_OUTCOMES = {
@@ -112,10 +115,30 @@ def _ingest_cash(db_session: Session, act: BrokerActivity) -> bool:
     return insert_cash_event(db_session, new) is not None
 
 
+def _classify_rejected(db_session: Session, rej: RejectedActivity) -> str:
+    """Count key for an activity the adapter could not use (review H2)."""
+    fields = {"activity_id": rej.activity_id, "order_id": rej.order_id, "reason": rej.reason}
+    if rej.activity_type != "FILL":
+        logger.warning("activity_rejected", activity_type=rej.activity_type, **fields)
+        return "cash_skipped_unusable"
+    if _our_trade(db_session, rej.order_id) is not None:
+        logger.error("own_fill_rejected", **fields)
+        return "fills_rejected_ours"
+    logger.warning("activity_rejected", activity_type="FILL", **fields)
+    return "fills_skipped_unusable"
+
+
 def ingest_activities(db_session: Session, broker: BrokerClient, since: date) -> IngestResult:
-    """Pull every fill and cash activity since New York date ``since`` and append it."""
+    """Pull every fill and cash activity since New York date ``since`` and append it.
+
+    Activities the adapter rejected are logged and counted; one bad row never blocks
+    the rest. A rejected fill for one of *our* orders is an error the caller must surface.
+    """
     counts = dict.fromkeys(IngestResult.__dataclass_fields__, 0)
-    for act in broker.list_activities(ACTIVITY_TYPES, since):
+    batch = broker.list_activities(ACTIVITY_TYPES, since)
+    for rej in batch.rejected:
+        counts[_classify_rejected(db_session, rej)] += 1
+    for act in batch.activities:
         if act.activity_type == "FILL":
             counts[_FILL_OUTCOMES[_ingest_fill(db_session, act)]] += 1
         elif _ingest_cash(db_session, act):
