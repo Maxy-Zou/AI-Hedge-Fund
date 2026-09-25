@@ -148,3 +148,13 @@ def test_inputs_are_not_mutated() -> None:
     snapshot = list(fills)
     mark_position(fills, [], close_cents=10_000, pnl_date=DAY)
     assert fills == snapshot
+
+
+def test_open_quantity_before_counts_only_earlier_days() -> None:
+    from ai_hedge_fund.mtm.pnl import open_quantity_before
+
+    fills = [buy(1, 10, 100, day=2), sell(2, 4, 100, day=3), buy(3, 5, 100, day=4)]
+    assert open_quantity_before(fills, date(2026, 9, 2)) == 0
+    assert open_quantity_before(fills, date(2026, 9, 3)) == 10
+    assert open_quantity_before(fills, date(2026, 9, 4)) == 6
+    assert open_quantity_before([sell(1, 1, 100, day=2)], date(2026, 9, 5)) == 0
