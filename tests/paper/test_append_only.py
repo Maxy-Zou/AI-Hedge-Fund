@@ -178,7 +178,9 @@ def test_legacy_query_delete_rejected(db_session: Session) -> None:
 
 
 def test_guarded_table_registry() -> None:
-    assert append_only.guarded_tables() == frozenset({"paper_trades", "paper_fills"})
+    assert append_only.guarded_tables() == frozenset(
+        {"paper_trades", "paper_fills", "paper_cash_events", "paper_pnl_daily"}
+    )
 
 
 # --------------------------------------------------------------------------- opt-in scope (#5)
