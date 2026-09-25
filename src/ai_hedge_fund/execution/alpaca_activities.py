@@ -26,6 +26,7 @@ from ai_hedge_fund.execution.redact import redact
 
 _CENT = Decimal(1)
 _MAX_CENTS = 2**63 - 1  # BigInteger
+_MAX_QTY = 2**31 - 1  # paper_fills.filled_qty is Integer
 _SIDES = frozenset({"buy", "sell"})
 _SYMBOL_MAX = 10  # paper_trades.ticker / paper_cash_events.ticker
 
@@ -79,6 +80,8 @@ def _fill_fields(item: dict[str, Any]) -> tuple[datetime, str, int, int]:
     if side not in _SIDES:
         raise _Reject(f"unsupported side {side!r}")
     qty = _decimal(item, "qty")
+    if abs(qty) > _MAX_QTY:
+        raise _Reject("qty is out of range")
     if qty != qty.to_integral_value():
         raise _Reject(f"fractional qty {item['qty']}")
     price_cents = _cents(item, "price")

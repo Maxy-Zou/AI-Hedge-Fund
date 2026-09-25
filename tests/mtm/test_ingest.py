@@ -229,3 +229,10 @@ def test_rejected_cash_activity_is_counted(db_session: Session) -> None:
     broker = _broker()
     broker.rejected.append(_rejected(None, kind="DIV"))
     assert ingest_activities(db_session, broker, SINCE).cash_skipped_unusable == 1
+
+
+def test_rejected_fill_without_order_id_is_treated_as_possibly_ours(db_session: Session) -> None:
+    """Re-review LOW: an unidentifiable fill fails closed."""
+    broker = _broker()
+    broker.rejected.append(_rejected(None))
+    assert ingest_activities(db_session, broker, SINCE).fills_rejected_ours == 1

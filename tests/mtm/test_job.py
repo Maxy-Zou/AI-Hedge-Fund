@@ -566,3 +566,24 @@ def test_inconsistent_fill_skips_that_signal_only(db_session: Session) -> None:
     price(db_session, 2, 10_000)
     run(db_session, 2)
     assert [r.signal_id for r in query_pnl_rows(db_session)] == [fine]
+
+
+def test_credits_capped_when_signals_hold_more_than_paid(db_session: Session) -> None:
+    """Re-review MED: holdings above the paid qty must not multiply the cash."""
+    held(db_session, qty=10)
+    held(db_session, qty=10)
+    cash(db_session, "DIV", 3, 100, qty="10")
+    price(db_session, 3, 10_000)
+    run(db_session, 3)
+    assert sum(r.realized_pnl_cents for r in query_pnl_rows(db_session)) <= 100
+
+
+def test_dividend_and_withholding_never_overcredit(db_session: Session) -> None:
+    """Re-review LOW: separate truncation of DIV and DIVWH must not round in the signal's favour."""
+    for _ in range(3):
+        held(db_session, qty=1)
+    cash(db_session, "DIV", 3, 301, qty="3")
+    cash(db_session, "DIVWH", 3, -47)
+    price(db_session, 3, 10_000)
+    run(db_session, 3)
+    assert sum(r.realized_pnl_cents for r in query_pnl_rows(db_session)) <= 301 - 47

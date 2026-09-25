@@ -121,7 +121,8 @@ def _classify_rejected(db_session: Session, rej: RejectedActivity) -> str:
     if rej.activity_type != "FILL":
         logger.warning("activity_rejected", activity_type=rej.activity_type, **fields)
         return "cash_skipped_unusable"
-    if _our_trade(db_session, rej.order_id) is not None:
+    if rej.order_id is None or _our_trade(db_session, rej.order_id) is not None:
+        # No order id -> cannot prove it is not ours: fail closed (re-review).
         logger.error("own_fill_rejected", **fields)
         return "fills_rejected_ours"
     logger.warning("activity_rejected", activity_type="FILL", **fields)

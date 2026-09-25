@@ -237,10 +237,20 @@ def test_one_bad_activity_does_not_abort_the_batch() -> None:
         {"price": "0"},
         {"price": "-1"},
         {"price": "1e999999999"},
+        {"qty": "1e30"},
         {"transaction_time": "2026-09-02T14:30:00"},  # naive
         {"symbol": "aapl"},
     ],
-    ids=["qty-0", "qty-neg", "price-0", "price-neg", "overflow", "naive-time", "lowercase"],
+    ids=[
+        "qty-0",
+        "qty-neg",
+        "price-0",
+        "price-neg",
+        "overflow",
+        "qty-huge",
+        "naive-time",
+        "lowercase",
+    ],
 )
 def test_invalid_fill_values_are_rejected(overrides: dict) -> None:
     broker, _ = _broker([[_fill(1, **overrides)]])

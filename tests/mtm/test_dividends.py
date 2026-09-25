@@ -17,7 +17,7 @@ from ai_hedge_fund.mtm.dividends import paid_shares, signal_credit
         (240, 10, "20", 120),
         (101, 30, "40", 75),
         (101, 10, "40", 25),
-        (-37, 5, "10", -18),  # withholding truncates toward zero
+        (-37, 5, "10", -19),  # withholding rounds down: never over-credits
         (5_000, 10, "100", 500),
         (240, 0, "10", 0),
         (100, 1, "3.5", 28),  # fractional account holding

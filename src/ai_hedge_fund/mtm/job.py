@@ -106,6 +106,7 @@ def _dividend_credits(
         held = {p.signal_id: open_quantity_before(p.fills, day) for p in positions}
         if sum(held.values()) > paid:  # bought between ex-date and pay date (TECH-DEBT)
             logger.warning("dividend_holdings_exceed_paid", event_id=ev.id, paid=str(paid))
+            paid = Decimal(sum(held.values()))  # cap: never credit more than was paid
         for signal_id, shares in held.items():
             if shares:
                 cents = signal_credit(ev.net_amount_cents, shares, paid)
