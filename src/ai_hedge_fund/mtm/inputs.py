@@ -40,6 +40,7 @@ class ClosePrice:
     close_cents: int
     source: str
     row_id: int
+    observed_date: datetime
 
 
 def _fills_by_signal(
@@ -91,19 +92,23 @@ def load_positions(db_session: Session, pnl_date: date) -> list[SignalPosition]:
 
 
 def load_close(
-    db_session: Session, ticker: str, pnl_date: date, now: datetime
+    db_session: Session, ticker: str, pnl_date: date, *, not_before: datetime, now: datetime
 ) -> ClosePrice | None:
     """That exact day's close -- never an earlier day's (11-PREMORTEM #2).
 
-    Several sources for one day resolve to the most recently observed row, the
-    rule ``execution/prices.py`` uses; rows observed after ``now`` are invisible
-    (#12).
+    Only rows observed in ``[not_before, now]`` qualify: ``not_before`` is the day's
+    close (+ buffer), so an intraday bar cached mid-session is never frozen as the
+    close (review H3), and rows observed after ``now`` are invisible (#12). A
+    non-positive close is treated as no price. Several sources for one day resolve
+    to the most recently observed row, the rule ``execution/prices.py`` uses.
     """
     row = db_session.execute(
-        select(DailyPrice.close_cents, DailyPrice.source, DailyPrice.id)
+        select(DailyPrice.close_cents, DailyPrice.source, DailyPrice.id, DailyPrice.observed_date)
         .where(
             DailyPrice.ticker == ticker,
             DailyPrice.trade_date == pnl_date,
+            DailyPrice.close_cents > 0,
+            DailyPrice.observed_date >= not_before,
             DailyPrice.observed_date <= now,
         )
         .order_by(DailyPrice.observed_date.desc(), DailyPrice.id.desc())
@@ -111,4 +116,9 @@ def load_close(
     ).first()
     if row is None:
         return None
-    return ClosePrice(close_cents=int(row[0]), source=str(row[1]), row_id=int(row[2]))
+    return ClosePrice(
+        close_cents=int(row[0]),
+        source=str(row[1]),
+        row_id=int(row[2]),
+        observed_date=normalise_as_of(row[3]),
+    )

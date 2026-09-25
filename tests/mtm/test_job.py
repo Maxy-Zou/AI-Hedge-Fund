@@ -235,7 +235,7 @@ def test_today_before_close_raises_incomplete(db_session: Session, now: datetime
 
 def test_today_after_close_buffer_allowed(db_session: Session) -> None:
     held(db_session)
-    price(db_session, 3, 10_500, observed=datetime(2026, 9, 3, 20, 15, tzinfo=UTC))
+    price(db_session, 3, 10_500, observed=datetime(2026, 9, 3, 20, 30, tzinfo=UTC))
     result = run(db_session, 3, now=datetime(2026, 9, 3, 20, 30, tzinfo=UTC))  # 16:30 ET
     assert result.inserted == 1
 
@@ -406,3 +406,57 @@ def test_oversold_signal_skipped_others_marked(db_session: Session) -> None:
     result = run(db_session, 3)
     assert result.skipped_oversold == (bad,)
     assert [r.signal_id for r in query_pnl_rows(db_session)] == [good]
+
+
+# --------------------------------------------------------------------------- review round (T10)
+
+
+def test_price_observed_before_close_is_not_a_close(db_session: Session) -> None:
+    """Review H3: an intraday bar cached at 11:00 ET must not be frozen as the day's close."""
+    sid = held(db_session)
+    price(db_session, 3, 10_100, observed=datetime(2026, 9, 3, 15, 0, tzinfo=UTC))
+    result = run(db_session, 3)
+    assert result.skipped_no_price == (sid,) and result.inserted == 0
+
+
+def test_pre_split_date_marked_with_post_split_price_row_is_skipped(db_session: Session) -> None:
+    """Review H4: yfinance Close is split-adjusted as of download; a D3 row fetched after a
+    D9 split carries post-split prices for pre-split shares."""
+    sid = held(db_session)
+    cash(db_session, "SPLIT", 9, 0)
+    price(db_session, 3, 5_000, observed=datetime(2026, 9, 9, 22, 0, tzinfo=UTC))
+    result = run(db_session, 3)
+    assert result.skipped_corporate_action == (sid,) and result.inserted == 0
+
+
+def test_price_fetched_before_a_later_split_is_used(db_session: Session) -> None:
+    held(db_session)
+    cash(db_session, "SPLIT", 9, 0)
+    price(db_session, 3, 10_000)  # observed D3 evening, before the split
+    assert run(db_session, 3).inserted == 1
+
+
+def test_zero_close_is_no_price_not_a_crash(db_session: Session) -> None:
+    """Review LOW: one corrupt price row must not abort every other ticker's mark."""
+    a = held(db_session, ticker="AAPL")
+    held(db_session, ticker="MSFT")
+    price(db_session, 3, 0, ticker="AAPL")
+    price(db_session, 3, 10_000, ticker="MSFT")
+    result = run(db_session, 3)
+    assert result.skipped_no_price == (a,) and result.inserted == 1
+
+
+@pytest.mark.parametrize(
+    ("observed", "marked"),
+    [
+        (datetime(2026, 9, 3, 20, 29, tzinfo=UTC), False),
+        (datetime(2026, 9, 3, 20, 30, tzinfo=UTC), True),
+    ],
+    ids=["16:29-ET", "16:30-ET"],
+)
+def test_close_observation_boundary_is_exact(
+    db_session: Session, observed: datetime, marked: bool
+) -> None:
+    held(db_session)
+    price(db_session, 3, 10_000, observed=observed)
+    assert (run(db_session, 3).inserted == 1) is marked

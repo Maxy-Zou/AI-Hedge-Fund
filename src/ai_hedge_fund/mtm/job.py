@@ -13,7 +13,7 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 
 import structlog
 from sqlalchemy.orm import Session
@@ -44,14 +44,19 @@ class JobResult:
     rows: tuple[NewPnlRow, ...]  # every row computed (what --dry-run prints)
 
 
+def complete_at(pnl_date: date, policy: MtmPolicy) -> datetime:
+    """16:00 New York on ``pnl_date`` plus the policy buffer, as an aware datetime."""
+    return datetime.combine(pnl_date, _MARKET_CLOSE, tzinfo=MARKET_TZ) + timedelta(
+        minutes=policy.market_close_buffer_minutes
+    )
+
+
 def check_completed_day(pnl_date: date, now: datetime, policy: MtmPolicy) -> None:
     """D6: only a weekday whose close (+ buffer) has passed may be marked (11-PREMORTEM #1)."""
     if pnl_date.weekday() >= 5:
         raise IncompleteTradingDay(f"{pnl_date.isoformat()} is not a weekday")
     today = trading_date(now)
-    closes_at = datetime.combine(pnl_date, _MARKET_CLOSE, tzinfo=MARKET_TZ) + timedelta(
-        minutes=policy.market_close_buffer_minutes
-    )
+    closes_at = complete_at(pnl_date, policy)
     if pnl_date > today or now < closes_at:
         raise IncompleteTradingDay(
             f"{pnl_date.isoformat()} has not closed yet (complete at {closes_at.isoformat()})"
@@ -125,6 +130,19 @@ class _Tally:
     oversold: list[int]
 
 
+def _price_postdates_later_action(
+    db_session: Session, ticker: str, pnl_date: date, price: ClosePrice
+) -> bool:
+    """Review H4: vendors split-adjust history as of the download day, so a close for
+    ``pnl_date`` fetched after a later split is in post-split units -- unusable here."""
+    fetched_on = trading_date(price.observed_date)
+    events = query_cash_events(db_session, ticker=ticker, on_or_before=fetched_on)
+    return any(
+        e.activity_type in NON_CASH_ACTIVITY_TYPES and date.fromisoformat(e.event_date) > pnl_date
+        for e in events
+    )
+
+
 def _mark_ticker(
     db_session: Session,
     positions: list[SignalPosition],
@@ -135,9 +153,13 @@ def _mark_ticker(
     tally: _Tally,
 ) -> None:
     ticker = positions[0].ticker
-    price = load_close(db_session, ticker, pnl_date, now)
+    not_before = complete_at(pnl_date, policy).astimezone(UTC)  # UTC: SQLite compares text
+    price = load_close(db_session, ticker, pnl_date, not_before=not_before, now=now)
     if price is None:
         tally.no_price.extend(p.signal_id for p in positions)
+        return
+    if _price_postdates_later_action(db_session, ticker, pnl_date, price):
+        tally.corporate.extend(p.signal_id for p in positions)
         return
     events = query_cash_events(db_session, ticker=ticker, on_or_before=pnl_date)
     actions = [
