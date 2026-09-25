@@ -31,9 +31,9 @@ migrations: [007]
 | Attribution inputs | `graph/nodes.py` `episodic_store_node` writes payload v2 (`analyst_stances`, `debate`, `mtm_policy_sha`); `graph/memory_deps.py` gains `mtm_policy` |
 | Schema | `alembic/versions/007_create_paper_pnl_daily.py`: `paper_pnl_daily` (cumulative, one row per signal/day, total = realized + unrealized CHECK) and `paper_cash_events`; both append-only (ORM guard + PG trigger on 004's function) |
 | Store | `mtm/records.py`, `mtm/store.py` (skip-or-insert, whole-batch rollback -> `ConcurrentRun`), `mtm/errors.py` |
-| Broker | `BrokerClient.list_activities`; `execution/alpaca_activities.py` (SDK-model shape check, exact cents, fractional refused); adapter paging via the SDK's `RESTClient.get` |
+| Broker | `BrokerClient.list_activities`; `execution/alpaca_activities.py` (field-by-field validation, exact cents; unusable items returned as `RejectedActivity`); adapter paging via the SDK's `RESTClient.get` |
 | Ingest | `mtm/ingest.py`, `scripts/ingest_fills.py` |
-| P&L | `mtm/pnl.py` (FIFO, raw-close mark, dividends), `mtm/dividends.py` (pro rata, exact), `mtm/inputs.py`, `mtm/job.py`, `scripts/mark_to_market.py` |
+| P&L | `mtm/pnl.py` (FIFO, raw-close mark, dividends), `mtm/dividends.py` (per-signal credit by the activity's paid qty, floored, never above the payment), `mtm/inputs.py`, `mtm/job.py`, `scripts/mark_to_market.py` |
 | Rollup | `mtm/rollup.py` (`attribution_rollup` -- Phase 13 calls this) |
 | Shared | `db/dates.py` `trading_date` / `market_midnight_utc` (New York) |
 
