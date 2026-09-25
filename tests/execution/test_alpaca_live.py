@@ -72,3 +72,28 @@ def test_duplicate_is_classified_and_lookup_finds_the_order() -> None:
         assert broker.get_order_by_client_order_id(f"smoke-missing-{uuid.uuid4().hex[:8]}") is None
     finally:
         broker.cancel_order(first.broker_order_id)
+
+
+def test_list_activities_roundtrip() -> None:
+    """Phase 11 (11-PREMORTEM #30/#31) against the real API: read-only.
+
+    Proves the SDK-client path (auth, paper host, /account/activities, paging
+    params) returns typed activities. On 2026-09-25 the paper account had none,
+    so an empty list is a pass; any item returned must parse to the typed shape.
+    """
+    from datetime import UTC, datetime, timedelta
+
+    from ai_hedge_fund.db.dates import trading_date
+    from ai_hedge_fund.mtm.ingest import ACTIVITY_TYPES
+
+    broker = _broker_or_skip()
+    since = trading_date(datetime.now(UTC)) - timedelta(days=90)
+    activities = broker.list_activities(ACTIVITY_TYPES, since)
+    assert isinstance(activities, list)
+    for act in activities:
+        assert act.activity_type in ACTIVITY_TYPES
+        assert trading_date(act.occurred_at) >= since
+        if act.activity_type == "FILL":
+            assert isinstance(act.qty, int) and isinstance(act.price_cents, int)
+        else:
+            assert isinstance(act.net_amount_cents, int)
