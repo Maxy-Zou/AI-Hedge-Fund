@@ -134,7 +134,7 @@ lockfile, so every clone resolved to whatever was newest on PyPI that day.
 - **Belief memory is human-readable.** Investment beliefs stored as structured documents (YAML/JSON), not opaque embeddings. Humans can read, edit, and override.
 
 ### Fix-as-you-find
-When incidental errors or mistakes surface during unrelated work — a broken import, a stale library call, a failing assertion, a typo, a dead branch, drift between code and tests — fix them inline in the same session rather than just reporting them. Group the fixes into their own atomic commit (separate from the main task's commit) so history stays reviewable. If a discovered issue is large enough to warrant its own plan (>~50 LOC change, architectural, or crosses phase boundaries), give it its own plan + spec + pre-mortem (see Development Workflow below) instead of patching ad-hoc.
+When incidental errors or mistakes surface during unrelated work — a broken import, a stale library call, a failing assertion, a typo, a dead branch, drift between code and tests — fix them inline in the same session rather than just reporting them. Group the fixes into their own atomic commit (separate from the main task's commit) so history stays reviewable. If a discovered issue is large enough to warrant its own plan (>~50 LOC change, architectural, or crosses phase boundaries), give it its own `/phase-plan` (see Development Workflow below) instead of patching ad-hoc.
 
 ### Data Handling
 - Raw data cached locally (PostgreSQL) to avoid redundant API calls
@@ -154,6 +154,8 @@ When incidental errors or mistakes surface during unrelated work — a broken im
 ```bash
 # PostgreSQL
 DATABASE_URL=postgresql+psycopg://hedge:hedge@localhost:5432/ai_hedge_fund
+# Postgres-only tests (migrations, triggers, column widths); db name must contain "test"
+TEST_DATABASE_URL=postgresql+psycopg://hedge:hedge@localhost:5432/ai_hedge_fund_test
 
 # Anthropic (Claude models)
 ANTHROPIC_API_KEY=
@@ -268,17 +270,31 @@ Milestone work is split into phases (see `.planning/ROADMAP.md`). Each phase shi
 - `main` is the only long-lived branch.
 - One branch per phase, cut from `main`: `phase/<NN>-<slug>` (e.g. `phase/09-paper-data-layer`). Phases depend on each other linearly, so each one starts from the previous phase's merged result -- there is no milestone-wide epic branch.
 - Phase branches merge to `main` by pull request after code review, then are deleted.
-- Ad-hoc fixes and doc changes outside a phase also go through a short-lived branch and PR; they skip the plan/spec/pre-mortem stages.
+- Ad-hoc fixes and doc changes outside a phase also go through a short-lived branch and PR; they skip the plan and split stages.
 
-### Per-phase stages
-1. **Plan** -- restate the phase goal, requirements, and success criteria from `ROADMAP.md`; break the work into ordered tasks. Output: `.planning/phases/<NN>-<slug>/<NN>-PLAN.md`.
-2. **Spec** -- concrete interfaces for every task: schemas, function signatures, table DDL, CLI flags, error contracts. Resolve every open question the code depends on *before* writing it. Output: `<NN>-SPEC.md`.
-3. **Pre-mortem** -- assume the phase shipped and failed. List the failure modes (data integrity, temporal leakage, cost, security, vendor drift), the invariant each would violate, and the test that would have caught it. Every failure mode listed becomes a test in the next stage. Output: `<NN>-PREMORTEM.md`.
-4. **Execute with TDD** -- RED (write the failing test) -> GREEN (minimal implementation) -> refactor. No implementation code before its test exists. Small atomic commits; `test:` commits may precede `feat:` commits.
-5. **Code review** -- review the full branch diff against the spec, the pre-mortem, and the Agent Development Rules above, before opening the PR. Fix every CRITICAL and HIGH finding; record deferred MEDIUM/LOW items in `.planning/TECH-DEBT.md`.
-6. **Merge** -- PR to `main` linking the plan, spec, and pre-mortem. Full suite green, ruff clean, and each ROADMAP success criterion checked off with the test or command that proves it, in `<NN>-SUMMARY.md`.
+### Per-phase stages (skills in `.claude/skills/`)
+Each stage is a skill; each ends by naming the next. Phases 01-10 used the older
+PLAN/SPEC/PREMORTEM trio -- leave those as history; new phases use this flow.
+
+1. **`/phase-plan`** -- one `<NN>-PLAN.md`: decisions, interfaces, a `phase-tasks` YAML block
+   (files each task owns/reads/depends on, shared edits in a T0 scaffold), and the pre-mortem as
+   a `phase-premortem` YAML block of full pytest node ids. Research fans out in parallel;
+   external APIs are probed, not assumed. Human signs off on the Decisions list only.
+2. **`/phase-split`** -- `devtools.waves` schedules tasks into waves by file ownership; tasks
+   are restructured to widen waves. Writes `<NN>-LEDGER.md`, the progress source of truth.
+3. **`/phase-exec`** (user-invoked) -- TDD per task; parallel waves run as subagents in git
+   worktrees, merged in plan order, full gate after every wave. `devtools.premortem_check` must
+   report 0 missing before the phase is done.
+4. **`/phase-review`** -- parallel fresh-context reviewers, one per risk area; confirmed
+   findings fixed RED-first; one targeted re-review of the fix diff. CRITICAL/HIGH fixed,
+   MEDIUM/LOW to `.planning/TECH-DEBT.md`.
+5. **`/phase-ship`** (user-invoked) -- final gates, `<NN>-SUMMARY.md`, tracking docs, PR.
+
+The PLAN stays live: an interface change updates the PLAN in the same commit as the code.
+If a change can be described in one sentence, skip the phase flow: TDD it and run `/code-review`.
 
 ### Verification gates (every PR)
-- `uv run pytest -q` -- full suite passes (1134 passed, 9 skipped at v1.0 close).
+- `TEST_DATABASE_URL=postgresql+psycopg://hedge:hedge@localhost:5432/ai_hedge_fund_test uv run pytest -q -rs` -- full suite passes with the Postgres tests actually running
+  (no skip reason mentioning `TEST_DATABASE_URL`).
 - `uv run ruff format --check . && uv run ruff check .` -- clean.
 - `uv sync --frozen --extra dev` -- lockfile still resolves; any dependency change is its own commit.
