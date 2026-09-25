@@ -58,6 +58,18 @@ def check_completed_day(pnl_date: date, now: datetime, policy: MtmPolicy) -> Non
         )
 
 
+def last_completed_trading_day(now: datetime, policy: MtmPolicy) -> date:
+    """The most recent weekday whose close (+ buffer) is at or before ``now``."""
+    day = trading_date(now)
+    for _ in range(7):
+        try:
+            check_completed_day(day, now, policy)
+            return day
+        except IncompleteTradingDay:
+            day -= timedelta(days=1)
+    raise AssertionError("unreachable: a week always contains a completed weekday")
+
+
 def _dividend_credits(
     positions: Sequence[SignalPosition], events: Sequence[CashEventRecord]
 ) -> dict[int, list[CashIn]]:
