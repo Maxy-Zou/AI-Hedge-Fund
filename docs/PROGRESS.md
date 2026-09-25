@@ -1,4 +1,10 @@
-## 2026-09-25 — Phase 11 implemented: Mark-to-Market and Attribution (MTM-01..04), review pending
+## 2026-09-25 — Phase 11 review: 5 HIGH defects confirmed and fixed before PR
+
+Six parallel read-only review lenses plus one targeted re-review. Confirmed by RED tests and fixed: the Alpaca activity parser rejected the documented response shapes (SDK models demand fields the docs omit); one manual short/fractional trade aborted all ingest (items are now rejected individually, ours fail loudly); an intraday bar could be frozen as the close (close must be observed after 16:00 ET + buffer); a split-adjusted close could mark a pre-split date; dividends could be over- or double-credited (now per-signal `floor(net * shares / max(paid, holdings))`). Plus loader/core date alignment and a dozen parser/stance/policy hardening fixes. Re-review found 1 MEDIUM + 3 LOW in the fixes; all fixed. Deferred items with rulings in TECH-DEBT.
+
+**Tests:** 1751 -> **1812 passed** (14 skipped); PG-gated 5/5; mtm DB tests on Postgres 77/77; live Alpaca activities read passed.
+
+## 2026-09-25 — Phase 11 implemented: Mark-to-Market and Attribution (MTM-01..04)
 
 Branch `phase/11-mark-to-market` (worktree `../AI-Hedge-Fund-phase11`). Plan -> Spec -> Pre-mortem -> TDD, T0-T9 done; T10 (independent review) and the PR are next. Spec amendments: A1 marks at the raw close and books broker dividends as realized income (cached `adj_close` keeps its download-day adjustment factor, so the planned ratio would have silently dropped dividends); A2 derives analyst stances (the analyst schemas have no direction field).
 

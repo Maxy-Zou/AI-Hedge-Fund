@@ -1,7 +1,7 @@
 ---
 phase: 11
 slug: mark-to-market
-status: implementation complete -- code review (T10) pending, PR not opened
+status: reviewed -- ready for PR (not opened)
 delivered: 2026-09-25
 branch: phase/11-mark-to-market
 requirements: [MTM-01, MTM-02, MTM-03, MTM-04]
@@ -12,7 +12,7 @@ migrations: [007]
 
 **Goal:** A daily job that turns fills into an append-only P&L series decomposed by analyst, debate side, and conviction -- so performance can be attributed rather than merely totaled.
 
-**Outcome:** Implemented. All four ROADMAP criteria have a proving test, and the suite is green on SQLite and, for every DB-touching `mtm` test, on PostgreSQL. Every implementation commit was preceded by a RED test commit. **Not yet reviewed:** T10 (independent review) has not run, so this is not ready to merge.
+**Outcome:** Delivered and reviewed. All four ROADMAP criteria have a proving test, green on SQLite and, for every DB-touching `mtm` test, on PostgreSQL. **The independent review (T10) found five HIGH defects the author's own tests missed** -- the activity parser would have rejected Alpaca's documented responses, one bad activity blocked all ingest, intraday and post-split price rows could be frozen as closes, and dividends could be credited several times over. All were confirmed by a failing test and fixed before merge (see *Code review*).
 
 ## Goal achievement
 
@@ -69,15 +69,30 @@ All 36 rows map to a test that exists in the suite -- checked mechanically at T9
 
 ## Verification
 
-- `uv run pytest -q` -> **1751 passed, 14 skipped** (from 1515 at branch start).
+- `uv run pytest -q` -> **1812 passed, 14 skipped** (from 1515 at branch start; 1751 before review).
 - `uv run ruff format --check . && uv run ruff check .` -> clean.
 - `uv sync --frozen --extra dev` -> resolves (no dependency change this phase).
-- PostgreSQL: `TEST_DATABASE_URL=postgresql+psycopg://hedge:hedge@localhost:5432/ai_hedge_fund_test uv run pytest -m slow tests/mtm tests/paper` -> migration 007 trigger + downgrade tests pass. The DB-touching `mtm` tests (`test_job`, `test_store`, `test_rollup`, `test_ingest`: 57) also passed against a throwaway Postgres database via a temporary fixture override -- the suite's fixtures are SQLite-only, so this run is manual (TECH-DEBT).
+- PostgreSQL: `TEST_DATABASE_URL=postgresql+psycopg://hedge:hedge@localhost:5432/ai_hedge_fund_test uv run pytest -m slow tests/mtm tests/paper` -> migration 007 trigger + downgrade tests pass. The DB-touching `mtm` tests (`test_job`, `test_store`, `test_rollup`, `test_ingest`: 57) also passed against a throwaway Postgres database via a temporary fixture override -- the suite's fixtures are SQLite-only, so this run is manual (TECH-DEBT). Re-run after review fixes: 77 passed.
 - Live: `test_alpaca_live.py::test_list_activities_roundtrip` passed against Alpaca paper.
 
 ## Code review
 
-Pending (T10).
+Six independent read-only lenses ran in parallel on `main...HEAD` (each saw only the diff, the plan/spec/pre-mortem, and its brief); every CRITICAL/HIGH was confirmed by writing its RED test and watching it fail before fixing. One targeted re-review then checked the fix diff `d260332..2323a3c`.
+
+| Lens | Raised | Confirmed + fixed | Rejected | Deferred (TECH-DEBT) |
+|---|---|---|---|---|
+| Spec compliance | 1 H, 1 L | H (late-fill dividend double credit -> H5) | -- | L (conviction key set) |
+| Database fidelity | 2 M, 3 L | M (loader date rule), L (zero close), L (cash validation abort, via H2), L (`_iso` UTC) | -- | M (Postgres fixture in suite) |
+| Vendor contracts | 2 H, 2 M, 1 L | H1 (documented shapes rejected), H2 (one bad row aborts ingest), M (canceled cash), L (non-JSON body) | -- | M (ex-date vs pay date) |
+| Entry points & tests | 1 H, 2 M, 5 L | H (dup of H2), M2 (#32 scrubbing test strengthened), L4 (SHA test covers all fields) | M1: stance rule vs real schemas -- test passes, no defect; kept as a drift guard | #31 test strength, L1 upsert detection, L2 row SHA vs stance SHA, L3 CWD-relative policy, L5 real-run CLI test |
+| Fail-closed & security | 1 H, 3 M, 4 L | H (dup of H3), M (naive timestamps), M (zero/negative/overflow qty/price), M (oversold holder's dividend -> H5), L (NaN/inf sentiment, non-string factors), L (non-int schema_version), L (reserved `unknown` bucket), L (lowercase symbol, page-token cycle) | -- | -- |
+| Temporal & data integrity | 3 H, 1 M, 1 L | H3 (intraday bar as close), H4 (split-adjusted close for a pre-split date), H5 (dividend allocation), L (one signal's bad fill aborts the day, via loader alignment) | -- | M (ingest watermark / observed_date on fills) |
+
+Fix commits: `df6b460` (H1, H2 + parser hardening; spec s4 amended), `c75fcae` (H3, H4, zero close), `d832ce2` (H5; spec s5 and pre-mortem #15 amended), `0ff52b0` (loader date rule + LOWs).
+
+**Re-review** of the fixes: all findings closed; it found one new MEDIUM (credits could exceed the payment when signals held more shares than the broker paid on -- the H5 warning logged but did not cap) and three LOW (rounding toward zero favoured the signal across DIV/DIVWH; a rejected fill with no order id failed open; unbounded fill qty). All four confirmed RED and fixed in `2323a3c`. No CRITICAL, so no further round.
+
+**Contract changes from review:** `list_activities` returns `ActivityBatch(activities, rejected)`; `FractionalQuantity` removed (fractional fills are rejections); ingest gains `fills_skipped_unusable` / `fills_rejected_ours` / `cash_skipped_unusable`, and `ingest_fills` exits 1 on `fills_rejected_ours`; a close must be observed after 16:00 ET + buffer; dividend credit is per-signal `floor(net * shares / max(paid, holdings))` (pre-mortem #15 now reads "never more than paid").
 
 ## Handoff to Phase 12 (Promotion Gate)
 

@@ -64,10 +64,13 @@ the debt and the expected resolution timing.
   ledger showing an open position the broker no longer holds. A periodic position reconciliation
   (broker positions vs ledger open qty) would surface this. Filed 2026-09-25.
 
-- **Mark-to-market: dividend paid after the position closed is unallocated (Phase 11):** dividends
-  are weighted by shares held at the start of the event (pay) date, so a position sold between the
-  ex-date and pay date gets nothing and the event logs `dividend_unallocated`. Using the activity's
-  own `qty` / ex-date would fix it. Filed 2026-09-25.
+- **Mark-to-market: dividends use pay-date holdings, not ex-date (Phase 11 review, MEDIUM):**
+  Alpaca's DIV activity is dated on the payment date and carries no ex-date. Since review H5 each
+  signal is credited `net * its shares at the start of the pay date / activity qty`, so a signal
+  that sold between ex-date and pay date gets nothing, and one that bought in that window is
+  credited (flagged by `dividend_holdings_exceed_paid`). Credits can never exceed what was paid.
+  Fix needs the ex-date (corporate-actions feed). Ruling: defer; paper holding periods are short
+  and the error is bounded by the payment. Filed 2026-09-25.
 
 - **Mark-to-market: no exchange calendar (Phase 11):** market holidays surface as
   `skipped_no_price`, and early-close days use the normal 16:00 ET guard. Correct but noisy.
@@ -77,6 +80,30 @@ the debt and the expected resolution timing.
   DB tests were run against Postgres once by a temporary fixture override. A `TEST_DATABASE_URL`
   switch in `tests/conftest.py` would make that repeatable (Phase 10's VARCHAR defect is the
   precedent for why it matters). Filed 2026-09-25.
+
+- **Mark-to-market: no ingest watermark; fills/cash not filtered by `observed_date` (Phase 11 review,
+  MEDIUM):** the job does not check that `ingest_fills` has caught up to `pnl_date`'s close, and a
+  re-run with a pinned `now` still sees fills and cash events ingested later, so a reproduction is
+  not exact. Extends the "no correction path" entry. Ruling: defer to PAPER-03 (scheduler enforces
+  ingest-then-mark and records a watermark). Filed 2026-09-25.
+
+- **Rollup: conviction dimension omits empty buckets; labels taken from the latest row (Phase 11
+  review, LOW):** `by_conviction_bucket` lists only buckets that occur (spec s7 says every policy
+  bucket + `unknown`) because `attribution_rollup` has no policy; after a policy change the whole
+  range's P&L goes to the latest row's labels (deterministic, sums still exact; `mtm_policy_shas`
+  reports the mix). `signals` counts signals whose last row predates `start`. Ruling: Phase 13 passes
+  the policy and fixes the key set; document the label rule in the report. Filed 2026-09-25.
+
+- **Row `mtm_policy_sha` is the job's policy, not the one that froze the stances (Phase 11 review,
+  LOW):** stances carry their own `mtm_policy_sha` in the episodic payload; the P&L row stamps the
+  job's. After a stance-rule change the row's SHA misdescribes its stances. Ruling: defer; record
+  both SHAs in `attribution` when a second rule version exists. Filed 2026-09-25.
+
+- **Test gaps from the Phase 11 review (LOW):** the no-UPDATE test classifies statements by first
+  word (an `INSERT ... ON CONFLICT DO UPDATE` would pass it; the byte-identical and new-price-source
+  tests do catch it); `mark_to_market`'s subprocess test runs only `--help`; policy paths are
+  CWD-relative (`MemoryDeps()` and the CLI fail outside the repo root -- same convention as the
+  risk/review policies). Ruling: defer. Filed 2026-09-25.
 
 ## Closed
 
