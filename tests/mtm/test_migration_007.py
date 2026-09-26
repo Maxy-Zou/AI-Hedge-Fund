@@ -34,6 +34,7 @@ from tests.paper.test_migration_roundtrip import (
     _pg_url_or_skip,
     _version,
 )
+from tests.pg_scratch import scratch_alembic
 
 MTM_TABLES = {"paper_pnl_daily", "paper_cash_events"}
 SHA = "e" * 64
@@ -277,15 +278,9 @@ def test_orm_guard_rejects_mutation(db_session: Session, op: str) -> None:
 
 @pytest.fixture(scope="module")
 def pg_cfg() -> Iterator[tuple[Config, str]]:
-    url = _pg_url_or_skip()
-    previous = os.environ.get("DATABASE_URL")
-    try:
-        yield _alembic_config(url), url
-    finally:
-        if previous is None:
-            os.environ.pop("DATABASE_URL", None)
-        else:
-            os.environ["DATABASE_URL"] = previous
+    """A private scratch database -- never migrate the shared TEST_DATABASE_URL one."""
+    with scratch_alembic(_pg_url_or_skip()) as cfg_url:
+        yield cfg_url
 
 
 @pytest.mark.slow

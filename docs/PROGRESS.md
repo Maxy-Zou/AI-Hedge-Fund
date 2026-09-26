@@ -1,3 +1,13 @@
+## 2026-09-26 — Fix: migration chain hardening (round-trip + parity, migration 008)
+
+Closes two TECH-DEBT entries. New `tests/db/test_migration_chain.py` exercises the full alembic chain 001 -> head (SQLite by default, PostgreSQL via `TEST_DATABASE_URL`): upgrade head / downgrade base / upgrade head, a step-wise walk down and up, a linear-chain check, and unfiltered `compare_metadata` ORM parity. It found the 002 `observed_date` drift was wider than filed: migration 001 left `observed_date` nullable on all six ingestion tables, plus `daily_prices.source`. Migration 008 makes all eight columns NOT NULL and refuses to upgrade over NULLs rather than backfilling. Local dev DB checked read-only first: 0 NULLs.
+
+**Files:** `alembic/versions/008_enforce_not_null_observed_date.py`, `tests/db/test_migration_chain.py`, `tests/paper/test_migration_roundtrip.py` (HEAD -> 008), `.planning/TECH-DEBT.md`.
+
+**Tests:** 1904 -> **1920 passed** (9 skipped, all live-API-key skips; Postgres tests ran).
+
+**Follow-up:** the PG migration tests had moved the shared `ai_hedge_fund_test` DB to 008 (off-main), breaking other branches. They now run in throwaway `<testdb>_<uuid>` databases (`tests/pg_scratch.py`); shared DB restored to 007. **1923 passed**.
+
 ## 2026-09-26 — Fix: concurrent submit_signal runs (TECH-DEBT F6)
 
 Two concurrent submits for one signal both computed the same attempt; the broker deduped the order, but the losing run crashed with the store's `DuplicateSubmission` (uncaught by the CLI). `submit_signal` now catches that conflict, re-reads the settled state via `next_attempt`, and raises `AlreadySubmitted` / `AlreadyDecided` (CLI exit 3), or `BrokerRejected` when the winner recorded a rejection. Catch-and-translate chosen over a per-signal advisory lock (no transaction held across the broker HTTP call; dialect-agnostic, so SQLite behaves the same).
