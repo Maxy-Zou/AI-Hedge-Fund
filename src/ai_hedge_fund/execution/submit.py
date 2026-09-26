@@ -7,6 +7,15 @@ row -- a submitted/rejected order or a typed refusal. Idempotency is enforced
 twice: ``next_attempt`` refuses to resubmit a settled signal, and the broker
 sees a unique ``client_order_id`` per attempt.
 
+Two concurrent runs for one signal can both pass ``next_attempt`` and compute the
+same attempt. The broker dedupes their orders (same client_order_id; the second
+run adopts the first's order), and the ``(signal_id, attempt_no)`` unique
+constraint admits exactly one row. The losing run re-reads the settled state and
+raises what a sequential re-run would -- AlreadySubmitted / AlreadyDecided, or
+BrokerRejected when the winner recorded a rejection -- instead of the store's
+DuplicateSubmission (Phase 10 review F6). No lock is needed: holding one would
+mean keeping a transaction open across the broker HTTP call.
+
 The client_order_id is stable across re-runs of one attempt, so a re-run after
 a lost broker response gets "duplicate" -- and then adopts the order the broker
 already holds (after checking it is the order we would place) instead of
@@ -54,6 +63,7 @@ from ai_hedge_fund.execution.errors import (
 from ai_hedge_fund.execution.policy import ExecutionPolicy
 from ai_hedge_fund.execution.prices import latest_adj_close_cents
 from ai_hedge_fund.paper import NewPaperTrade, PaperTradeRecord, insert_paper_trade
+from ai_hedge_fund.paper.errors import DuplicateSubmission
 from ai_hedge_fund.paper.recall import query_paper_trades
 from ai_hedge_fund.schemas.signal_output import FinalSignalOutput
 
@@ -234,9 +244,35 @@ def submit_signal(
     if dry_run:
         return decision
 
-    if isinstance(decision, Refusal):
-        return _record_refusal(deps, ctx, attempt, decision)
-    return _submit_order(deps, ctx, attempt, decision, price_cents)
+    try:
+        if isinstance(decision, Refusal):
+            return _record_refusal(deps, ctx, attempt, decision)
+        return _submit_order(deps, ctx, attempt, decision, price_cents)
+    except DuplicateSubmission as exc:
+        settled = _concurrent_outcome(deps, ctx, attempt)
+        if settled is None:
+            raise
+        raise settled from exc
+
+
+def _concurrent_outcome(deps: SubmitDeps, ctx: SignalContext, attempt: int) -> Exception | None:
+    """The typed error for a run that lost the race to record ``attempt``.
+
+    The store rolled the session back, so ``next_attempt`` sees the winner's
+    committed row. None when no row landed at ``attempt`` -- the conflict was not
+    a race on this signal, so the caller re-raises the store error.
+    """
+    try:
+        nxt = next_attempt(deps.db_session, ctx.signal_id, deps.policy)
+    except (AlreadySubmitted, AlreadyDecided, AttemptsExhausted) as settled:
+        logger.warning("paper_trade_concurrent_run", signal_id=ctx.signal_id, attempt=attempt)
+        return settled
+    if nxt > attempt:  # the winner recorded a rejection; a retry remains possible
+        logger.warning("paper_trade_concurrent_run", signal_id=ctx.signal_id, attempt=attempt)
+        return BrokerRejected(
+            f"signal {ctx.signal_id} attempt {attempt} was recorded as rejected by a concurrent run"
+        )
+    return None
 
 
 def _base_payload(deps: SubmitDeps, ctx: SignalContext) -> dict[str, Any]:

@@ -34,13 +34,6 @@ the debt and the expected resolution timing.
   and provides the pattern (file-based SQLite + `alembic.autogenerate.compare_metadata`).
   Extend to the full chain, and add parity checks for every v1.0 table, in a v1.x cleanup.
 
-- **submit_signal has no concurrency guard (Phase 10 review F6; narrowed by review round 2):**
-  two concurrent runs for one signal compute the same attempt and therefore the same deterministic
-  client_order_id, so the broker accepts only one order (the other gets "duplicate" and adopts it).
-  What remains: the losing run fails at the (signal_id, attempt_no) unique constraint with a DB error
-  instead of a clean AlreadySubmitted. Safe for the single-threaded CLI; a scheduler (PAPER-03) should
-  take a per-signal advisory lock. Deferred. Filed 2026-09-24, updated same day.
-
 - **Price source precedence is undecided (Phase 10 review round 2, R10):** `daily_prices` can hold a
   yfinance and a tiingo row for the same day. `execution/prices.py` now resolves ties to the most
   recently collected row -- deterministic, so dry-run and submit agree -- but prefers no source.
@@ -106,6 +99,16 @@ the debt and the expected resolution timing.
   risk/review policies). Ruling: defer. Filed 2026-09-25.
 
 ## Closed
+
+- **submit_signal has no concurrency guard (Phase 10 review F6):** the losing run of two concurrent
+  submits for one signal now raises what a sequential re-run would -- `AlreadySubmitted` /
+  `AlreadyDecided`, or `BrokerRejected` if the winner recorded a rejection -- instead of the store's
+  `DuplicateSubmission`. `submit_signal` catches the `(signal_id, attempt_no)` conflict and re-reads
+  the settled state via `next_attempt`. Chosen over a `pg_advisory_xact_lock`: the lock would hold a
+  transaction open across the broker HTTP call and is Postgres-only; the broker already dedupes by
+  client_order_id and the unique constraint already admits one row, so only the error mapping was
+  missing. Works identically on SQLite. Tests: `tests/execution/test_submit_concurrency.py`
+  (deterministic interleavings + a two-thread Postgres race). Closed 2026-09-26.
 
 - **Async pipeline invoked against a sync PostgresSaver (found Phase 10, pre-existing since Phase 1):**
   `test_checkpoint_resume` drove `ainvoke` through the sync `PostgresSaver` (no `aget_tuple` ->
