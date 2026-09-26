@@ -1,3 +1,9 @@
+## 2026-09-26 — Project README
+
+Added `README.md` (the repo had none): what the system does, a Mermaid diagram of the signal pipeline, design principles, v1.0/v1.1 phase status, quickstart, CLI reference, configuration table with key sign-up links, repository layout, dev gates, research foundations, and an honest-positioning disclaimer. No performance figures (no paper track record exists yet).
+
+**Files:** `README.md`, `LICENSE` (MIT), `docs/PROGRESS.md`. Repo About description + topics set. **Tests:** unchanged.
+
 ## 2026-09-26 — Fix: migration chain hardening (round-trip + parity, migration 008)
 
 Closes two TECH-DEBT entries. New `tests/db/test_migration_chain.py` exercises the full alembic chain 001 -> head (SQLite by default, PostgreSQL via `TEST_DATABASE_URL`): upgrade head / downgrade base / upgrade head, a step-wise walk down and up, a linear-chain check, and unfiltered `compare_metadata` ORM parity. It found the 002 `observed_date` drift was wider than filed: migration 001 left `observed_date` nullable on all six ingestion tables, plus `daily_prices.source`. Migration 008 makes all eight columns NOT NULL and refuses to upgrade over NULLs rather than backfilling. Local dev DB checked read-only first: 0 NULLs.
