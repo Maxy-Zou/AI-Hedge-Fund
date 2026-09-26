@@ -24,23 +24,6 @@ the debt and the expected resolution timing.
   `JSON(none_as_null=True)`; episodic should too. One-line change with the full suite as proof;
   kept out of Phase 9 because it alters a v1.0 table's storage contract.
 
-- **Migration 002 `observed_date` nullability drift (found Phase 9 pre-mortem #23):**
-  `002_create_portfolio_positions.py` declares `observed_date` without `nullable=False`; the
-  ORM mixin requires it. Production schema is looser than the model. Needs a corrective
-  migration (`ALTER COLUMN ... SET NOT NULL`) after confirming no NULLs exist in prod.
-
-- **Migrations 001-003 have no round-trip test (found Phase 9 T4):**
-  `tests/paper/test_migration_roundtrip.py` is the first migration the suite has ever executed
-  and provides the pattern (file-based SQLite + `alembic.autogenerate.compare_metadata`).
-  Extend to the full chain, and add parity checks for every v1.0 table, in a v1.x cleanup.
-
-- **submit_signal has no concurrency guard (Phase 10 review F6; narrowed by review round 2):**
-  two concurrent runs for one signal compute the same attempt and therefore the same deterministic
-  client_order_id, so the broker accepts only one order (the other gets "duplicate" and adopts it).
-  What remains: the losing run fails at the (signal_id, attempt_no) unique constraint with a DB error
-  instead of a clean AlreadySubmitted. Safe for the single-threaded CLI; a scheduler (PAPER-03) should
-  take a per-signal advisory lock. Deferred. Filed 2026-09-24, updated same day.
-
 - **Price source precedence is undecided (Phase 10 review round 2, R10):** `daily_prices` can hold a
   yfinance and a tiingo row for the same day. `execution/prices.py` now resolves ties to the most
   recently collected row -- deterministic, so dry-run and submit agree -- but prefers no source.
@@ -106,6 +89,29 @@ the debt and the expected resolution timing.
   risk/review policies). Ruling: defer. Filed 2026-09-25.
 
 ## Closed
+
+- **Migration 002 `observed_date` nullability drift (found Phase 9 pre-mortem #23):** wider than
+  filed -- migration 001 had the same gap on `observed_date` in all six ingestion tables plus
+  `daily_prices.source` (8 columns total). Migration 008 sets all eight NOT NULL and *refuses* to
+  upgrade if any NULL exists (no backfill: `observed_date` is provenance). Checked the local dev
+  database first (read-only): 0 NULLs in every column, and the columns were already NOT NULL there
+  (built via `create_all`), so 008 is a no-op on it. Closed 2026-09-26.
+
+- **Migrations 001-003 have no round-trip test (found Phase 9 T4):** `tests/db/test_migration_chain.py`
+  runs the whole chain 001 -> head on SQLite and PostgreSQL: head -> base -> head, a step-wise
+  walk down and back up one revision at a time, a linear-chain check, and *unfiltered*
+  `compare_metadata` parity over every table (nullability included) plus a per-table nullability
+  check for the eight v1.0 tables. Closed 2026-09-26.
+
+- **submit_signal has no concurrency guard (Phase 10 review F6):** the losing run of two concurrent
+  submits for one signal now raises what a sequential re-run would -- `AlreadySubmitted` /
+  `AlreadyDecided`, or `BrokerRejected` if the winner recorded a rejection -- instead of the store's
+  `DuplicateSubmission`. `submit_signal` catches the `(signal_id, attempt_no)` conflict and re-reads
+  the settled state via `next_attempt`. Chosen over a `pg_advisory_xact_lock`: the lock would hold a
+  transaction open across the broker HTTP call and is Postgres-only; the broker already dedupes by
+  client_order_id and the unique constraint already admits one row, so only the error mapping was
+  missing. Works identically on SQLite. Tests: `tests/execution/test_submit_concurrency.py`
+  (deterministic interleavings + a two-thread Postgres race). Closed 2026-09-26.
 
 - **Async pipeline invoked against a sync PostgresSaver (found Phase 10, pre-existing since Phase 1):**
   `test_checkpoint_resume` drove `ainvoke` through the sync `PostgresSaver` (no `aget_tuple` ->
