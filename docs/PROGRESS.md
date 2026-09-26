@@ -2,7 +2,7 @@
 
 Added `README.md` (the repo had none): what the system does, a Mermaid diagram of the signal pipeline, design principles, v1.0/v1.1 phase status, quickstart, CLI reference, configuration table with key sign-up links, repository layout, dev gates, research foundations, and an honest-positioning disclaimer. No performance figures (no paper track record exists yet).
 
-**Files:** `README.md`, `docs/PROGRESS.md`. **Tests:** unchanged.
+**Files:** `README.md`, `LICENSE` (MIT), `docs/PROGRESS.md`. Repo About description + topics set. **Tests:** unchanged.
 
 ## 2026-09-25 — Phase 11 review: 5 HIGH defects confirmed and fixed before PR
 

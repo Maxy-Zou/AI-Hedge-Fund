@@ -10,6 +10,7 @@ it, and a tamper-evident audit trail.
 ![PydanticAI](https://img.shields.io/badge/agents-PydanticAI-E92063)
 ![PostgreSQL](https://img.shields.io/badge/storage-PostgreSQL%2016-4169E1?logo=postgresql&logoColor=white)
 ![Claude](https://img.shields.io/badge/LLM-Claude-D97757)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 > [!IMPORTANT]
 > **Status: research system + paper trading.** No live capital is traded. There is no performance
@@ -31,6 +32,7 @@ it, and a tamper-evident audit trail.
 - [Development](#development)
 - [Research foundations](#research-foundations)
 - [Honest positioning](#honest-positioning)
+- [License](#license)
 
 ---
 
@@ -217,3 +219,7 @@ testing.
 This is a research system that produces structured, auditable investment theses. It is **not** an
 autonomous trading system and makes no claim of generating alpha. All trade-level decisions require
 human review, and only paper trading is supported. Nothing in this repository is investment advice.
+
+## License
+
+[MIT](LICENSE) © 2026 Maxy-Zou
