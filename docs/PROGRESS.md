@@ -8,6 +8,14 @@ Closes two TECH-DEBT entries. New `tests/db/test_migration_chain.py` exercises t
 
 **Follow-up:** the PG migration tests had moved the shared `ai_hedge_fund_test` DB to 008 (off-main), breaking other branches. They now run in throwaway `<testdb>_<uuid>` databases (`tests/pg_scratch.py`); shared DB restored to 007. **1923 passed**.
 
+## 2026-09-26 — Fix: concurrent submit_signal runs (TECH-DEBT F6)
+
+Two concurrent submits for one signal both computed the same attempt; the broker deduped the order, but the losing run crashed with the store's `DuplicateSubmission` (uncaught by the CLI). `submit_signal` now catches that conflict, re-reads the settled state via `next_attempt`, and raises `AlreadySubmitted` / `AlreadyDecided` (CLI exit 3), or `BrokerRejected` when the winner recorded a rejection. Catch-and-translate chosen over a per-signal advisory lock (no transaction held across the broker HTTP call; dialect-agnostic, so SQLite behaves the same).
+
+**Files:** `src/ai_hedge_fund/execution/submit.py`, `tests/execution/test_submit_concurrency.py` (new), `.planning/TECH-DEBT.md`.
+
+**Tests:** 1904 -> **1908 passed** (9 skipped, none for `TEST_DATABASE_URL`); +3 SQLite interleaving tests, +1 two-thread Postgres race test on a private throwaway schema.
+
 ## 2026-09-25 — Phase 11 review: 5 HIGH defects confirmed and fixed before PR
 
 Six parallel read-only review lenses plus one targeted re-review. Confirmed by RED tests and fixed: the Alpaca activity parser rejected the documented response shapes (SDK models demand fields the docs omit); one manual short/fractional trade aborted all ingest (items are now rejected individually, ours fail loudly); an intraday bar could be frozen as the close (close must be observed after 16:00 ET + buffer); a split-adjusted close could mark a pre-split date; dividends could be over- or double-credited (now per-signal `floor(net * shares / max(paid, holdings))`). Plus loader/core date alignment and a dozen parser/stance/policy hardening fixes. Re-review found 1 MEDIUM + 3 LOW in the fixes; all fixed. Deferred items with rulings in TECH-DEBT.

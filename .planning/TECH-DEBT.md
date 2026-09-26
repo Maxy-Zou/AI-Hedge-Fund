@@ -24,13 +24,6 @@ the debt and the expected resolution timing.
   `JSON(none_as_null=True)`; episodic should too. One-line change with the full suite as proof;
   kept out of Phase 9 because it alters a v1.0 table's storage contract.
 
-- **submit_signal has no concurrency guard (Phase 10 review F6; narrowed by review round 2):**
-  two concurrent runs for one signal compute the same attempt and therefore the same deterministic
-  client_order_id, so the broker accepts only one order (the other gets "duplicate" and adopts it).
-  What remains: the losing run fails at the (signal_id, attempt_no) unique constraint with a DB error
-  instead of a clean AlreadySubmitted. Safe for the single-threaded CLI; a scheduler (PAPER-03) should
-  take a per-signal advisory lock. Deferred. Filed 2026-09-24, updated same day.
-
 - **Price source precedence is undecided (Phase 10 review round 2, R10):** `daily_prices` can hold a
   yfinance and a tiingo row for the same day. `execution/prices.py` now resolves ties to the most
   recently collected row -- deterministic, so dry-run and submit agree -- but prefers no source.
@@ -109,6 +102,16 @@ the debt and the expected resolution timing.
   walk down and back up one revision at a time, a linear-chain check, and *unfiltered*
   `compare_metadata` parity over every table (nullability included) plus a per-table nullability
   check for the eight v1.0 tables. Closed 2026-09-26.
+
+- **submit_signal has no concurrency guard (Phase 10 review F6):** the losing run of two concurrent
+  submits for one signal now raises what a sequential re-run would -- `AlreadySubmitted` /
+  `AlreadyDecided`, or `BrokerRejected` if the winner recorded a rejection -- instead of the store's
+  `DuplicateSubmission`. `submit_signal` catches the `(signal_id, attempt_no)` conflict and re-reads
+  the settled state via `next_attempt`. Chosen over a `pg_advisory_xact_lock`: the lock would hold a
+  transaction open across the broker HTTP call and is Postgres-only; the broker already dedupes by
+  client_order_id and the unique constraint already admits one row, so only the error mapping was
+  missing. Works identically on SQLite. Tests: `tests/execution/test_submit_concurrency.py`
+  (deterministic interleavings + a two-thread Postgres race). Closed 2026-09-26.
 
 - **Async pipeline invoked against a sync PostgresSaver (found Phase 10, pre-existing since Phase 1):**
   `test_checkpoint_resume` drove `ainvoke` through the sync `PostgresSaver` (no `aget_tuple` ->
