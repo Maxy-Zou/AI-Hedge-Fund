@@ -1,3 +1,9 @@
+## 2026-09-26 — Project README
+
+Added `README.md` (the repo had none): what the system does, a Mermaid diagram of the signal pipeline, design principles, v1.0/v1.1 phase status, quickstart, CLI reference, configuration table with key sign-up links, repository layout, dev gates, research foundations, and an honest-positioning disclaimer. No performance figures (no paper track record exists yet).
+
+**Files:** `README.md`, `docs/PROGRESS.md`. **Tests:** unchanged.
+
 ## 2026-09-25 — Phase 11 review: 5 HIGH defects confirmed and fixed before PR
 
 Six parallel read-only review lenses plus one targeted re-review. Confirmed by RED tests and fixed: the Alpaca activity parser rejected the documented response shapes (SDK models demand fields the docs omit); one manual short/fractional trade aborted all ingest (items are now rejected individually, ours fail loudly); an intraday bar could be frozen as the close (close must be observed after 16:00 ET + buffer); a split-adjusted close could mark a pre-split date; dividends could be over- or double-credited (now per-signal `floor(net * shares / max(paid, holdings))`). Plus loader/core date alignment and a dozen parser/stance/policy hardening fixes. Re-review found 1 MEDIUM + 3 LOW in the fixes; all fixed. Deferred items with rulings in TECH-DEBT.
